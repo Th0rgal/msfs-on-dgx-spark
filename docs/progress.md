@@ -255,3 +255,24 @@ Artifacts from this pass:
 - `/tmp/finalize-msfs-retest.log`
 - `/tmp/msfs-enable-steamplay.log`
 - `/tmp/steam-after-finalize-retest.png`
+
+## 2026-02-27 (11:30 UTC)
+
+Deep-dive retry on `spark-de79` for MSFS 2024 (`AppID 2537590`):
+
+- Steam was previously authenticated (`steamid=76561198351709467`) and MSFS 2024 page showed `INSTALL`.
+- Repeated install triggers were attempted from both URI and UI paths:
+  - `steam://install/2537590`
+  - direct library tile/navigation clicks in headless X11 session
+  - install button click/confirm retries on the MSFS 2024 details page
+- No install manifest was created (`appmanifest_2537590.acf` remained absent), and control test app install URI also did not create a manifest.
+- During repeated UI automation, Steam WebUI entered a broken renderer state:
+  - main client shows a black content area with `data:text/html,...` in the URL row
+  - this state persists across Steam process restarts and htmlcache reset
+- After forced process recycle, current Steam client instance is now unauthenticated (`steamid=0`), so install flow is blocked again at auth level.
+
+Current hard blocker:
+
+- Steam WebUI instability in this headless Snap/FEX session (black page + `data:text/html`) prevents reliable install action dispatch.
+- Session auth was lost during recovery; Steam must be re-authenticated before any further install attempts.
+- End-to-end MSFS launch proof is still pending.
