@@ -62,3 +62,18 @@ Verification artifacts captured during this run:
 
 - `/tmp/steam-state-1250410.png`
 - `/tmp/verify-msfs-20260227T023730Z.log`
+
+## 2026-02-27 (04:39 UTC)
+
+Latest live retest on `spark-de79`:
+
+- `scripts/06-verify-msfs-state.sh` confirms runtime remains healthy (`Xvfb :1`, `openbox`, `steamwebhelper`, `x11vnc`, Sunshine active).
+- `scripts/08-finalize-auth-and-run-msfs.sh` re-tested with `LOGIN_WAIT_SECONDS=60`; it times out waiting for authenticated Steam session.
+- Steam is still unauthenticated (`steamid=0`) and waiting at Steam Guard prompt.
+- MSFS `AppID 1250410` manifest remains missing, so install/launch cannot proceed before Steam Guard is completed.
+
+Artifacts from this retest:
+
+- `/tmp/steam-state-1250410.png`
+- `/tmp/verify-msfs-20260227T0438Z.log`
+- `/tmp/finalize-msfs-20260227T0438Z.log`
