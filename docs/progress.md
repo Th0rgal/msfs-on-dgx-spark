@@ -77,3 +77,17 @@ Artifacts from this retest:
 - `/tmp/steam-state-1250410.png`
 - `/tmp/verify-msfs-20260227T0438Z.log`
 - `/tmp/finalize-msfs-20260227T0438Z.log`
+
+## 2026-02-27 (05:17 UTC)
+
+Live re-validation on `spark-de79`:
+
+- `scripts/06-verify-msfs-state.sh` still reports healthy runtime services (`Xvfb :1`, `openbox`, `steamwebhelper`, `x11vnc`, Sunshine).
+- Steam is still unauthenticated (`steamid=0`) at Guard challenge, so authenticated install actions cannot proceed.
+- MSFS `AppID 1250410` manifest is still missing.
+- `compatibilitytools.vdf` is still absent in this unauthenticated state (expected before first successful login / compatibility selection).
+
+Artifacts from this check:
+
+- `/tmp/steam-state-now.png`
+- `/tmp/finalize-msfs-<timestamp>.log`
