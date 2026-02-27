@@ -2,6 +2,8 @@
 # Resume headless Steam session and trigger MSFS install/launch on DGX Spark.
 set -euo pipefail
 
+"$(dirname "$0")/17-fix-xdg-user-dirs.sh" >/dev/null 2>&1 || true
+
 DISPLAY_NUM="${DISPLAY_NUM:-:1}"
 RESOLUTION="${RESOLUTION:-1920x1080x24}"
 MSFS_APPID="${MSFS_APPID:-2537590}"

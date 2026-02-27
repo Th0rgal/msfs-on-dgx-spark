@@ -580,3 +580,28 @@ Latest artifacts captured:
 - `output/msfs-filter-selected.png`
 - `output/msfs-filter-after-playclick.png`
 
+
+## 2026-02-27 (17:31 UTC, XDG/dispatch debugging + clean retry)
+
+Most likely untried root cause investigated in this cycle: malformed desktop/XDG environment was breaking protocol dispatch and causing unstable headless UI behavior.
+
+What was validated and changed:
+- Found corrupted `~/.config/user-dirs.dirs` (contained stray `EOF` and shell lines), which triggered repeated runtime warnings during URI/open attempts.
+- Added `scripts/17-fix-xdg-user-dirs.sh` to rewrite `user-dirs.dirs` and ensure standard XDG folders exist.
+- Hooked this repair into `scripts/05-resume-headless-msfs.sh` so every resume cycle normalizes the desktop environment.
+- Confirmed Steam Play remap is still active:
+  - `Proton Experimental` command prefix resolves to `GE-Proton10-32` in `compat_log.txt`.
+
+Key observations from this pass:
+- Steam auth state remains session-fragile:
+  - At `17:24Z`, helper process showed authenticated `steamid=76561198351709467`.
+  - Subsequent clean restart returned to unauthenticated `steamid=0`.
+- `steam://` dispatch from CLI remains unreliable in this headless session; no fresh `StartSession: appID 2537590` events were created in this cycle.
+- UI automation still landed on Steam Store and did not produce a launch event for AppID `2537590`.
+
+Artifacts:
+- `output/restart-open-after-xdgfix-20260227T172406Z.log`
+- `output/finalize-after-xdgfix-20260227T172439Z.log`
+- `output/ui-clean-resume-20260227T172921Z.log`
+- `output/ui-clean-play-20260227T172921Z.log`
+- `output/ui-clean-20260227T172921Z-4-postplay.png`
