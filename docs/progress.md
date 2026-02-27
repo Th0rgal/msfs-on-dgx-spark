@@ -327,3 +327,36 @@ Artifacts:
 Current blocker remains unchanged:
 
 - `~/snap/steam/common/.local/share/Steam/steamapps/appmanifest_2537590.acf` is still missing, so download/launch cannot be validated end-to-end yet.
+
+## 2026-02-27 (14:10 UTC)
+
+Focused install deep-dive on `spark-de79` for MSFS 2024 (`AppID 2537590`) uncovered the next concrete gate after prior install-click failures:
+
+- Reached stable Library view and reliably selected `Microsoft Flight Simulator 2024` from the left game list.
+- Triggered install dialog consistently from the MSFS details page.
+- Confirmed installer modal fields are present (`Install`, install location row, desktop/application shortcut toggles).
+- Advanced one step further to a new modal gate: **MSFS EULA acceptance** dialog appears with `Accept`/`Cancel`.
+
+Current blocker has shifted:
+
+- Install queue is now blocked at the in-client EULA modal interaction. In this headless automation path, repeated synthetic click/keyboard attempts did not successfully dismiss the EULA dialog.
+- As a result, `appmanifest_2537590.acf` is still not created yet and download does not start.
+
+Artifacts from this pass:
+
+- `output/msfs-2024-selected-20260227T134926Z.png` (MSFS 2024 selected in Library)
+- `output/msfs-2024-install-dialog-20260227T135011Z.png` (install dialog reached)
+- `output/msfs-2024-eula-modal-20260227T135950Z.png` (EULA gate reached)
+- `output/msfs-2024-eula-scrolled-20260227T140601Z.png` (EULA modal still active after scroll/accept attempts)
+
+Next unblock:
+
+1. Manually click `Accept` in the MSFS EULA modal once via the live Steam UI session.
+2. Immediately rerun:
+
+```bash
+cd ~/msfs-on-dgx-spark
+MSFS_APPID=2537590 ./scripts/08-finalize-auth-and-run-msfs.sh
+```
+
+After EULA acceptance, manifest/download/launch verification should proceed in the existing flow.
