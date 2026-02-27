@@ -360,3 +360,28 @@ MSFS_APPID=2537590 ./scripts/08-finalize-auth-and-run-msfs.sh
 ```
 
 After EULA acceptance, manifest/download/launch verification should proceed in the existing flow.
+
+## 2026-02-27 (14:35 UTC)
+
+Post-EULA/install retest on `spark-de79` for MSFS 2024 (`AppID 2537590`):
+
+- `scripts/08-finalize-auth-and-run-msfs.sh` now reaches manifest and reports full install completion:
+  - `appmanifest_2537590.acf` present
+  - `StateFlags=4`
+  - `BytesDownloaded=7261863936` / `BytesToDownload=7261863936` (100%)
+- Steam launch action is accepted and game process chain starts, but exits after ~50 seconds.
+- Crash artifacts in prefix confirm early boot crash before playable state/Xbox sign-in:
+  - `AsoboReport-Crash.txt` shows `Type="SEH" Code=0xC0000005`
+  - crash context remains in `MainState:BOOT SubState:BOOT_INIT`
+
+Current state:
+
+- Install problem is resolved.
+- Remaining blocker is runtime stability under current Snap Steam + FEX + Proton Experimental stack on DGX ARM; game exits during boot before handoff point.
+
+Artifacts from this pass:
+
+- `output/finalize-msfs-20260227T142909Z.log`
+- `output/verify-msfs-20260227T143142Z.log`
+- `/tmp/msfs-launch-state-2537590.png`
+- `.../compatdata/2537590/.../Microsoft Flight Simulator 2024/AsoboReport-Crash.txt`
