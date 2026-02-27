@@ -4,7 +4,7 @@ set -euo pipefail
 
 DISPLAY_NUM="${DISPLAY_NUM:-:1}"
 MSFS_APPID="${MSFS_APPID:-2537590}"
-MODE="${1:-uri}" # uri|applaunch
+MODE="${1:-uri}" # uri|applaunch|pipe
 WAIT_SECONDS="${WAIT_SECONDS:-15}"
 
 find_steam_dir() {
@@ -51,11 +51,18 @@ case "$MODE" in
   applaunch)
     DISPLAY="$DISPLAY_NUM" steam -applaunch "${MSFS_APPID}" -dx11 -FastLaunch >/tmp/msfs-debug-applaunch.log 2>&1 || true
     ;;
+  pipe)
+    MSFS_APPID="$MSFS_APPID" WAIT_SECONDS="$WAIT_SECONDS" "$(dirname "$0")/19-dispatch-via-steam-pipe.sh"
+    ;;
   *)
-    echo "ERROR: unsupported mode '$MODE' (use: uri|applaunch)"
+    echo "ERROR: unsupported mode  (use: uri|applaunch|pipe)"
     exit 3
     ;;
 esac
+
+if [ "$MODE" = "pipe" ]; then
+  exit 0
+fi
 
 sleep "$WAIT_SECONDS"
 

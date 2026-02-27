@@ -631,3 +631,41 @@ Current status:
 - Install remains intact (`AppID 2537590` manifest present, fully downloaded).
 - Runtime remap path remains in place (Proton-Experimental command prefix -> GE-Proton).
 - Remaining blocker is reliable launch dispatch from this headless Steam UI state.
+
+## 2026-02-27 (18:15-18:23 UTC, Steam pipe dispatch breakthrough + runtime retest)
+
+New root-cause and fix path validated:
+- CLI launch dispatch (`steam://...`/`-applaunch`) can be ignored in headless Snap session, but Steam IPC pipe dispatch works.
+- Writing launch URI directly to `~/.steam/steam.pipe` reliably produced new launch sessions (`StartSession` for AppID `2537590`).
+
+What was added:
+- `scripts/19-dispatch-via-steam-pipe.sh`
+  - Dispatches `steam://rungameid/2537590` via Steam pipe.
+  - Verifies acceptance via `GameAction` / `StartSession` deltas.
+- Updated `scripts/13-debug-launch-dispatch.sh`
+  - Added `pipe` mode: `uri|applaunch|pipe`.
+
+Runtime retest outcomes using pipe dispatch:
+- Launch reached real game process chain repeatedly:
+  - `steam-launch-wrapper ... waitforexitandrun ... FlightSimulator2024.exe`
+  - `FlightSimulator2024.exe` process appeared.
+- Game stayed up longer (~38-48s) than earlier ~2s failures, then exited.
+- Crash signature remains unchanged:
+  - `SEH 0xC0000005`
+  - `MainState:BOOT SubState:BOOT_INIT`
+  - `EnableD3D12=true`
+
+Compatibility variant tested in this cycle:
+- Restored true `Proton - Experimental` (removed GE remap for test run).
+- Result remained early BOOT_INIT crash; no material improvement over GE-Proton run.
+
+Artifacts:
+- `output/pipe-dispatch-20260227T181511Z.log`
+- `output/pipe-launch-cycle-20260227T181559Z.log`
+- `output/runtime-watch-20260227T181635Z.log`
+- `output/protonexp-rerun-20260227T181923Z.log`
+- `output/AsoboReport-Crash-2537590-20260227T182254Z.txt`
+
+Current status:
+- Dispatch reliability blocker is largely solved via Steam pipe.
+- Hard blocker is now runtime crash in BOOT_INIT (not install/entitlement/dispatch).
