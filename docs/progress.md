@@ -1044,3 +1044,31 @@ Current assessment:
 - Dispatch/auth/proton-tool selection are working.
 - Forced launch arguments and dll overrides are now verified to apply.
 - Remaining blocker is still pre-frame runtime/platform incompatibility on this ARM+FEX+Snap-Proton stack; not a missing launch option anymore.
+
+## 2026-02-27 (22:27-22:32 UTC, compat cleanup + Vulkan forcing retest)
+
+New tests in this cycle:
+
+1. Updated `scripts/29-force-msfs-dx11-proton-wrapper.sh` to force NVIDIA Vulkan ICD and forum-aligned env toggles (`PROTON_ENABLE_WAYLAND=0`, `DXVK_HDR=0`).
+2. Removed stale Steam per-user launch config (`localconfig.vdf`) and normalized `sharedconfig.vdf` launch options to remove malformed legacy override text.
+3. Re-ran launch with clean commandline path and then with `PROTON_USE_WINED3D=1` fallback.
+
+Key findings:
+
+- Cleanup succeeded: launch path no longer injected `explorer /desktop=...` and now uses direct executable invocation:
+  - `... proton.real waitforexitandrun .../FlightSimulator2024.exe -dx11 -FastLaunch`
+- Forcing NVIDIA ICD in Proton runtime caused Vulkan instance creation failure:
+  - `wine_vkCreateInstance Failed to create instance, res=-9`
+  - `Failed to initialize DXVK`
+- With ICD force removed + `PROTON_USE_WINED3D=1`, app still exits in init.
+- Latest crash signature remains unchanged:
+  - `Where="CrashReport_Z::Init"`
+  - `FrameCount=0`
+  - `LastStates="<no global flow>@"`
+  - latest observed `TimeUTC=2026-02-27T22:32:07Z`
+
+Assessment update:
+
+- We did remove a real compat/config issue (stale virtual-desktop launch injection).
+- The remaining blocker is still runtime/platform-level initialization failure under this ARM+FEX+Steam Runtime stack.
+- Hard-forcing host NVIDIA ICD inside pressure-vessel is not viable in current session (DXVK init fails immediately).
