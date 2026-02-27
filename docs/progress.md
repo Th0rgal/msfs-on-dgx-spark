@@ -228,6 +228,28 @@ Current blocker remains unchanged:
 - `~/snap/steam/common/.local/share/Steam/steamapps/appmanifest_2537590.acf` is still not being created in unattended mode, so download queue and launch verification cannot complete yet.
 - Steam UI still appears to require a manual in-client install confirmation path that automation is not reliably triggering in this headless session.
 
+## 2026-02-27 (later pass, MSFS 2024)
+
+Validated again on `spark-de79` after successful Steam account login:
+
+- Steam is authenticated (`steamid=76561198351709467`) and headless services remain healthy (`Xvfb :1`, `openbox`, `steamwebhelper`, `x11vnc`, Sunshine).
+- Confirmed `Microsoft Flight Simulator 2024` appears in the Steam Library (`AppID 2537590`) and can be selected in UI.
+- Repeated install attempts were executed through:
+  - Steam URI flow (`steam://install/2537590`) from scripts.
+  - Direct UI clicks in Steam (headless + VNC control path).
+  - Keyboard-triggered install attempts from the selected library row.
+
+Current hard blocker:
+
+- Steam still does not create `steamapps/appmanifest_2537590.acf` after install attempts.
+- Because manifest creation never starts, no download queue is created and first-launch verification cannot proceed.
+
+Latest artifacts (workspace):
+
+- `output/vnc-msfs-row-attempt3.png` (MSFS 2024 selected in Library with INSTALL button visible)
+- `output/vnc-msfs-install-click-successpath.png` (post-click state still not queued)
+- `output/vnc-msfs-enter-from-list.png` (selected-row keyboard attempt)
+
 Artifacts from this pass:
 
 - `/tmp/finalize-msfs-retest.log`
