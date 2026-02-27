@@ -519,3 +519,34 @@ Artifacts:
 - `output/steam-after-ge3-20260227T160726Z.png`
 - `output/steam-vgui-recover-20260227T160821Z.log`
 - `output/steam-dbus-20260227T160908Z.log`
+
+## 2026-02-27 (16:45 UTC) additional runtime-fix cycle
+
+New hypotheses tested and results on `spark-de79`:
+
+- Confirmed the game install is intact (`appmanifest_2537590.acf` present, game files in `steamapps/common/MSFS2024`).
+- Identified a UI-state blocker: Steam repeatedly lands on a Store age-gate page (`app/3764200`), and `steam://rungameid/2537590` dispatches create no fresh `App Running` event in this trapped state.
+- Removed stale launcher blocker (`fex_launcher.sh steam://install/2537590`), but launch URI dispatch still did not produce a new run event.
+- Applied an untried clean runtime path:
+  - switched compatibility mapping to `proton_10` via `scripts/10-enable-steam-play.sh`
+  - reset prefix by moving `compatdata/2537590` to backup (`2537590.bak.20260227T163452Z`)
+  - restarted Steam and reattempted launch drive
+- Observed that native `proton_10` binary is not actually installed under `steamapps/common` on this host (only `Proton - Experimental` and `GE-Proton10-32`).
+- Tried direct GE-Proton invocation (bypassing Steam UI) with full compat env; this fails on ARM with:
+  - `pressure-vessel-wrap: Exec format error`
+  - confirms direct proton path is not viable here outside Steam/FEX dispatch.
+
+Artifacts from this cycle:
+
+- `output/attempt-cleanprefix-proton10-20260227T163452Z.log`
+- `output/attempt-cleanprefix-proton10-20260227T163452Z.png`
+- `output/click-attempt-postreset2-20260227T163647Z.log`
+- `output/click-attempt-postreset2-20260227T163647Z.png`
+- `output/ui-recover-20260227T163812Z.png`
+- `output/agegate-clear-attempt-20260227T163924Z.png`
+- `output/direct-geproton-20260227T164555Z.log`
+
+Current assessment:
+
+- Most likely immediate blocker is Steam UI trap/dispatch state (age-gate/store page), not file installation.
+- Next practical fix path is to recover Steam to Library/details UI reliably (or restart into clean Library landing), then trigger Play from in-client details where dispatch can create a real `App Running` session for post-reset prefix.
