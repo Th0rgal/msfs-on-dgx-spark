@@ -152,3 +152,18 @@ Artifacts from this run:
 - `/tmp/steam-state-1250410.png`
 - `output/verify-20260227T075730Z.log`
 - `output/finalize-20260227T075730Z.log`
+
+## 2026-02-27 (08:57 UTC)
+
+License-path validation for user request (Xbox sign-in without Steam purchase):
+
+- Reconnected to `spark-de79` and confirmed Steam UI session is reachable in headless desktop.
+- Triggered direct install attempts for `AppID 1250410` from the current Steam session (`steam://install/1250410` and finalize script path).
+- No `appmanifest_1250410.acf` was created after install triggers; install did not queue.
+- This project path targets the Steam build under Proton/FEX. Xbox/Microsoft sign-in is an in-game identity step, not a package entitlement source for Steam.
+- Therefore, local install/launch on this Linux DGX path requires Steam entitlement for `1250410` on the logged-in Steam account.
+
+Conclusion:
+
+- Goal remains blocked for the requested "Xbox login only, no Steam purchase" path.
+- To proceed locally on DGX, use a Steam account that already owns MSFS 2020 (or purchase on Steam), then complete first launch and sign into Xbox inside MSFS.
