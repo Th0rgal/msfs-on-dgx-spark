@@ -177,6 +177,13 @@ At any point, collect a one-shot readiness report and screenshot:
 
 This prints process health (`Xvfb`, `openbox`, Steam, `x11vnc`), MSFS AppID `1250410` manifest/download status, Sunshine service state, and writes a Steam desktop screenshot to `/tmp/steam-state-1250410.png`.
 
+If you are currently blocked at Steam Guard, you can keep one watcher running that automatically queues install as soon as login succeeds:
+
+```bash
+./scripts/07-await-login-and-install.sh
+```
+
+
 
 ## Phase 4: Remote Streaming (Optional)
 

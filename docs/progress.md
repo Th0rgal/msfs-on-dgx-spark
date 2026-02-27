@@ -39,3 +39,12 @@ Optional verification at any time:
 ```bash
 ./scripts/06-verify-msfs-state.sh
 ```
+
+## 2026-02-27 (continued)
+
+Additional live validation on `spark-de79` at `2026-02-27T01:57:10Z`:
+
+- `scripts/06-verify-msfs-state.sh` confirms runtime services are healthy (`Xvfb :1`, `openbox`, `steamwebhelper`, `x11vnc`, Sunshine active).
+- Steam remains blocked at email Steam Guard prompt for account `her3sy`; no authenticated SteamID is present yet.
+- MSFS install manifest remains absent (`appmanifest_1250410.acf`), confirming no queued install while unauthenticated.
+- Added `scripts/07-await-login-and-install.sh` to automatically continue once Steam auth succeeds: waits for non-zero SteamID, triggers `steam://install/1250410`, and prints manifest-based progress.
