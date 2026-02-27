@@ -205,3 +205,31 @@ Artifacts from this run:
   - Install dialog appears for **Microsoft Flight Simulator 2024** and accepts click on **Install**.
   - After dialog closes, Steam returns to game page still showing **INSTALL** and no manifest is created.
 - Current hard blocker: `~/snap/steam/common/.local/share/Steam/steamapps/appmanifest_2537590.acf` is still missing, so download/launch cannot proceed.
+
+## 2026-02-27 (09:52 UTC)
+
+Retest and automation hardening for MSFS 2024 (`2537590`) on `spark-de79`:
+
+- Confirmed Steam is authenticated and MSFS 2024 is present in Library under account persona `Thomas`.
+- Added `scripts/10-enable-steam-play.sh` to enforce Proton mappings in `config/compatibilitytools.vdf` for:
+  - default (`0`)
+  - `1250410`
+  - `2537590`
+- Updated `scripts/08-finalize-auth-and-run-msfs.sh`:
+  - new explicit compatibility step (`[4/7]`) calling `10-enable-steam-play.sh`
+  - fixed launch argument selection so `MSFS_APPID=2537590` uses `~/launch-msfs.sh 2024` (not `2020`)
+  - step numbering adjusted to `[1/7]..[7/7]`
+- Re-ran full finalize flow (`MSFS_APPID=2537590 LOGIN_WAIT_SECONDS=30 POLL_SECONDS=10`).
+  - Steam auth check succeeded (`authenticated: ui-detected`).
+  - Manifest wait still timed out after 300s.
+
+Current blocker remains unchanged:
+
+- `~/snap/steam/common/.local/share/Steam/steamapps/appmanifest_2537590.acf` is still not being created in unattended mode, so download queue and launch verification cannot complete yet.
+- Steam UI still appears to require a manual in-client install confirmation path that automation is not reliably triggering in this headless session.
+
+Artifacts from this pass:
+
+- `/tmp/finalize-msfs-retest.log`
+- `/tmp/msfs-enable-steamplay.log`
+- `/tmp/steam-after-finalize-retest.png`
