@@ -115,6 +115,9 @@ NVIDIA GB10 Blackwell GPU
 
 # 8. Optional: one-shot finalize (Steam Guard code -> install -> launch)
 ./scripts/08-finalize-auth-and-run-msfs.sh <STEAM_GUARD_CODE>
+
+# 9. Optional: verify MSFS launch process state
+./scripts/09-verify-msfs-launch.sh
 ```
 
 See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [docs/progress.md](docs/progress.md) for live validation notes.
@@ -144,7 +147,7 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 │   ├── 05-resume-headless-msfs.sh # Resume headless Steam session + MSFS install/launch
 │   ├── 06-verify-msfs-state.sh # Verify readiness/install state + capture Steam screen
 │   ├── 07-await-login-and-install.sh # Wait for Steam auth and auto-queue MSFS install
-│   └── 08-finalize-auth-and-run-msfs.sh # One-shot auth/install/launch orchestrator
+│   ├── 08-finalize-auth-and-run-msfs.sh # One-shot auth/install/launch orchestrator
 └── docs/
     ├── setup-guide.md         # Detailed setup walkthrough
     ├── progress.md            # Live validation status and blockers

@@ -191,6 +191,12 @@ For a single command that can enter Steam Guard (if provided), queue install, an
 ./scripts/08-finalize-auth-and-run-msfs.sh <STEAM_GUARD_CODE>
 ```
 
+After launch is triggered, verify a candidate MSFS process is actually running:
+
+```bash
+./scripts/09-verify-msfs-launch.sh
+```
+
 ## Phase 4: Remote Streaming (Optional)
 
 If the DGX Spark is headless or you want to play from another device, use Sunshine + Moonlight.

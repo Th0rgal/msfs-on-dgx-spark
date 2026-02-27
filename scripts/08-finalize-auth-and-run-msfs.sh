@@ -7,6 +7,7 @@ MSFS_APPID="${MSFS_APPID:-1250410}"
 LOGIN_WAIT_SECONDS="${LOGIN_WAIT_SECONDS:-3600}"
 INSTALL_WAIT_SECONDS="${INSTALL_WAIT_SECONDS:-0}"  # 0 = do not wait for full download
 POLL_SECONDS="${POLL_SECONDS:-20}"
+LAUNCH_VERIFY_WAIT_SECONDS="${LAUNCH_VERIFY_WAIT_SECONDS:-120}"
 GUARD_CODE="${1:-${STEAM_GUARD_CODE:-}}"
 
 find_steam_dir() {
@@ -55,21 +56,21 @@ if [ -z "$STEAM_DIR" ]; then
 fi
 MANIFEST="$STEAM_DIR/steamapps/appmanifest_${MSFS_APPID}.acf"
 
-echo "[1/5] Ensuring headless stack is running..."
+echo "[1/6] Ensuring headless stack is running..."
 "$(dirname "$0")/05-resume-headless-msfs.sh" install >/tmp/msfs-resume.log 2>&1 || true
 
 if [ -n "$GUARD_CODE" ]; then
-  echo "[2/5] Attempting Steam Guard code entry via xdotool on ${DISPLAY_NUM}..."
+  echo "[2/6] Attempting Steam Guard code entry via xdotool on ${DISPLAY_NUM}..."
   if command -v xdotool >/dev/null 2>&1; then
     DISPLAY="$DISPLAY_NUM" xdotool key --delay 80 "$GUARD_CODE" Return || true
   else
     echo "WARN: xdotool not installed; cannot auto-type Steam Guard code."
   fi
 else
-  echo "[2/5] No Steam Guard code supplied; skipping code entry."
+  echo "[2/6] No Steam Guard code supplied; skipping code entry."
 fi
 
-echo "[3/5] Waiting for authenticated Steam session..."
+echo "[3/6] Waiting for authenticated Steam session..."
 start_ts="$(date +%s)"
 while true; do
   sid="$(steamid_from_processes || true)"
@@ -89,7 +90,7 @@ while true; do
   sleep "$POLL_SECONDS"
 done
 
-echo "[4/5] Triggering install and checking manifest..."
+echo "[4/6] Triggering install and checking manifest..."
 DISPLAY="$DISPLAY_NUM" steam "steam://install/${MSFS_APPID}" >/tmp/msfs-install-uri.log 2>&1 || true
 
 wait_manifest_start="$(date +%s)"
@@ -130,7 +131,7 @@ if [ "$INSTALL_WAIT_SECONDS" -gt 0 ]; then
   done
 fi
 
-echo "[5/5] Launching MSFS via ~/launch-msfs.sh 2020..."
+echo "[5/6] Launching MSFS via ~/launch-msfs.sh 2020..."
 if [ -x "$HOME/launch-msfs.sh" ]; then
   DISPLAY="$DISPLAY_NUM" "$HOME/launch-msfs.sh" 2020 >/tmp/msfs-launch.log 2>&1 || true
 else
@@ -141,6 +142,13 @@ sleep 8
 if command -v import >/dev/null 2>&1; then
   DISPLAY="$DISPLAY_NUM" import -window root "/tmp/msfs-launch-state-${MSFS_APPID}.png" || true
   echo "Launch screenshot: /tmp/msfs-launch-state-${MSFS_APPID}.png"
+fi
+
+echo "[6/6] Verifying launch process state..."
+if WAIT_SECONDS="$LAUNCH_VERIFY_WAIT_SECONDS" "$(dirname "$0")/09-verify-msfs-launch.sh"; then
+  echo "Launch verification succeeded."
+else
+  echo "WARN: Launch verification did not find a running MSFS process yet."
 fi
 
 echo "Done. Review /tmp/msfs-launch.log and run scripts/06-verify-msfs-state.sh for current status."

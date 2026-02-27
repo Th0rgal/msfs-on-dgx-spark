@@ -120,3 +120,20 @@ Artifacts from this run:
 - `/tmp/steam-state-20260227T063725Z.png`
 - `/tmp/finalize-msfs-20260227T063725Z.log`
 - `/tmp/verify-msfs-20260227T063725Z.log`
+
+## 2026-02-27 (07:21 UTC)
+
+Live re-test on `spark-de79` with additional launch verification:
+
+- Runtime stack remains healthy (`Xvfb :1`, `openbox`, `steamwebhelper`, `x11vnc`, Sunshine).
+- Steam remains unauthenticated (`steamid=0`) at Steam Guard, so MSFS `1250410` is still not installable in this session.
+- Added `scripts/09-verify-msfs-launch.sh` to explicitly detect candidate launch processes after launch trigger.
+- Updated `scripts/08-finalize-auth-and-run-msfs.sh` to invoke launch verification as step `[6/6]`.
+- Re-ran finalize flow (`LOGIN_WAIT_SECONDS=45`): timed out waiting for Steam auth as expected.
+
+Artifacts from this run:
+
+- `/tmp/steam-state-20260227T0719Z.png`
+- `/tmp/finalize-msfs-20260227T0719Z.log`
+- `/tmp/verify-msfs-20260227T0719Z.log`
+- `/tmp/verify-launch-20260227T0720Z.log`
