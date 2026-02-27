@@ -940,3 +940,25 @@ Assessment update:
 - C: package mirroring + clean prefix did not resolve startup exits.
 - Remaining blocker still appears to be runtime/platform behavior on ARM + FEX + Proton,
   not Steam auth/dispatch or obvious package-path misconfiguration.
+
+## 2026-02-27 (20:55-20:57 UTC, install-script bypass check)
+
+New targeted check:
+
+- Temporarily replaced `MSFS2024/InstallUtils/InstallScript.vdf` with a no-op body,
+  launched once with GE, then restored original script file.
+
+Observed behavior:
+
+- `Running install script evaluator ... step(s)` dropped from `2` to `1` in `console_log`.
+- Launch still followed the same path and exited after ~40s.
+- No fresh Asobo crash report was generated; latest remains from `20:13:14Z`.
+
+Artifacts:
+
+- `output/installscript-bypass-test-20260227T205553Z.log`
+
+Conclusion:
+
+- Install script complexity is not the primary blocker.
+- Runtime exit behavior remains unchanged after script bypass.
