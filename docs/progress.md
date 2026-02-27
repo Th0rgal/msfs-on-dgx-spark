@@ -105,3 +105,18 @@ Artifacts from this re-test:
 
 - `/tmp/steam-state-1250410.png`
 - `/tmp/finalize-msfs-20260227T0557Z.log`
+
+## 2026-02-27 (06:37 UTC)
+
+Live retest on `spark-de79`:
+
+- SSH/device access and headless stack still healthy (`Xvfb :1`, `openbox`, `steamwebhelper`, `x11vnc`, Sunshine active).
+- `scripts/08-finalize-auth-and-run-msfs.sh` re-run with `LOGIN_WAIT_SECONDS=45`; timed out waiting for authenticated Steam session.
+- Steam UI remains on email Steam Guard challenge for account `her3sy` (unauthenticated `steamid=0`).
+- MSFS `AppID 1250410` manifest is still missing; install/launch cannot proceed until Steam Guard is completed.
+
+Artifacts from this run:
+
+- `/tmp/steam-state-20260227T063725Z.png`
+- `/tmp/finalize-msfs-20260227T063725Z.log`
+- `/tmp/verify-msfs-20260227T063725Z.log`
