@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DISPLAY_NUM="${DISPLAY_NUM:-:1}"
-MSFS_APPID="${MSFS_APPID:-1250410}"
+MSFS_APPID="${MSFS_APPID:-2537590}"
 LOGIN_WAIT_SECONDS="${LOGIN_WAIT_SECONDS:-3600}"
 INSTALL_WAIT_SECONDS="${INSTALL_WAIT_SECONDS:-0}"  # 0 = do not wait for full download
 POLL_SECONDS="${POLL_SECONDS:-20}"
@@ -30,6 +30,23 @@ steamid_from_processes() {
   pgrep -af steamwebhelper \
     | sed -n 's/.*-steamid=\([0-9][0-9]*\).*/\1/p' \
     | awk '$1 != 0 { print; exit }'
+}
+
+steam_session_authenticated() {
+  local sid
+  sid="$(steamid_from_processes || true)"
+  if [ -n "$sid" ]; then
+    return 0
+  fi
+
+  if command -v xdotool >/dev/null 2>&1; then
+    if DISPLAY="$DISPLAY_NUM" xdotool search --name "Steam" >/dev/null 2>&1 \
+      && ! DISPLAY="$DISPLAY_NUM" xdotool search --name "Sign in to Steam" >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+
+  return 1
 }
 
 manifest_progress() {
@@ -73,8 +90,9 @@ fi
 echo "[3/6] Waiting for authenticated Steam session..."
 start_ts="$(date +%s)"
 while true; do
-  sid="$(steamid_from_processes || true)"
-  if [ -n "$sid" ]; then
+  if steam_session_authenticated; then
+    sid="$(steamid_from_processes || true)"
+    [ -z "$sid" ] && sid="ui-detected"
     echo "Authenticated Steam session detected: steamid=$sid"
     break
   fi
@@ -131,7 +149,7 @@ if [ "$INSTALL_WAIT_SECONDS" -gt 0 ]; then
   done
 fi
 
-echo "[5/6] Launching MSFS via ~/launch-msfs.sh 2020..."
+echo "[5/6] Launching MSFS via ~/launch-msfs.sh 2024..."
 if [ -x "$HOME/launch-msfs.sh" ]; then
   DISPLAY="$DISPLAY_NUM" "$HOME/launch-msfs.sh" 2020 >/tmp/msfs-launch.log 2>&1 || true
 else

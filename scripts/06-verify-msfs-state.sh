@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DISPLAY_NUM="${DISPLAY_NUM:-:1}"
-MSFS_APPID="${MSFS_APPID:-1250410}"
+MSFS_APPID="${MSFS_APPID:-2537590}"
 SHOT_PATH="${SHOT_PATH:-/tmp/steam-state-${MSFS_APPID}.png}"
 
 find_steam_dir() {
@@ -22,6 +22,31 @@ find_steam_dir() {
   return 1
 }
 
+steamid_from_processes() {
+  pgrep -af steamwebhelper \
+    | sed -n 's/.*-steamid=\([0-9][0-9]*\).*/\1/p' \
+    | awk '$1 != 0 { print; exit }'
+}
+
+auth_status() {
+  local sid
+  sid="$(steamid_from_processes || true)"
+  if [ -n "$sid" ]; then
+    echo "authenticated (steamid=$sid)"
+    return
+  fi
+
+  if command -v xdotool >/dev/null 2>&1; then
+    if DISPLAY="$DISPLAY_NUM" xdotool search --name "Steam" >/dev/null 2>&1 \
+      && ! DISPLAY="$DISPLAY_NUM" xdotool search --name "Sign in to Steam" >/dev/null 2>&1; then
+      echo "authenticated (ui-detected)"
+      return
+    fi
+  fi
+
+  echo "unauthenticated"
+}
+
 STEAM_DIR="$(find_steam_dir || true)"
 if [ -z "$STEAM_DIR" ]; then
   echo "ERROR: Steam directory not found."
@@ -36,15 +61,22 @@ printf "  Time (UTC): %s\n" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 printf "  Host: %s\n" "$(hostname)"
 printf "  DISPLAY: %s\n" "$DISPLAY_NUM"
 printf "  Steam dir: %s\n" "$STEAM_DIR"
+printf "  Steam auth: %s\n" "$(auth_status)"
 
 printf "\nProcess checks\n"
-for pat in "Xvfb $DISPLAY_NUM" "openbox" "steamwebhelper" "x11vnc .* -rfbport 5901"; do
+for pat in "Xvfb $DISPLAY_NUM" "openbox" "steamwebhelper"; do
   if pgrep -af "$pat" >/dev/null; then
     printf "  [OK] %s\n" "$pat"
   else
     printf "  [MISSING] %s\n" "$pat"
   fi
 done
+
+if pgrep -af 'x11vnc .* -rfbport 5901' >/dev/null || pgrep -af 'x11vnc .* -rfbport 5900' >/dev/null; then
+  printf "  [OK] x11vnc rfbport 5900/5901\n"
+else
+  printf "  [MISSING] x11vnc rfbport 5900/5901\n"
+fi
 
 printf "\nMSFS install state\n"
 if [ -f "$MANIFEST" ]; then
@@ -73,9 +105,9 @@ fi
 printf "\nProton compatibility config\n"
 if [ -f "$COMPAT_TOOL_VDF" ]; then
   if command -v rg >/dev/null 2>&1; then
-    MATCH_CMD=(rg -n "1250410|proton|Proton" "$COMPAT_TOOL_VDF")
+    MATCH_CMD=(rg -n "1250410|2537590|proton|Proton" "$COMPAT_TOOL_VDF")
   else
-    MATCH_CMD=(grep -En "1250410|proton|Proton" "$COMPAT_TOOL_VDF")
+    MATCH_CMD=(grep -En "1250410|2537590|proton|Proton" "$COMPAT_TOOL_VDF")
   fi
   if "${MATCH_CMD[@]}" >/dev/null 2>&1; then
     printf "  [OK] compatibilitytools.vdf exists and contains Proton/app override entries\n"
@@ -95,7 +127,7 @@ fi
 
 if command -v ss >/dev/null 2>&1; then
   printf "\nStreaming ports\n"
-  ss -ltnup 2>/dev/null | awk 'NR==1 || /:47984|:47989|:47990|:48010|:5901/' || true
+  ss -ltnup 2>/dev/null | awk 'NR==1 || /:47984|:47989|:47990|:48010|:5900|:5901/' || true
 fi
 
 printf "\nCurrent UI capture\n"

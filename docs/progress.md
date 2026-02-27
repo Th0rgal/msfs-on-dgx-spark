@@ -167,3 +167,29 @@ Conclusion:
 
 - Goal remains blocked for the requested "Xbox login only, no Steam purchase" path.
 - To proceed locally on DGX, use a Steam account that already owns MSFS 2020 (or purchase on Steam), then complete first launch and sign into Xbox inside MSFS.
+
+## 2026-02-27 (09:10 UTC)
+
+Live progress after Steam Guard completion on `spark-de79`:
+
+- Steam account `her3sy` is now authenticated and stable in Library view (persona `Thomas`).
+- Updated automation/auth logic to avoid false negatives when `steamwebhelper` reports `-steamid=0` despite authenticated UI:
+  - `scripts/07-await-login-and-install.sh`
+  - `scripts/08-finalize-auth-and-run-msfs.sh`
+  - `scripts/06-verify-msfs-state.sh`
+- Verifier now reports `Steam auth: authenticated (ui-detected)` and accepts `x11vnc` on `5900` or `5901`.
+- `AppID 1250410` still does not auto-create an install manifest when triggered via URI in this session.
+- Library UI now clearly shows **Microsoft Flight Simulator 2024** with an Install flow (install dialog opened successfully). This indicates Steam entitlement exists for 2024 on this account.
+
+Current blocker to final "running" proof:
+
+- Install confirmation/download for the selected MSFS title has not yet been driven to an active manifest/download state in this unattended run.
+- Therefore, end-to-end launch verification is still pending.
+
+Artifacts from this run:
+
+- `output/steam-after-login-attempt-20260227T085252Z.png` (authenticated Steam UI)
+- `output/finalize-20260227T085915Z.log` (auth success + 1250410 manifest timeout)
+- `output/verify-20260227T090458Z.log` (updated verifier output)
+- `output/steam-state-20260227T090458Z.png` (Library with MSFS 2024 visible)
+- `output/steam-msfs2024-after-install-click-20260227T090739Z.png` (MSFS 2024 install dialog)

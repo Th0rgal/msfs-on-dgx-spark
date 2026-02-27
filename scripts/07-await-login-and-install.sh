@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DISPLAY_NUM="${DISPLAY_NUM:-:1}"
-MSFS_APPID="${MSFS_APPID:-1250410}"
+MSFS_APPID="${MSFS_APPID:-2537590}"
 POLL_SECONDS="${POLL_SECONDS:-15}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-1800}"  # 30 min login wait
 
@@ -27,6 +27,23 @@ steamid_from_processes() {
   pgrep -af steamwebhelper \
     | sed -n 's/.*-steamid=\([0-9][0-9]*\).*/\1/p' \
     | awk '$1 != 0 { print; exit }'
+}
+
+steam_session_authenticated() {
+  local sid
+  sid="$(steamid_from_processes || true)"
+  if [ -n "$sid" ]; then
+    return 0
+  fi
+
+  if command -v xdotool >/dev/null 2>&1; then
+    if DISPLAY="$DISPLAY_NUM" xdotool search --name "Steam" >/dev/null 2>&1 \
+      && ! DISPLAY="$DISPLAY_NUM" xdotool search --name "Sign in to Steam" >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+
+  return 1
 }
 
 print_manifest_state() {
@@ -57,10 +74,11 @@ echo "[1/4] Ensuring headless Steam stack is up..."
 "$(dirname "$0")/05-resume-headless-msfs.sh" install >/tmp/msfs-resume.log 2>&1 || true
 
 start_ts="$(date +%s)"
-echo "[2/4] Waiting for authenticated Steam session (steamid != 0)..."
+echo "[2/4] Waiting for authenticated Steam session..."
 while true; do
-  sid="$(steamid_from_processes || true)"
-  if [ -n "$sid" ]; then
+  if steam_session_authenticated; then
+    sid="$(steamid_from_processes || true)"
+    [ -z "$sid" ] && sid="ui-detected"
     echo "Authenticated Steam session detected: steamid=$sid"
     break
   fi
