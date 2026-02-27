@@ -137,3 +137,18 @@ Artifacts from this run:
 - `/tmp/finalize-msfs-20260227T0719Z.log`
 - `/tmp/verify-msfs-20260227T0719Z.log`
 - `/tmp/verify-launch-20260227T0720Z.log`
+
+## 2026-02-27 (07:57 UTC)
+
+Live retest on `spark-de79`:
+
+- SSH connectivity is healthy and runtime stack remains up (`Xvfb :1`, `openbox`, `steamwebhelper`, `x11vnc`, Sunshine).
+- `scripts/06-verify-msfs-state.sh` confirms `steamid=0` state and missing MSFS manifest (`appmanifest_1250410.acf`).
+- `scripts/08-finalize-auth-and-run-msfs.sh` re-run (`LOGIN_WAIT_SECONDS=120`, `POLL_SECONDS=10`) and continues waiting for authenticated Steam session.
+- Fresh UI screenshot confirms Steam is blocked at 5-character email Steam Guard prompt for account `her3sy`.
+
+Artifacts from this run:
+
+- `/tmp/steam-state-1250410.png`
+- `output/verify-20260227T075730Z.log`
+- `output/finalize-20260227T075730Z.log`
