@@ -820,3 +820,51 @@ Current assessment update:
 - Package-path preseed did not change BOOT_INIT failure behavior.
 - Non-Snap Steam path is currently blocked by namespace/uid-map restrictions in this DGX environment.
 - Remaining blocker continues to be runtime/platform stability on ARM + FEX + Proton for this title.
+
+## 2026-02-27 (19:50-19:54 UTC, UserCfg syntax fix + hard overlay test)
+
+This cycle targeted two untried high-probability causes:
+
+1. `UserCfg.opt` syntax ambiguity (previous preseed used `{InstalledPackagesPath ...}` form).
+2. Forcing one run with Steam overlay libraries physically removed from preload path.
+
+What was changed:
+
+- Added `scripts/23-fix-usercfg-format-and-test.sh`:
+  - Writes canonical line format in both roaming paths:
+    - `InstalledPackagesPath "C:\users\steamuser\AppData\Roaming\Microsoft Flight Simulator 2024\Packages"`
+  - Removes zero-byte `FlightSimulator2024.CFG` if present.
+  - Dispatches launch via `steam.pipe` and captures summary.
+- Added `scripts/24-test-hard-disable-overlay.sh`:
+  - Temporarily moves `gameoverlayrenderer.so` (32/64) before launch and restores afterward.
+  - Captures launch summary and crash signature.
+
+Validation outcomes:
+
+- `UserCfg` format fix did not change crash signature.
+  - New run at `2026-02-27T19:51:13Z` exited at `19:51:52Z`.
+  - Crash report (`2026-02-27T19:51:51Z`) remained:
+    - `Code=0xC0000005`
+    - `MainState:BOOT SubState:BOOT_INIT`
+    - `EnableD3D12=true`
+    - `NumRegisteredPackages=0`
+- Hard overlay-removal run also did not resolve boot crash.
+  - New run at `2026-02-27T19:53:08Z` exited at `19:53:47Z`.
+  - Crash report (`2026-02-27T19:53:46Z`) remained unchanged:
+    - `Code=0xC0000005`
+    - `MainState:BOOT SubState:BOOT_INIT`
+    - `EnableD3D12=true`
+    - `NumRegisteredPackages=0`
+
+Artifacts:
+
+- `output/usercfg-fix-cycle-20260227T195058Z.log`
+- `output/AsoboReport-Crash-2537590-usercfgfix-20260227T195151Z.txt`
+- `output/overlay-hardoff-cycle-20260227T195254Z.log`
+- `output/AsoboReport-Crash-2537590-hardoverlayoff-20260227T195347Z.txt`
+
+Updated assessment:
+
+- Launch dispatch and auth are working; multiple new sessions were created and executed.
+- Runtime still consistently fails in early boot with the same crash signature.
+- Remaining blocker remains platform/runtime compatibility on this ARM + FEX + Proton stack, not install/auth/dispatch or UserCfg/overlay toggles.
