@@ -763,3 +763,60 @@ Current assessment:
 - Install/auth/dispatch are now consistently working.
 - The remaining blocker is an early runtime crash during BOOT initialization under the current ARM + FEX + Steam Snap + Proton stack.
 - Most likely next attempts should target runtime container/proton internals (e.g., running outside Steam Snap confinement or testing a distinct proton/runtime build matrix), not Steam UI automation.
+
+## 2026-02-27 (19:26-19:35 UTC, package-path preseed + non-Snap runtime attempt)
+
+This cycle targeted two high-probability untried fixes:
+
+1. Missing package path bootstrap (`NumRegisteredPackages=0` in every crash report).
+2. Moving runtime off Steam Snap confinement via native Steam launcher under FEX.
+
+What was changed:
+
+- Added `scripts/22-preseed-msfs-usercfg.sh`.
+  - Seeds `UserCfg.opt` for MSFS 2024 in Proton prefix:
+    - `C:\users\steamuser\AppData\Roaming\Microsoft Flight Simulator 2024\Packages`
+  - Creates `Packages/Official` + `Packages/Community`.
+  - Mirrors `UserCfg.opt` into legacy `Microsoft Flight Simulator` roaming path.
+  - Backs up zero-byte `FlightSimulator2024.CFG` if present.
+
+Validation after preseed + launch via `steam.pipe`:
+
+- Launch dispatch accepted and produced new `StartSession` / `GameAction` events.
+- Crash signature unchanged:
+  - `Code=0xC0000005`
+  - `LastStates=" MainState:BOOT SubState:BOOT_INIT"`
+  - `EnableD3D12=true`
+  - `NumRegisteredPackages=0`
+- Latest observed crash timestamp in this cycle: `2026-02-27T19:25:55Z`.
+
+Non-Snap Steam attempt (new path):
+
+- Downloaded Valve Steam launcher bundle to `~/fex-steam-native/steam-launcher`.
+- Launched via `DISPLAY=:1 FEXBash ... ./steam`.
+- Native Steam bootstrap fails before usable client start with:
+  - `bwrap: setting up uid map: Permission denied`
+  - `Error: Steam now requires user namespaces to be enabled.`
+- Host-level checks show:
+  - `/proc/sys/kernel/unprivileged_userns_clone=1`
+  - `unshare -Urm true` still fails (`Operation not permitted`), including under FEX.
+- Attempted workaround:
+  - setuid root on `/usr/bin/bwrap` succeeded (`bwrap` basic test passes),
+  - but Steam runtime check still fails with uid-map permission error.
+
+Proton toolchain attempt:
+
+- Triggered installs for `AppID 3658110` (Proton 10) and `2180100` (Hotfix) via Steam pipe.
+- `appinfo_log` shows only `RequestAppInfoUpdate` entries; no content download/install occurred.
+
+Artifacts:
+
+- `output/preseed-usercfg-20260227T192636Z.log`
+- `output/preseed-launch-20260227T192636Z.log`
+- `output/native-steam-state-20260227T193240Z.png`
+
+Current assessment update:
+
+- Package-path preseed did not change BOOT_INIT failure behavior.
+- Non-Snap Steam path is currently blocked by namespace/uid-map restrictions in this DGX environment.
+- Remaining blocker continues to be runtime/platform stability on ARM + FEX + Proton for this title.
