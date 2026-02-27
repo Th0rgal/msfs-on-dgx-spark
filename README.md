@@ -103,19 +103,22 @@ NVIDIA GB10 Blackwell GPU
 
 # 4. (Optional) Set up remote streaming
 ./scripts/04-setup-streaming.sh
+
+# 5. Resume/create headless Steam session and trigger MSFS install
+./scripts/05-resume-headless-msfs.sh install
 ```
 
-See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions.
+See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [docs/progress.md](docs/progress.md) for live validation notes.
 
 ## Project Status
 
 | Phase | Status |
 |-------|--------|
 | Research & documentation | Done |
-| Vulkan driver fix | Script ready, untested |
-| FEX + Steam installation | Script ready, untested |
-| MSFS 2020 launch attempt | Not started |
-| MSFS 2020 playable | Not started |
+| Vulkan driver fix | Validated on DGX (580.95.05 Vulkan active) |
+| FEX + Steam installation | Validated (Steam Snap on ARM64) |
+| MSFS 2020 launch attempt | In progress (blocked at Steam Guard login) |
+| MSFS 2020 playable | Pending full install + first boot |
 | MSFS 2024 attempt | Not started |
 | Performance tuning (DLSS, MFG) | Not started |
 
@@ -128,13 +131,14 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions.
 │   ├── 01-fix-vulkan.sh       # Fix Vulkan driver on DGX Spark
 │   ├── 02-install-fex-steam.sh # Install FEX-Emu and Steam
 │   ├── 03-configure-msfs.sh   # Configure Proton for MSFS
-│   └── 04-setup-streaming.sh  # Set up Sunshine for remote play
+│   ├── 04-setup-streaming.sh  # Set up Sunshine for remote play
+│   └── 05-resume-headless-msfs.sh # Resume headless Steam session + MSFS install/launch
 └── docs/
     ├── setup-guide.md         # Detailed setup walkthrough
+    ├── progress.md            # Live validation status and blockers
     ├── research.md            # Full research notes
     └── troubleshooting.md     # Known issues and fixes
 ```
-
 ## Contributing
 
 This is uncharted territory. If you have a DGX Spark and want to help, open an issue or PR. Particularly useful:

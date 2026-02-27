@@ -3,9 +3,6 @@
 #
 # Since the DGX Spark may be headless or you may want to play from
 # another device, Sunshine + Moonlight provides low-latency game streaming.
-#
-# Sunshine is the open-source self-hosted alternative to NVIDIA GameStream.
-# Moonlight is the client (runs on PC, Mac, iOS, Android, etc.)
 set -euo pipefail
 
 echo "=== Sunshine Streaming Setup ==="
@@ -18,32 +15,36 @@ if [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
     echo ""
     echo "Options:"
     echo "  1. Connect a physical display to the DGX Spark"
-    echo "  2. Use a virtual display (instructions below)"
+    echo "  2. Use a virtual display (Xvfb) + x11vnc"
     echo ""
 fi
 
 echo "[1/3] Installing Sunshine..."
 if command -v sunshine &>/dev/null; then
     echo "  Sunshine already installed."
-    sunshine --version 2>/dev/null || true
+    sunshine --version 2>/dev/null | head -n 3 || true
 else
-    echo "  Installing Sunshine from GitHub releases..."
-    echo ""
-    echo "  Option A: Snap (easiest)"
-    echo "    sudo snap install sunshine --edge"
-    echo ""
-    echo "  Option B: .deb package"
-    echo "    Visit: https://github.com/LizardByte/Sunshine/releases"
-    echo "    Download the arm64 .deb for Ubuntu 24.04"
-    echo "    sudo dpkg -i sunshine-*.deb"
-    echo "    sudo apt-get install -f"
-    echo ""
+    ARCH=$(dpkg --print-architecture)
+    if [[ "$ARCH" != "arm64" && "$ARCH" != "amd64" ]]; then
+        echo "  ERROR: Unsupported architecture for packaged Sunshine: $ARCH"
+        exit 1
+    fi
 
-    read -rp "  Install via snap? [Y/n] " INSTALL_SNAP
-    if [[ "${INSTALL_SNAP:-y}" != [nN] ]]; then
-        sudo snap install sunshine --edge || {
-            echo "  Snap install failed. Try the .deb method above."
-        }
+    DEB_URL="https://github.com/LizardByte/Sunshine/releases/latest/download/sunshine-ubuntu-24.04-${ARCH}.deb"
+    DEB_FILE="/tmp/sunshine-ubuntu-24.04-${ARCH}.deb"
+
+    echo "  Downloading Sunshine package: $DEB_URL"
+    curl -fL "$DEB_URL" -o "$DEB_FILE"
+
+    echo "  Installing Sunshine package..."
+    sudo dpkg -i "$DEB_FILE" || sudo apt-get -f install -y
+
+    echo "  Verifying Sunshine installation..."
+    if command -v sunshine &>/dev/null; then
+        sunshine --version 2>/dev/null | head -n 3 || true
+    else
+        echo "  ERROR: Sunshine install failed."
+        exit 1
     fi
 fi
 
@@ -53,25 +54,13 @@ echo "[2/3] Virtual display configuration..."
 echo ""
 echo "  If running headless, you need a virtual display for Sunshine to capture."
 echo ""
-echo "  Method: udev virtual monitor (NVIDIA driver-level)"
-echo "  Create /etc/X11/xorg.conf.d/99-virtual.conf with:"
+echo "  Quick headless option (temporary):"
+echo "    Xvfb :1 -screen 0 1920x1080x24 &"
+echo "    DISPLAY=:1 openbox &"
+echo "    DISPLAY=:1 sunshine"
 echo ""
-echo '  Section "Device"'
-echo '      Identifier "NVIDIA"'
-echo '      Driver "nvidia"'
-echo '  EndSection'
-echo ""
-echo '  Section "Screen"'
-echo '      Identifier "Default Screen"'
-echo '      Device "NVIDIA"'
-echo '      DefaultDepth 24'
-echo '      SubSection "Display"'
-echo '          Depth 24'
-echo '          Modes "1920x1080"'
-echo '      EndSubSection'
-echo '  EndSection'
-echo ""
-echo "  Alternatively, use a headless HDMI dummy plug (~\$10) for a real signal."
+echo "  Persistent option:"
+echo "    Configure a real or virtual monitor in Xorg, or use a headless HDMI dummy plug."
 
 # Moonlight client info
 echo ""
@@ -79,8 +68,8 @@ echo "[3/3] Moonlight client setup..."
 echo ""
 echo "  Install Moonlight on your client device:"
 echo "  - PC/Mac: https://moonlight-stream.org/"
-echo "  - iOS: App Store → Moonlight Game Streaming"
-echo "  - Android: Play Store → Moonlight Game Streaming"
+echo "  - iOS: App Store -> Moonlight Game Streaming"
+echo "  - Android: Play Store -> Moonlight Game Streaming"
 echo ""
 echo "  Pairing:"
 echo "  1. Start Sunshine on DGX Spark: sunshine"

@@ -153,6 +153,23 @@ DXVK_HUD=fps,devinfo %command% -FastLaunch
 3. The game will download additional content (scenery, world data) — this is normal and can be 100+ GB
 4. Monitor the terminal for errors
 
+### Headless resume (Steam Guard / reconnect-safe)
+
+If your SSH/VNC session drops or Steam Guard interrupts login, run:
+
+```bash
+./scripts/05-resume-headless-msfs.sh install
+```
+
+This restarts `Xvfb`, `openbox`, Steam, and `x11vnc` on `127.0.0.1:5901`, then re-triggers the MSFS install URI.
+
+After installation completes, trigger launch:
+
+```bash
+./scripts/05-resume-headless-msfs.sh launch
+```
+
+
 ## Phase 4: Remote Streaming (Optional)
 
 If the DGX Spark is headless or you want to play from another device, use Sunshine + Moonlight.
@@ -160,10 +177,12 @@ If the DGX Spark is headless or you want to play from another device, use Sunshi
 ### Install Sunshine
 
 ```bash
-sudo snap install sunshine --edge
+ARCH=$(dpkg --print-architecture)
+curl -fL "https://github.com/LizardByte/Sunshine/releases/latest/download/sunshine-ubuntu-24.04-${ARCH}.deb" -o /tmp/sunshine.deb
+sudo dpkg -i /tmp/sunshine.deb || sudo apt-get -f install -y
 ```
 
-Or download the ARM64 .deb from [Sunshine releases](https://github.com/LizardByte/Sunshine/releases).
+The Snap package is no longer available on this DGX image; use the GitHub release .deb instead.
 
 ### Configure Sunshine
 
