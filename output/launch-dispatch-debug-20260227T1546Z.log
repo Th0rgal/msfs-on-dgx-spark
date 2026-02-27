@@ -1,0 +1,100 @@
+Updated launch options for AppID 2537590 in:
+  /home/th0rgal/snap/steam/common/.local/share/Steam/userdata/391443739/7/remote/sharedconfig.vdf
+22:					"2537590"
+25:						"LaunchOptions"		"PROTON_LOG=1 PROTON_USE_WINED3D=1 PROTON_NO_ESYNC=1 PROTON_NO_FSYNC=1 %command% -dx11 -FastLaunch"
+Debug launch dispatch
+  Time (UTC): 2026-02-27T15:46:20Z
+  Display: :1
+  AppID: 2537590
+  Mode: uri
+  GameAction count before: 17
+  GameAction count after:  17
+RESULT: no new GameAction entries; launch request not accepted by current client state.
+1130:[2026-02-27 14:26:44] GameAction [AppID 2537590, ActionID 1] : LaunchApp changed task to ProcessingShaderCache with ""
+1131:[2026-02-27 14:26:44] GameAction [AppID 2537590, ActionID 1] : LaunchApp waiting for user response to ProcessingShaderCache ""
+1132:[2026-02-27 14:26:53] GameAction [AppID 2537590, ActionID 1] : LaunchApp changed task to SiteLicenseSeatCheckout with ""
+1133:[2026-02-27 14:26:53] GameAction [AppID 2537590, ActionID 1] : LaunchApp changed task to DelayLaunch with ""
+1134:[2026-02-27 14:26:53] GameAction [AppID 2537590, ActionID 1] : LaunchApp changed task to CreatingProcess with ""
+1135:[2026-02-27 14:26:53] GameAction [AppID 2537590, ActionID 1] : LaunchApp waiting for user response to CreatingProcess ""
+1136:[2026-02-27 14:26:53] GameAction [AppID 2537590, ActionID 1] : LaunchApp continues with user response "CreatingProcess"
+1138:[2026-02-27 14:26:53] Game process added : AppID 2537590 "/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam-launch-wrapper -- /home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/reaper SteamLaunch AppId=2537590 -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper'/_v2-entry-point --verb=waitforexitandrun -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/Proton - Experimental'/proton waitforexitandrun  '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/MSFS2024/FlightSimulator2024.exe'", ProcID 79022, IP 0.0.0.0:0
+1139:[2026-02-27 14:26:54] GameAction [AppID 2537590, ActionID 1] : LaunchApp changed task to WaitingGameWindow with ""
+1140:[2026-02-27 14:26:54] GameAction [AppID 2537590, ActionID 1] : LaunchApp changed task to Completed with ""
+1145:[2026-02-27 14:27:04] Game process updated : AppID 2537590 "/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam-launch-wrapper -- /home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/reaper SteamLaunch AppId=2537590 -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper'/_v2-entry-point --verb=waitforexitandrun -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/Proton - Experimental'/proton waitforexitandrun  '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/MSFS2024/FlightSimulator2024.exe'", ProcID 79078, IP 0.0.0.0:0
+1146:[2026-02-27 14:27:26] Game process updated : AppID 2537590 "/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam-launch-wrapper -- /home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/reaper SteamLaunch AppId=2537590 -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper'/_v2-entry-point --verb=waitforexitandrun -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/Proton - Experimental'/proton waitforexitandrun  '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/MSFS2024/FlightSimulator2024.exe'", ProcID 79150, IP 0.0.0.0:0
+1156:[2026-02-27 14:27:43] Game process removed: AppID 2537590 "/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam-launch-wrapper -- /home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/reaper SteamLaunch AppId=2537590 -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper'/_v2-entry-point --verb=waitforexitandrun -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/Proton - Experimental'/proton waitforexitandrun  '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/MSFS2024/FlightSimulator2024.exe'", ProcID 79150 
+1161:[2026-02-27 14:29:11] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1162:[2026-02-27 14:29:13] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1163:[2026-02-27 14:29:15] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1164:[2026-02-27 14:33:45] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1212:[2026-02-27 14:46:36] ExecCommandLine: "'/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam' '-srt-logger-opened' '-no-cef-sandbox'"
+1222:[2026-02-27 14:46:40] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1223:[2026-02-27 14:48:23] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1224:[2026-02-27 14:48:25] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1225:[2026-02-27 14:48:28] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1226:[2026-02-27 14:51:02] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1227:[2026-02-27 14:56:49] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1228:[2026-02-27 14:56:53] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1229:[2026-02-27 14:56:57] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1230:[2026-02-27 14:57:01] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1277:[2026-02-27 15:05:39] ExecCommandLine: "'/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam' '-srt-logger-opened' '-no-cef-sandbox'"
+1278:[2026-02-27 15:05:39] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1289:[2026-02-27 15:12:12] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1290:[2026-02-27 15:14:25] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1291:[2026-02-27 15:16:03] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1339:[2026-02-27 15:25:40] ExecCommandLine: "'/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam' '-srt-logger-opened' '-no-cef-sandbox'"
+1340:[2026-02-27 15:25:40] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1351:[2026-02-27 15:27:24] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1352:[2026-02-27 15:30:45] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1353:[2026-02-27 15:36:50] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1354:[2026-02-27 15:36:52] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1387:[2026-02-27 15:39:46] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1388:[2026-02-27 15:46:22] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+Debug launch dispatch
+  Time (UTC): 2026-02-27T15:46:32Z
+  Display: :1
+  AppID: 2537590
+  Mode: applaunch
+  GameAction count before: 17
+  GameAction count after:  17
+RESULT: no new GameAction entries; launch request not accepted by current client state.
+1131:[2026-02-27 14:26:44] GameAction [AppID 2537590, ActionID 1] : LaunchApp waiting for user response to ProcessingShaderCache ""
+1132:[2026-02-27 14:26:53] GameAction [AppID 2537590, ActionID 1] : LaunchApp changed task to SiteLicenseSeatCheckout with ""
+1133:[2026-02-27 14:26:53] GameAction [AppID 2537590, ActionID 1] : LaunchApp changed task to DelayLaunch with ""
+1134:[2026-02-27 14:26:53] GameAction [AppID 2537590, ActionID 1] : LaunchApp changed task to CreatingProcess with ""
+1135:[2026-02-27 14:26:53] GameAction [AppID 2537590, ActionID 1] : LaunchApp waiting for user response to CreatingProcess ""
+1136:[2026-02-27 14:26:53] GameAction [AppID 2537590, ActionID 1] : LaunchApp continues with user response "CreatingProcess"
+1138:[2026-02-27 14:26:53] Game process added : AppID 2537590 "/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam-launch-wrapper -- /home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/reaper SteamLaunch AppId=2537590 -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper'/_v2-entry-point --verb=waitforexitandrun -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/Proton - Experimental'/proton waitforexitandrun  '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/MSFS2024/FlightSimulator2024.exe'", ProcID 79022, IP 0.0.0.0:0
+1139:[2026-02-27 14:26:54] GameAction [AppID 2537590, ActionID 1] : LaunchApp changed task to WaitingGameWindow with ""
+1140:[2026-02-27 14:26:54] GameAction [AppID 2537590, ActionID 1] : LaunchApp changed task to Completed with ""
+1145:[2026-02-27 14:27:04] Game process updated : AppID 2537590 "/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam-launch-wrapper -- /home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/reaper SteamLaunch AppId=2537590 -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper'/_v2-entry-point --verb=waitforexitandrun -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/Proton - Experimental'/proton waitforexitandrun  '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/MSFS2024/FlightSimulator2024.exe'", ProcID 79078, IP 0.0.0.0:0
+1146:[2026-02-27 14:27:26] Game process updated : AppID 2537590 "/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam-launch-wrapper -- /home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/reaper SteamLaunch AppId=2537590 -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper'/_v2-entry-point --verb=waitforexitandrun -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/Proton - Experimental'/proton waitforexitandrun  '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/MSFS2024/FlightSimulator2024.exe'", ProcID 79150, IP 0.0.0.0:0
+1156:[2026-02-27 14:27:43] Game process removed: AppID 2537590 "/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam-launch-wrapper -- /home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/reaper SteamLaunch AppId=2537590 -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper'/_v2-entry-point --verb=waitforexitandrun -- '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/Proton - Experimental'/proton waitforexitandrun  '/home/th0rgal/snap/steam/common/.local/share/Steam/steamapps/common/MSFS2024/FlightSimulator2024.exe'", ProcID 79150 
+1161:[2026-02-27 14:29:11] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1162:[2026-02-27 14:29:13] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1163:[2026-02-27 14:29:15] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1164:[2026-02-27 14:33:45] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1212:[2026-02-27 14:46:36] ExecCommandLine: "'/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam' '-srt-logger-opened' '-no-cef-sandbox'"
+1222:[2026-02-27 14:46:40] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1223:[2026-02-27 14:48:23] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1224:[2026-02-27 14:48:25] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1225:[2026-02-27 14:48:28] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1226:[2026-02-27 14:51:02] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1227:[2026-02-27 14:56:49] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1228:[2026-02-27 14:56:53] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1229:[2026-02-27 14:56:57] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1230:[2026-02-27 14:57:01] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1277:[2026-02-27 15:05:39] ExecCommandLine: "'/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam' '-srt-logger-opened' '-no-cef-sandbox'"
+1278:[2026-02-27 15:05:39] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1289:[2026-02-27 15:12:12] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1290:[2026-02-27 15:14:25] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1291:[2026-02-27 15:16:03] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1339:[2026-02-27 15:25:40] ExecCommandLine: "'/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam' '-srt-logger-opened' '-no-cef-sandbox'"
+1340:[2026-02-27 15:25:40] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1351:[2026-02-27 15:27:24] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1352:[2026-02-27 15:30:45] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1353:[2026-02-27 15:36:50] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1354:[2026-02-27 15:36:52] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1387:[2026-02-27 15:39:46] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1388:[2026-02-27 15:46:22] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+1389:[2026-02-27 15:46:35] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"

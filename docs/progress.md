@@ -419,3 +419,39 @@ Current most likely next fix not yet validated end-to-end:
   - force non-Experimental Proton variant (e.g. `proton_10`/`proton_hotfix` or GE-Proton), and
   - force DX11 launch option.
 - Then capture new Asobo/Proton artifacts to confirm whether boot passes `BOOT_INIT`.
+
+## 2026-02-27 (15:46 UTC, safe launch profile + dispatch-path isolation)
+
+Continued live triage on `spark-de79` with a focus on isolating whether the current blocker is runtime-crash or launch-dispatch:
+
+- Added automation to set per-title launch options in Steam config:
+  - `scripts/12-set-msfs-launch-options.sh`
+  - Applied on DGX for `2537590`:
+    - `PROTON_LOG=1 PROTON_USE_WINED3D=1 PROTON_NO_ESYNC=1 PROTON_NO_FSYNC=1 %command% -dx11 -FastLaunch`
+- Added automation to verify whether Steam accepted a launch request by tracking `GameAction` deltas:
+  - `scripts/13-debug-launch-dispatch.sh`
+  - Ran both `uri` and `applaunch` modes live.
+
+Observed results:
+
+1. Launch options are now definitely written in `sharedconfig.vdf` for AppID `2537590`.
+2. Both launch-dispatch paths still fail to enqueue a new launch in the current client state:
+   - `steam://rungameid/2537590` -> no new `GameAction [AppID 2537590]` lines
+   - `steam -applaunch 2537590` -> no new `GameAction [AppID 2537590]` lines
+3. Existing crash file timestamp remained unchanged (last real game run still at `2026-02-27 14:27:42Z`), confirming no new runtime attempt was produced in this pass.
+4. Attempting a fully direct FEX wrapper launch outside Steam dispatch failed earlier in container setup:
+   - `steam-launch-wrapper: $XDG_RUNTIME_DIR not set`
+   - `pressure-vessel-wrap ... bwrap: setting up uid map: Permission denied`
+   - This means direct wrapper invocation is not a valid replacement for Steam-managed launch on this host.
+
+Conclusion from this pass:
+
+- Current top blocker has shifted to Steam client launch-dispatch acceptance in this headless session.
+- Runtime crash (`BOOT_INIT` / `SEH 0xC0000005`) remains the last confirmed launch outcome, but we cannot test new runtime knobs until dispatch is accepted again.
+
+Artifacts from this pass:
+
+- `output/launch-dispatch-debug-20260227T1546Z.log`
+- `output/msfs-direct-fex-20260227T1540Z.log`
+- `output/steam-console-tail-20260227T1540Z.log`
+- `output/steam-state-20260227T1540Z.png`

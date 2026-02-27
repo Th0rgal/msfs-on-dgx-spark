@@ -1,0 +1,3 @@
+steam-launch-wrapper: $XDG_RUNTIME_DIR not set.
+pressure-vessel-wrap[93945]: E: Child process exited with code 1: bwrap: setting up uid map: Permission denied
+

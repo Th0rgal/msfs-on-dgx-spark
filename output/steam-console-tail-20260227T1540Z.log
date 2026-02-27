@@ -1,0 +1,220 @@
+[2026-02-27 14:46:15] Client version: 1769025840
+[2026-02-27 14:46:15] wayland: skipping init because GAMESCOPE_WAYLAND_DISPLAY is not set
+[2026-02-27 14:46:15] Warning: wayland init failed, some functionality may be unavailable
+[2026-02-27 14:46:15] Container detected, disabling HIDAPI udev integration
+[2026-02-27 14:46:15] Container detected, disabling udev integration
+[2026-02-27 14:46:15] Loaded SDL version release-3.4.0-98-gb1362f8a4
+[2026-02-27 14:46:15] GetWin32Stats: display was not open yet, good
+[2026-02-27 14:46:15] ThreadGetProcessExitCode: no such process 82674
+[2026-02-27 14:46:15] ChildProcessQuery: failed with code -1
+[2026-02-27 14:46:15] CGpuTopology: failed to run gpu topology query
+[2026-02-27 14:46:15] GetWin32Stats: display was not open yet, good
+[2026-02-27 14:46:15] IPC function call IClientUtils::GetSteamRealm took too long: 71 msec
+[2026-02-27 14:46:15] wayland: skipping init because GAMESCOPE_WAYLAND_DISPLAY is not set
+[2026-02-27 14:46:15] Steam Runtime Launch Service: starting steam-runtime-launcher-service
+[2026-02-27 14:46:15] Steam Runtime Launch Service: steam-runtime-launcher-service is running pid 82801
+[2026-02-27 14:46:15] Warning: failed to set thread priority: set failed for 8: setpriority() failed
+[2026-02-27 14:46:15] Warning: failed to set thread priority: set failed for priority 8
+[2026-02-27 14:46:15] Warning: support for elevated priorities is most likely unavailable, suppressing future warnings
+[2026-02-27 14:46:15] Warning: failed to set thread priority: set failed for 8: setpriority() failed
+[2026-02-27 14:46:15] IPC function call IClientNetworkDeviceManager::IsInterfaceValid took too long: 88 msec
+[2026-02-27 14:46:15] Failed to init SteamVR because it isn't installed
+[2026-02-27 14:46:25] Console Log Start
+[2026-02-27 14:46:29] GetIPCConnectionDetails: lsof -P -F upnR -i TCP@127.0.0.1:45964
+[2026-02-27 14:46:29] GetIPCConnectionDetails: lsof -P -F upnR -i TCP@127.0.0.1:39678
+[2026-02-27 14:46:29] GetIPCConnectionDetails: p82615
+[2026-02-27 14:46:29] GetIPCConnectionDetails: R82493
+[2026-02-27 14:46:29] GetIPCConnectionDetails: u1000
+[2026-02-27 14:46:29] GetIPCConnectionDetails: nlocalhost:38579->localhost:45964
+[2026-02-27 14:46:29] GetIPCConnectionDetails: p83048
+[2026-02-27 14:46:29] GetIPCConnectionDetails: R82965
+[2026-02-27 14:46:29] GetIPCConnectionDetails: u1000
+[2026-02-27 14:46:29] GetIPCConnectionDetails: nlocalhost:45964->localhost:38579
+[2026-02-27 14:46:29] GetIPCConnectionDetails: p82615
+[2026-02-27 14:46:29] GetIPCConnectionDetails: R82493
+[2026-02-27 14:46:29] GetIPCConnectionDetails: u1000
+[2026-02-27 14:46:29] GetIPCConnectionDetails: nlocalhost:33085->localhost:39678
+[2026-02-27 14:46:29] GetIPCConnectionDetails: p83048
+[2026-02-27 14:46:29] GetIPCConnectionDetails: R82965
+[2026-02-27 14:46:29] GetIPCConnectionDetails: u1000
+[2026-02-27 14:46:29] GetIPCConnectionDetails: nlocalhost:39678->localhost:33085
+[2026-02-27 14:46:31] GLibLog: domain:Gtk  msg:gtk_disable_setlocale() must be called before gtk_init()
+[2026-02-27 14:46:31] local (potentially out of sync) copy of roaming config loaded - 385 bytes.
+[2026-02-27 14:46:33] roaming config store loaded successfully - 385 bytes.
+[2026-02-27 14:46:34] System startup time: 18.58 seconds
+[2026-02-27 14:46:36] ExecCommandLine: "'/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam' '-srt-logger-opened' '-no-cef-sandbox'"
+[2026-02-27 14:46:36] GetIPCConnectionDetails: lsof -P -F upnR -i TCP@127.0.0.1:38696
+[2026-02-27 14:46:36] GetIPCConnectionDetails: p82615
+[2026-02-27 14:46:36] GetIPCConnectionDetails: R82493
+[2026-02-27 14:46:36] GetIPCConnectionDetails: u1000
+[2026-02-27 14:46:36] GetIPCConnectionDetails: nlocalhost:27060->localhost:38696
+[2026-02-27 14:46:36] GetIPCConnectionDetails: p83048
+[2026-02-27 14:46:36] GetIPCConnectionDetails: R82965
+[2026-02-27 14:46:36] GetIPCConnectionDetails: u1000
+[2026-02-27 14:46:36] GetIPCConnectionDetails: nlocalhost:38696->localhost:27060
+[2026-02-27 14:46:40] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 14:48:23] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 14:48:25] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 14:48:28] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 14:51:02] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 14:56:49] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 14:56:53] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 14:56:57] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 14:57:01] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+
+
+[2026-02-27 15:05:19] Client version: 1769025840
+[2026-02-27 15:05:19] wayland: skipping init because GAMESCOPE_WAYLAND_DISPLAY is not set
+[2026-02-27 15:05:19] Warning: wayland init failed, some functionality may be unavailable
+[2026-02-27 15:05:19] Container detected, disabling HIDAPI udev integration
+[2026-02-27 15:05:19] Container detected, disabling udev integration
+[2026-02-27 15:05:19] Loaded SDL version release-3.4.0-98-gb1362f8a4
+[2026-02-27 15:05:19] GetWin32Stats: display was not open yet, good
+[2026-02-27 15:05:19] ThreadGetProcessExitCode: no such process 87106
+[2026-02-27 15:05:19] ChildProcessQuery: failed with code -1
+[2026-02-27 15:05:19] CGpuTopology: failed to run gpu topology query
+[2026-02-27 15:05:19] GetWin32Stats: display was not open yet, good
+[2026-02-27 15:05:19] IPC function call IClientUtils::GetSteamRealm took too long: 86 msec
+[2026-02-27 15:05:19] wayland: skipping init because GAMESCOPE_WAYLAND_DISPLAY is not set
+[2026-02-27 15:05:19] Steam Runtime Launch Service: starting steam-runtime-launcher-service
+[2026-02-27 15:05:19] Steam Runtime Launch Service: steam-runtime-launcher-service is running pid 87232
+[2026-02-27 15:05:19] Warning: failed to set thread priority: set failed for 8: setpriority() failed
+[2026-02-27 15:05:19] Warning: failed to set thread priority: set failed for priority 8
+[2026-02-27 15:05:19] Warning: support for elevated priorities is most likely unavailable, suppressing future warnings
+[2026-02-27 15:05:19] Warning: failed to set thread priority: set failed for 8: setpriority() failed
+[2026-02-27 15:05:19] IPC function call IClientNetworkDeviceManager::IsInterfaceValid took too long: 87 msec
+[2026-02-27 15:05:19] Failed to init SteamVR because it isn't installed
+[2026-02-27 15:05:28] Console Log Start
+[2026-02-27 15:05:33] GetIPCConnectionDetails: lsof -P -F upnR -i TCP@127.0.0.1:35750
+[2026-02-27 15:05:33] GetIPCConnectionDetails: lsof -P -F upnR -i TCP@127.0.0.1:40086
+[2026-02-27 15:05:33] GetIPCConnectionDetails: p87048
+[2026-02-27 15:05:33] GetIPCConnectionDetails: R86924
+[2026-02-27 15:05:33] GetIPCConnectionDetails: u1000
+[2026-02-27 15:05:33] GetIPCConnectionDetails: nlocalhost:39693->localhost:35750
+[2026-02-27 15:05:33] GetIPCConnectionDetails: p87541
+[2026-02-27 15:05:33] GetIPCConnectionDetails: R87395
+[2026-02-27 15:05:33] GetIPCConnectionDetails: u1000
+[2026-02-27 15:05:33] GetIPCConnectionDetails: nlocalhost:35750->localhost:39693
+[2026-02-27 15:05:33] GetIPCConnectionDetails: p87048
+[2026-02-27 15:05:33] GetIPCConnectionDetails: R86924
+[2026-02-27 15:05:33] GetIPCConnectionDetails: u1000
+[2026-02-27 15:05:33] GetIPCConnectionDetails: nlocalhost:46339->localhost:40086
+[2026-02-27 15:05:33] GetIPCConnectionDetails: p87541
+[2026-02-27 15:05:33] GetIPCConnectionDetails: R87395
+[2026-02-27 15:05:33] GetIPCConnectionDetails: u1000
+[2026-02-27 15:05:33] GetIPCConnectionDetails: nlocalhost:40086->localhost:46339
+[2026-02-27 15:05:35] GLibLog: domain:Gtk  msg:gtk_disable_setlocale() must be called before gtk_init()
+[2026-02-27 15:05:35] local (potentially out of sync) copy of roaming config loaded - 385 bytes.
+[2026-02-27 15:05:37] roaming config store loaded successfully - 385 bytes.
+[2026-02-27 15:05:37] System startup time: 18.01 seconds
+[2026-02-27 15:05:39] ExecCommandLine: "'/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam' '-srt-logger-opened' '-no-cef-sandbox'"
+[2026-02-27 15:05:39] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 15:05:40] GetIPCConnectionDetails: lsof -P -F upnR -i TCP@127.0.0.1:33492
+[2026-02-27 15:05:40] GetIPCConnectionDetails: p87048
+[2026-02-27 15:05:40] GetIPCConnectionDetails: R86924
+[2026-02-27 15:05:40] GetIPCConnectionDetails: u1000
+[2026-02-27 15:05:40] GetIPCConnectionDetails: nlocalhost:27060->localhost:33492
+[2026-02-27 15:05:40] GetIPCConnectionDetails: p87541
+[2026-02-27 15:05:40] GetIPCConnectionDetails: R87395
+[2026-02-27 15:05:40] GetIPCConnectionDetails: u1000
+[2026-02-27 15:05:40] GetIPCConnectionDetails: nlocalhost:33492->localhost:27060
+[2026-02-27 15:05:40] IPC function call IClientUtils::GetGameOverlayUIInstanceFocusGameID took too long: 383 msec
+[2026-02-27 15:12:12] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 15:14:25] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 15:16:03] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 15:24:58] Created mapping SteamChrome_MasterStream_uid1000_spid87048_mem when set to fail if created
+
+
+[2026-02-27 15:25:21] Client version: 1769025840
+[2026-02-27 15:25:21] wayland: skipping init because GAMESCOPE_WAYLAND_DISPLAY is not set
+[2026-02-27 15:25:21] Warning: wayland init failed, some functionality may be unavailable
+[2026-02-27 15:25:21] Container detected, disabling HIDAPI udev integration
+[2026-02-27 15:25:21] Container detected, disabling udev integration
+[2026-02-27 15:25:21] Loaded SDL version release-3.4.0-98-gb1362f8a4
+[2026-02-27 15:25:21] GetWin32Stats: display was not open yet, good
+[2026-02-27 15:25:21] ThreadGetProcessExitCode: no such process 90081
+[2026-02-27 15:25:21] ChildProcessQuery: failed with code -1
+[2026-02-27 15:25:21] CGpuTopology: failed to run gpu topology query
+[2026-02-27 15:25:21] GetWin32Stats: display was not open yet, good
+[2026-02-27 15:25:21] IPC function call IClientUtils::GetSteamRealm took too long: 66 msec
+[2026-02-27 15:25:21] wayland: skipping init because GAMESCOPE_WAYLAND_DISPLAY is not set
+[2026-02-27 15:25:21] Steam Runtime Launch Service: starting steam-runtime-launcher-service
+[2026-02-27 15:25:21] Steam Runtime Launch Service: steam-runtime-launcher-service is running pid 90209
+[2026-02-27 15:25:21] Warning: failed to set thread priority: set failed for 8: setpriority() failed
+[2026-02-27 15:25:21] Warning: failed to set thread priority: set failed for priority 8
+[2026-02-27 15:25:21] Warning: support for elevated priorities is most likely unavailable, suppressing future warnings
+[2026-02-27 15:25:21] Warning: failed to set thread priority: set failed for 8: setpriority() failed
+[2026-02-27 15:25:21] IPC function call IClientNetworkDeviceManager::IsInterfaceValid took too long: 91 msec
+[2026-02-27 15:25:21] Failed to init SteamVR because it isn't installed
+[2026-02-27 15:25:30] Console Log Start
+[2026-02-27 15:25:34] GetIPCConnectionDetails: lsof -P -F upnR -i TCP@127.0.0.1:44026
+[2026-02-27 15:25:34] GetIPCConnectionDetails: lsof -P -F upnR -i TCP@127.0.0.1:46802
+[2026-02-27 15:25:34] GetIPCConnectionDetails: p90024
+[2026-02-27 15:25:34] GetIPCConnectionDetails: R89904
+[2026-02-27 15:25:34] GetIPCConnectionDetails: u1000
+[2026-02-27 15:25:34] GetIPCConnectionDetails: nlocalhost:44045->localhost:44026
+[2026-02-27 15:25:34] GetIPCConnectionDetails: p90454
+[2026-02-27 15:25:34] GetIPCConnectionDetails: R90370
+[2026-02-27 15:25:34] GetIPCConnectionDetails: u1000
+[2026-02-27 15:25:34] GetIPCConnectionDetails: nlocalhost:44026->localhost:44045
+[2026-02-27 15:25:34] GetIPCConnectionDetails: p90024
+[2026-02-27 15:25:34] GetIPCConnectionDetails: R89904
+[2026-02-27 15:25:34] GetIPCConnectionDetails: u1000
+[2026-02-27 15:25:34] GetIPCConnectionDetails: nlocalhost:38591->localhost:46802
+[2026-02-27 15:25:34] GetIPCConnectionDetails: p90454
+[2026-02-27 15:25:34] GetIPCConnectionDetails: R90370
+[2026-02-27 15:25:34] GetIPCConnectionDetails: u1000
+[2026-02-27 15:25:34] GetIPCConnectionDetails: nlocalhost:46802->localhost:38591
+[2026-02-27 15:25:36] GLibLog: domain:Gtk  msg:gtk_disable_setlocale() must be called before gtk_init()
+[2026-02-27 15:25:36] local (potentially out of sync) copy of roaming config loaded - 385 bytes.
+[2026-02-27 15:25:38] roaming config store loaded successfully - 385 bytes.
+[2026-02-27 15:25:39] System startup time: 18.10 seconds
+[2026-02-27 15:25:40] ExecCommandLine: "'/home/th0rgal/snap/steam/common/.local/share/Steam/ubuntu12_32/steam' '-srt-logger-opened' '-no-cef-sandbox'"
+[2026-02-27 15:25:40] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 15:25:42] GetIPCConnectionDetails: lsof -P -F upnR -i TCP@127.0.0.1:39278
+[2026-02-27 15:25:42] GetIPCConnectionDetails: p90024
+[2026-02-27 15:25:42] GetIPCConnectionDetails: R89904
+[2026-02-27 15:25:42] GetIPCConnectionDetails: u1000
+[2026-02-27 15:25:42] GetIPCConnectionDetails: nlocalhost:27060->localhost:39278
+[2026-02-27 15:25:42] GetIPCConnectionDetails: p90454
+[2026-02-27 15:25:42] GetIPCConnectionDetails: R90370
+[2026-02-27 15:25:42] GetIPCConnectionDetails: u1000
+[2026-02-27 15:25:42] GetIPCConnectionDetails: nlocalhost:39278->localhost:27060
+[2026-02-27 15:25:42] IPC function call IClientUtils::GetGameOverlayUIInstanceFocusGameID took too long: 431 msec
+[2026-02-27 15:27:24] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 15:30:45] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 15:36:50] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 15:36:52] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
+[2026-02-27 15:39:26] Created mapping SteamChrome_MasterStream_uid1000_spid90024_mem when set to fail if created
+[2026-02-27 15:39:28] Steam Runtime Launch Service: steam-runtime-launcher-service pid 90209 exited
+[2026-02-27 15:39:29] Steam Runtime Launch Service: starting steam-runtime-launcher-service
+[2026-02-27 15:39:29] Steam Runtime Launch Service: steam-runtime-launcher-service is running pid 92368
+[2026-02-27 15:39:37] GetIPCConnectionDetails: lsof -P -F upnR -i TCP@127.0.0.1:58198
+[2026-02-27 15:39:37] GetIPCConnectionDetails: lsof -P -F upnR -i TCP@127.0.0.1:39432
+[2026-02-27 15:39:37] GetIPCConnectionDetails: p90024
+[2026-02-27 15:39:37] GetIPCConnectionDetails: R1
+[2026-02-27 15:39:37] GetIPCConnectionDetails: u1000
+[2026-02-27 15:39:37] GetIPCConnectionDetails: nlocalhost:44045->localhost:58198
+[2026-02-27 15:39:37] GetIPCConnectionDetails: p92482
+[2026-02-27 15:39:37] GetIPCConnectionDetails: R92399
+[2026-02-27 15:39:37] GetIPCConnectionDetails: u1000
+[2026-02-27 15:39:37] GetIPCConnectionDetails: nlocalhost:58198->localhost:44045
+[2026-02-27 15:39:37] GetIPCConnectionDetails: p90024
+[2026-02-27 15:39:37] GetIPCConnectionDetails: R1
+[2026-02-27 15:39:37] GetIPCConnectionDetails: u1000
+[2026-02-27 15:39:37] GetIPCConnectionDetails: nlocalhost:38591->localhost:39432
+[2026-02-27 15:39:37] GetIPCConnectionDetails: p92482
+[2026-02-27 15:39:37] GetIPCConnectionDetails: R92399
+[2026-02-27 15:39:37] GetIPCConnectionDetails: u1000
+[2026-02-27 15:39:37] GetIPCConnectionDetails: nlocalhost:39432->localhost:38591
+[2026-02-27 15:39:43] GetIPCConnectionDetails: lsof -P -F upnR -i TCP@127.0.0.1:50338
+[2026-02-27 15:39:43] GetIPCConnectionDetails: p90024
+[2026-02-27 15:39:43] GetIPCConnectionDetails: R1
+[2026-02-27 15:39:43] GetIPCConnectionDetails: u1000
+[2026-02-27 15:39:43] GetIPCConnectionDetails: nlocalhost:27060->localhost:50338
+[2026-02-27 15:39:43] GetIPCConnectionDetails: p92482
+[2026-02-27 15:39:43] GetIPCConnectionDetails: R92399
+[2026-02-27 15:39:43] GetIPCConnectionDetails: u1000
+[2026-02-27 15:39:43] GetIPCConnectionDetails: nlocalhost:50338->localhost:27060
+[2026-02-27 15:39:43] IPC function call IClientUtils::GetGameOverlayUIInstanceFocusGameID took too long: 405 msec
+[2026-02-27 15:39:46] ExecCommandLine: "'~/.steam/root/ubuntu12_32/steam' '-no-cef-sandbox'"
