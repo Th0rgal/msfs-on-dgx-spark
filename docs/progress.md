@@ -550,3 +550,33 @@ Current assessment:
 
 - Most likely immediate blocker is Steam UI trap/dispatch state (age-gate/store page), not file installation.
 - Next practical fix path is to recover Steam to Library/details UI reliably (or restart into clean Library landing), then trigger Play from in-client details where dispatch can create a real `App Running` session for post-reset prefix.
+
+## 2026-02-27 (17:00-18:10 UTC)
+
+Additional fix cycle on `spark-de79` focused on launch runtime and dispatch reliability:
+
+- Refined finding: when launch did dispatch earlier, Steam always executed
+  `.../steamapps/common/Proton - Experimental/proton ...` for `AppID 2537590`.
+- Existing compat mapping edits were not reliably taking effect in this headless session.
+- Added a hard remap helper so Proton-Experimental resolves to GE-Proton:
+  - `scripts/15-remap-proton-experimental-to-ge.sh`
+- Added restart and navigation helper to re-open Steam directly at MSFS details after remap:
+  - `scripts/16-restart-steam-and-open-msfs.sh`
+
+Validated outcomes in this pass:
+
+- Steam UI automation works for Store -> Library recovery and game detail navigation.
+- Launch dispatch is currently session-sensitive: no fresh `GameAction [AppID 2537590]` entries were accepted during this cycle, so no new post-remap crash signature could be captured yet.
+- Next critical validation is a real Play dispatch while remap is active.
+
+Latest artifacts captured:
+
+- `output/steam-main-window.png`
+- `output/steam-main-after-library-tab.png`
+- `output/steam-main-after-viewpage-btn.png`
+- `output/msfs-details-before-play-remap.png`
+- `output/msfs-details-after-play-remap.png`
+- `output/msfs-filter-flight.png`
+- `output/msfs-filter-selected.png`
+- `output/msfs-filter-after-playclick.png`
+

@@ -52,10 +52,10 @@ if ! pgrep -f "x11vnc .* -rfbport 5901" >/dev/null; then
 fi
 
 if [ "$ACTION" = "install" ]; then
-    DISPLAY="$DISPLAY_NUM" steam "steam://install/${MSFS_APPID}" >/tmp/msfs-install-uri.log 2>&1 || true
+    timeout 12s env DISPLAY="$DISPLAY_NUM" steam "steam://install/${MSFS_APPID}" >/tmp/msfs-install-uri.log 2>&1 || true
     echo "Triggered Steam install URI for AppID ${MSFS_APPID}."
 else
-    DISPLAY="$DISPLAY_NUM" steam "steam://rungameid/${MSFS_APPID}" >/tmp/msfs-launch-uri.log 2>&1 || true
+    timeout 12s env DISPLAY="$DISPLAY_NUM" steam "steam://rungameid/${MSFS_APPID}" >/tmp/msfs-launch-uri.log 2>&1 || true
     echo "Triggered Steam launch URI for AppID ${MSFS_APPID}."
 fi
 
