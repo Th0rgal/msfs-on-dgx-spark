@@ -1001,3 +1001,46 @@ Current assessment:
 
 - We appear to have moved past the previous immediate BOOT_INIT crash loop in this configuration.
 - Remaining work is to confirm interactive viability (window/splash progression and input path) and ensure this sustained run reproduces consistently.
+
+## 2026-02-27 (22:03-22:14 UTC, launch-option injection + DX12 suppression trials)
+
+This cycle targeted an untried root cause: Steam launch options were being written to `sharedconfig.vdf` but not actually reaching Proton/MSFS.
+
+What was validated:
+
+- `scripts/28-set-localconfig-launch-options.sh` added to write `LaunchOptions` in `userdata/<id>/config/localconfig.vdf`.
+- Even with localconfig entries present, process environment still did not include `PROTON_LOG`/`WINEDLLOVERRIDES` when launched via Steam in this headless path.
+- Added `scripts/29-force-msfs-dx11-proton-wrapper.sh` to wrap GE-Proton and force runtime arguments/env for MSFS launches.
+- Wrapper confirmed effective by Proton log header:
+  - `Command: ... FlightSimulator2024.exe -dx11 -FastLaunch`
+  - `System/Effective WINEDLLOVERRIDES: d3d12,d3d12core=n`
+
+Behavior changes observed:
+
+- DirectX12 popup became intermittent instead of immediate in some runs.
+- MSFS launch sessions became reproducible with forced args/env and longer runtime windows (~2-3 minutes).
+- However, game still exits with no rendered frame and no global flow progression:
+  - `AsoboReport-RunningSession.txt` remains `Where="CrashReport_Z::Init"`
+  - `FrameCount=0`
+  - `LastStates="<no global flow>@"`
+
+Additional attempted bypass:
+
+- Wrapped launch via Wine virtual desktop (`explorer /desktop=MSFS,1920x1080 ... -dx11 -FastLaunch`) to reduce monitor/adapter mismatch impact.
+- This did not eliminate the startup failure; fatal popup still appears in some runs and process exits persist.
+
+Artifacts from this cycle:
+
+- `output/dx11-force-cycle-20260227T220311Z.log`
+- `output/localconfig-dx11-cycle-20260227T220544Z.log`
+- `output/localconfig-dx11-post95-20260227T220818Z.log`
+- `output/wrapper-dx11-cycle-20260227T220929Z.log`
+- `output/wrapper-dx11-n-cycle-20260227T221054Z.log`
+- `output/virtualdesktop-cycle-20260227T221337Z.log`
+- `output/steam-2537590.log`
+
+Current assessment:
+
+- Dispatch/auth/proton-tool selection are working.
+- Forced launch arguments and dll overrides are now verified to apply.
+- Remaining blocker is still pre-frame runtime/platform incompatibility on this ARM+FEX+Snap-Proton stack; not a missing launch option anymore.
