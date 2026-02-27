@@ -106,6 +106,9 @@ NVIDIA GB10 Blackwell GPU
 
 # 5. Resume/create headless Steam session and trigger MSFS install
 ./scripts/05-resume-headless-msfs.sh install
+
+# 6. Verify current readiness/download state and capture Steam screen
+./scripts/06-verify-msfs-state.sh
 ```
 
 See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [docs/progress.md](docs/progress.md) for live validation notes.
@@ -132,7 +135,8 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 │   ├── 02-install-fex-steam.sh # Install FEX-Emu and Steam
 │   ├── 03-configure-msfs.sh   # Configure Proton for MSFS
 │   ├── 04-setup-streaming.sh  # Set up Sunshine for remote play
-│   └── 05-resume-headless-msfs.sh # Resume headless Steam session + MSFS install/launch
+│   ├── 05-resume-headless-msfs.sh # Resume headless Steam session + MSFS install/launch
+│   └── 06-verify-msfs-state.sh # Verify readiness/install state + capture Steam screen
 └── docs/
     ├── setup-guide.md         # Detailed setup walkthrough
     ├── progress.md            # Live validation status and blockers

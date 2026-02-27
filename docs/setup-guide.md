@@ -169,6 +169,14 @@ After installation completes, trigger launch:
 ./scripts/05-resume-headless-msfs.sh launch
 ```
 
+At any point, collect a one-shot readiness report and screenshot:
+
+```bash
+./scripts/06-verify-msfs-state.sh
+```
+
+This prints process health (`Xvfb`, `openbox`, Steam, `x11vnc`), MSFS AppID `1250410` manifest/download status, Sunshine service state, and writes a Steam desktop screenshot to `/tmp/steam-state-1250410.png`.
+
 
 ## Phase 4: Remote Streaming (Optional)
 
