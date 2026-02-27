@@ -703,3 +703,21 @@ Conclusion from this pass:
 - Launch dispatch path is now reliable again after stale-state cleanup.
 - Forcing GE via Proton-Experimental remap did not resolve the BOOT_INIT crash.
 - Remaining blocker is runtime/platform-level stability under Snap Steam + FEX + Proton.
+
+## 2026-02-27 (18:49 UTC, forced non-D3D12 profile retest)
+
+Ran an additional controlled runtime experiment after GE remap was confirmed active:
+
+- Temporary launch options tested for AppID `2537590`:
+  - `PROTON_LOG=1`
+  - `PROTON_ENABLE_NVAPI=0`
+  - `PROTON_USE_WINED3D=1`
+- Dispatch used Steam pipe (`steam://rungameid/2537590`).
+- Result: launch session still exited in ~40s with the same crash pattern.
+  - New crash timestamp observed: `2026-02-27T18:49:58Z`
+  - Signature remained `SEH 0xC0000005` in early `BOOT_INIT`.
+
+Post-test cleanup:
+
+- Restored default launch options back to:
+  - `PROTON_LOG=1 PROTON_LOG_DIR=/home/th0rgal/msfs-on-dgx-spark/output %command%`
