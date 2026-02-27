@@ -276,3 +276,28 @@ Current hard blocker:
 - Steam WebUI instability in this headless Snap/FEX session (black page + `data:text/html`) prevents reliable install action dispatch.
 - Session auth was lost during recovery; Steam must be re-authenticated before any further install attempts.
 - End-to-end MSFS launch proof is still pending.
+
+## 2026-02-27 (12:30 UTC)
+
+Latest live recheck on `spark-de79` while continuing MSFS 2024 (`2537590`) install automation:
+
+- Reconnected and confirmed headless stack remains up (`Xvfb :1`, `openbox`, Steam, `x11vnc`, Sunshine).
+- Steam briefly showed authenticated Store session (`THOMAS` persona visible), but install URI and scripted UI actions still did not create `appmanifest_2537590.acf`.
+- Attempted fallback to non-Snap Steam client (`steam-installer`) is not available on this ARM64 Ubuntu target (`no installation candidate`), so Snap+FEX remains the active/only client path.
+- During cleanup/restart attempts, Steam authentication state regressed back to unauthenticated (`steamid=0`), so install/launch cannot proceed in this pass.
+- Added diagnostic helper `scripts/11-debug-steam-window-state.sh` to capture:
+  - parsed SteamIDs from `steamwebhelper`
+  - visible X11 window inventory (IDs, geometry, names)
+  - Steam/FEX process snapshot
+  - root-window screenshot
+
+Current blocker:
+
+- Steam session must be re-authenticated and kept stable long enough to queue `2537590` into Downloads (`appmanifest_2537590.acf` creation is the gating signal).
+
+Immediate next command after re-authentication:
+
+```bash
+cd ~/msfs-on-dgx-spark
+MSFS_APPID=2537590 ./scripts/08-finalize-auth-and-run-msfs.sh
+```
