@@ -721,3 +721,45 @@ Post-test cleanup:
 
 - Restored default launch options back to:
   - `PROTON_LOG=1 PROTON_LOG_DIR=/home/th0rgal/msfs-on-dgx-spark/output %command%`
+## 2026-02-27 (19:00-19:08 UTC, GPU identity + overlay injection retests)
+
+Another full runtime fix cycle on `spark-de79` focused on two untried high-probability causes:
+
+1. GPU identity/NVAPI handling on ARM/FEX path (`GPUName="NVIDIA Tegra NVIDIA GB10"` in crash reports).
+2. Steam overlay injection potentially destabilizing Proton/FEX startup.
+
+What was changed:
+
+- Fixed a bug in `scripts/19-dispatch-via-steam-pipe.sh` (`printf %sn` -> `printf %s\n`) so URI writes to `steam.pipe` are correctly newline-terminated.
+- Added `scripts/20-test-gpu-spoof-launch.sh` to run one controlled launch cycle with:
+  - `PROTON_HIDE_NVIDIA_GPU=1`
+  - `PROTON_ENABLE_NVAPI=0`
+  - `PROTON_NO_ESYNC=1`
+  - `PROTON_NO_FSYNC=1`
+- Added `scripts/21-test-overlay-off-launch.sh` to set per-app `OverlayAppEnable=0`, apply minimal launch options, launch via pipe, and capture crash/runtime evidence.
+
+Validation outcomes:
+
+- Pipe dispatch remains reliable (`GameAction` and `StartSession` increments observed each run).
+- Both new fix paths still end in the same early crash signature:
+  - `Code=0xC0000005`
+  - `LastStates=" MainState:BOOT SubState:BOOT_INIT"`
+  - `EnableD3D12=true`
+  - `NumRegisteredPackages=0`
+- Overlay disable flag did **not** stop overlay library injection in this environment:
+  - pressure-vessel command line still includes `--ld-preload ... gameoverlayrenderer.so`.
+
+Latest artifacts:
+
+- `output/gpu-spoof-cycle-20260227T190139Z.log`
+- `output/gpu-spoof-runtime-20260227T190139Z.log`
+- `output/AsoboReport-Crash-2537590-20260227T190139Z.txt`
+- `output/overlay-off-cycle-20260227T190546Z.log`
+- `output/overlay-off-runtime-20260227T190546Z.log`
+- `output/AsoboReport-Crash-2537590-overlayoff-20260227T190546Z.txt`
+
+Current assessment:
+
+- Install/auth/dispatch are now consistently working.
+- The remaining blocker is an early runtime crash during BOOT initialization under the current ARM + FEX + Steam Snap + Proton stack.
+- Most likely next attempts should target runtime container/proton internals (e.g., running outside Steam Snap confinement or testing a distinct proton/runtime build matrix), not Steam UI automation.
