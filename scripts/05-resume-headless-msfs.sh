@@ -3,6 +3,7 @@
 set -euo pipefail
 
 "$(dirname "$0")/17-fix-xdg-user-dirs.sh" >/dev/null 2>&1 || true
+"$(dirname "$0")/18-fix-steam-uri-handler.sh" >/dev/null 2>&1 || true
 
 DISPLAY_NUM="${DISPLAY_NUM:-:1}"
 RESOLUTION="${RESOLUTION:-1920x1080x24}"

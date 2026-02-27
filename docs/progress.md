@@ -605,3 +605,29 @@ Artifacts:
 - `output/ui-clean-resume-20260227T172921Z.log`
 - `output/ui-clean-play-20260227T172921Z.log`
 - `output/ui-clean-20260227T172921Z-4-postplay.png`
+
+## 2026-02-27 (17:45-18:00 UTC, URI handler + dispatch cycle)
+
+New likely root-cause tested: `steam://` protocol handler drifted away from Steam in headless session, causing URI launches to route into Firefox or no-op.
+
+What was changed:
+
+- Added `scripts/18-fix-steam-uri-handler.sh`.
+  - Copies `steam_steam.desktop` into `~/.local/share/applications`.
+  - Refreshes desktop MIME cache (`update-desktop-database` when available).
+  - Enforces `x-scheme-handler/steam=steam_steam.desktop` in `~/.config/mimeapps.list`.
+  - Applies `xdg-mime default steam_steam.desktop x-scheme-handler/steam`.
+- Integrated handler fix into resume flow (`scripts/05-resume-headless-msfs.sh`).
+
+Validation from this pass:
+
+- `xdg-open steam://...` now resolves to Steam (`STEAMDIR: ...`) instead of Firefox.
+- Steam was re-started and re-authenticated successfully (`connection_log.txt` shows fresh logged-on session at `17:51:06Z`).
+- Despite handler and auth recovery, unattended URI dispatch still did not emit fresh `GameAction [AppID 2537590]` events in this cycle.
+- UI click-scans against detected Steam webhelper surface also did not trigger launch events.
+
+Current status:
+
+- Install remains intact (`AppID 2537590` manifest present, fully downloaded).
+- Runtime remap path remains in place (Proton-Experimental command prefix -> GE-Proton).
+- Remaining blocker is reliable launch dispatch from this headless Steam UI state.
