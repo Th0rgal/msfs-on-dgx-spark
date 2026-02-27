@@ -962,3 +962,42 @@ Conclusion:
 
 - Install script complexity is not the primary blocker.
 - Runtime exit behavior remains unchanged after script bypass.
+## 2026-02-27 (21:36-21:50 UTC, native FEX + userns + thunks breakthrough)
+
+This cycle targeted two untried high-probability blockers at once:
+
+1. Native Steam runtime launch under FEX was blocked by user namespace restrictions (`bwrap uid map permission denied`).
+2. FEX Vulkan path was not forced to host thunks, so x86 clients were defaulting to llvmpipe in many runs.
+
+What changed:
+
+- Enabled AppArmor userns gates (runtime):
+  - `kernel.apparmor_restrict_unprivileged_userns=0`
+  - `kernel.apparmor_restrict_unprivileged_unconfined=0`
+- Rewrote `~/.fex-emu/Config.json` to force thunk mappings:
+  - `Vulkan=1`, `GL=1`, `drm=1`, `WaylandClient=1`, `asound=1`
+- Verified FEX Vulkan now sees NVIDIA on host in direct test (`FEXBash -c vulkaninfo --summary`):
+  - `deviceName = NVIDIA Tegra NVIDIA GB10`
+- Launched **native Steam under FEX** while reusing Snap Steam state (`HOME=~/snap/steam/common`) and dispatched MSFS via `steam.pipe`.
+
+Validation result (major behavior change):
+
+- Dispatch accepted (`GameAction` and `StartSession` incremented at ~21:44 UTC).
+- `FlightSimulator2024.exe` remained alive for >5 minutes (checked through `21:49:56 UTC`) with active wine/proton process tree.
+- No fresh `AsoboReport-Crash-2537590.txt` was produced during this run window.
+- This is a clear improvement vs prior repeat exits around ~40s in `BOOT_INIT`.
+
+New scripts added:
+
+- `scripts/26-enable-userns-and-fex-thunks.sh`
+- `scripts/27-launch-native-fex-steam-on-snap-home.sh`
+
+New artifacts:
+
+- `output/native-msfs-run-20260227T214408Z.log`
+- `output/native-xvfb3-msfs-20260227T214824Z.png`
+
+Current assessment:
+
+- We appear to have moved past the previous immediate BOOT_INIT crash loop in this configuration.
+- Remaining work is to confirm interactive viability (window/splash progression and input path) and ensure this sustained run reproduces consistently.
