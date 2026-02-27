@@ -455,3 +455,28 @@ Artifacts from this pass:
 - `output/msfs-direct-fex-20260227T1540Z.log`
 - `output/steam-console-tail-20260227T1540Z.log`
 - `output/steam-state-20260227T1540Z.png`
+
+## 2026-02-27 (16:00 UTC, GE-Proton install + tool mapping test)
+
+Continued runtime-fix iteration on `spark-de79` after manual Play crash reports:
+
+- Confirmed fresh manual Play attempts at `15:49:46` and `15:49:55` did reach Steam launch tasks, but both exited in ~2 seconds (`Game process removed`), with no new Asobo crash artifact timestamps.
+- Reverted aggressive launch options (`wined3d`, `-dx11`) and switched to log-focused launch options to avoid masking the original boot path.
+- Installed latest GE-Proton from upstream GitHub release:
+  - `GE-Proton10-32` extracted under `.../Steam/compatibilitytools.d/GE-Proton10-32`.
+- Updated Steam compatibility mapping to target GE-Proton for default, `1250410`, and `2537590`.
+- Restarted Steam and validated GE tool registration in `compat_log.txt`:
+  - `Registering tool GE-Proton10-32`
+  - `Command prefix for tool 0 "GE-Proton10-32" .../compatibilitytools.d/GE-Proton10-32/proton`
+
+Current blocker in this pass:
+
+- Steam session restarted into unauthenticated state (`steamid=0` in `steamwebhelper` args), so new launch attempts are not being accepted (`GameAction` count unchanged).
+- Because no fresh launch occurred after GE mapping, runtime effect of GE-Proton on MSFS boot is still pending validation.
+
+Artifacts from this pass:
+
+- `output/steam-after-resume-ge.png`
+- `output/ge-step1-library.png`
+- `output/ge-step2-selected.png`
+- `output/ge-step3-after-play.png`

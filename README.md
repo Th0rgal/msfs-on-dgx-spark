@@ -148,6 +148,7 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 │   ├── 06-verify-msfs-state.sh # Verify readiness/install state + capture Steam screen
 │   ├── 07-await-login-and-install.sh # Wait for Steam auth and auto-queue MSFS install
 │   ├── 08-finalize-auth-and-run-msfs.sh # One-shot auth/install/launch orchestrator
+│   ├── 14-install-ge-proton.sh # Install latest GE-Proton into compatibilitytools.d
 └── docs/
     ├── setup-guide.md         # Detailed setup walkthrough
     ├── progress.md            # Live validation status and blockers
