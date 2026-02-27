@@ -385,3 +385,37 @@ Artifacts from this pass:
 - `output/verify-msfs-20260227T143142Z.log`
 - `/tmp/msfs-launch-state-2537590.png`
 - `.../compatdata/2537590/.../Microsoft Flight Simulator 2024/AsoboReport-Crash.txt`
+## 2026-02-27 (15:30 UTC, crash triage + launch-dispatch retest)
+
+Live retest on `spark-de79` focused on root-cause isolation after the first real MSFS 2024 run/crash:
+
+- Confirmed install is complete and owned:
+  - `steamapps/appmanifest_2537590.acf` present with `StateFlags=4` and full depot bytes downloaded/staged.
+- Confirmed historical launch actually happened from Steam client path (from `logs/console_log.txt`):
+  - `GameAction [AppID 2537590]` advanced through `ProcessingInstallScript`, `CreatingProcess`, and process add/remove.
+  - Steam launched via Proton chain:
+    - `...SteamLinuxRuntime_sniper/_v2-entry-point --verb=waitforexitandrun -- 'Proton - Experimental'/proton waitforexitandrun .../MSFS2024/FlightSimulator2024.exe`
+- Confirmed crash artifact remains the same early boot failure:
+  - `AsoboReport-Crash.txt` unchanged, `SEH 0xC0000005`, state `BOOT::BOOT_INIT`, `EnableD3D12=true`.
+
+New fixes attempted in this pass (all executed live on DGX):
+
+1. `-dx11` launch attempts from command line (`steam -applaunch` / `steam://rungameid`) with Proton debug env.
+2. Direct Proton invocation and direct `steam-launch-wrapper` invocation to bypass Steam UI dispatch.
+3. Steam restart from clean process state (standard mode) followed by post-login launch URI retrigger.
+4. UI-driving attempts with `xdotool` against Store->Library->MSFS path.
+
+Observed results:
+
+- CLI/URI launch dispatch did not create a fresh game process in this session.
+- Direct invocation attempts hit architecture/runtime boundary when bypassing Steam launch path:
+  - `Exec format error` for x86 wrapper/proton binaries when not run through Steam's FEX-managed chain.
+- `xdotool` interaction remains unreliable against current Steam web UI surface in this headless setup (window IDs resolve to tiny helper windows; absolute clicks showed no UI state change).
+- No new MSFS crash/session artifacts were generated in this pass; last true crash remains the 14:27 UTC record.
+
+Current most likely next fix not yet validated end-to-end:
+
+- Run one fresh in-client launch with explicit safe profile in Steam UI:
+  - force non-Experimental Proton variant (e.g. `proton_10`/`proton_hotfix` or GE-Proton), and
+  - force DX11 launch option.
+- Then capture new Asobo/Proton artifacts to confirm whether boot passes `BOOT_INIT`.
