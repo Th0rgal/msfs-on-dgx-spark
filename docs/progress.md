@@ -669,3 +669,37 @@ Artifacts:
 Current status:
 - Dispatch reliability blocker is largely solved via Steam pipe.
 - Hard blocker is now runtime crash in BOOT_INIT (not install/entitlement/dispatch).
+
+## 2026-02-27 (18:33-18:48 UTC, stale launch-state cleanup + GE remap retest)
+
+Additional root-cause findings from this cycle:
+
+- Found a real bug in `scripts/19-dispatch-via-steam-pipe.sh`:
+  - It used `printf %sn`, which can emit malformed payloads such as
+    `steam://rungameid/2537590n...` into Steam IPC.
+  - This correlated with stale `ShowGameArgs "-dx11"` wait states in Steam logs.
+- Fixed dispatch script to use `printf '%s\n'`.
+- Also fixed `scripts/13-debug-launch-dispatch.sh` unsupported-mode error text.
+
+Behavior validated after a full Steam core recycle (`steampid` replaced):
+
+- Fresh pipe dispatch again produced real launch sessions for `2537590`.
+- Confirmed that direct `compatibilitytools.vdf` app mapping to `GE-Proton10-32`
+  was not sufficient by itself in this environment (Steam still used tool `1493710` path).
+- Re-applied explicit Proton-Experimental remap (`scripts/15-remap-proton-experimental-to-ge.sh`)
+  and re-ran launch on clean client state.
+- Post-remap command prefix resolved to GE path as expected:
+  - `.../compatibilitytools.d/GE-Proton10-32/proton waitforexitandrun ...`
+
+Result:
+
+- MSFS still exits during early boot with same signature:
+  - `SEH 0xC0000005`
+  - `MainState:BOOT SubState:BOOT_INIT`
+  - latest crash timestamp observed: `2026-02-27T18:47:35Z`
+
+Conclusion from this pass:
+
+- Launch dispatch path is now reliable again after stale-state cleanup.
+- Forcing GE via Proton-Experimental remap did not resolve the BOOT_INIT crash.
+- Remaining blocker is runtime/platform-level stability under Snap Steam + FEX + Proton.

@@ -33,7 +33,7 @@ echo "  Pipe:  $STEAM_PIPE"
 echo "  GameAction before: $before_ga"
 echo "  StartSession before: $before_start"
 
-printf %sn "$LAUNCH_URI" > "$STEAM_PIPE"
+printf '%s\n' "$LAUNCH_URI" > "$STEAM_PIPE"
 sleep "$WAIT_SECONDS"
 
 after_ga="$(grep -F -c "GameAction [AppID ${MSFS_APPID}" "$CONSOLE_LOG" || true)"

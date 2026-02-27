@@ -55,7 +55,7 @@ case "$MODE" in
     MSFS_APPID="$MSFS_APPID" WAIT_SECONDS="$WAIT_SECONDS" "$(dirname "$0")/19-dispatch-via-steam-pipe.sh"
     ;;
   *)
-    echo "ERROR: unsupported mode  (use: uri|applaunch|pipe)"
+    echo "ERROR: unsupported mode '$MODE' (use: uri|applaunch|pipe)"
     exit 3
     ;;
 esac
