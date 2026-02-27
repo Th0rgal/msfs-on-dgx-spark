@@ -1072,3 +1072,45 @@ Assessment update:
 - We did remove a real compat/config issue (stale virtual-desktop launch injection).
 - The remaining blocker is still runtime/platform-level initialization failure under this ARM+FEX+Steam Runtime stack.
 - Hard-forcing host NVIDIA ICD inside pressure-vessel is not viable in current session (DXVK init fails immediately).
+
+## 2026-02-27 (22:53-23:00 UTC, direct DXGI triage + Valve Proton A/B)
+
+This cycle focused on two likely untried causes of the persistent startup failure:
+
+1. Potential wrong Vulkan adapter selection (llvmpipe vs NVIDIA) in vkd3d.
+2. Corrupted compat runtime mapping where `Proton - Experimental` was symlinked to GE.
+
+What was tried:
+
+- Added `scripts/30-force-vkd3d-nvidia-wrapper.sh` to force:
+  - `VKD3D_VULKAN_DEVICE=0`
+  - `VKD3D_FILTER_DEVICE_NAME="NVIDIA Tegra NVIDIA GB10"`
+  - `DXVK_FILTER_DEVICE_NAME="NVIDIA Tegra NVIDIA GB10"`
+- Re-ran native-FEX launch path with userns + thunk config and pipe dispatch.
+- Restored real Valve Proton Experimental by replacing symlinked `Proton - Experimental` with backed-up original directory.
+- Cleared `config/compatibilitytools.vdf` overrides and verified `compat_log` eventually switched tool 1493710 prefix to `/steamapps/common/Proton - Experimental/proton`.
+- Added `scripts/31-wrap-valve-exp-dx11.sh` to force `-dx11 -FastLaunch` on Valve Experimental and retested.
+
+Key evidence:
+
+- Proton log now shows repeat crash in Wine `dxgi.dll`, not just generic app init:
+  - `Exception 0xc0000005`
+  - `Unhandled page fault ... at 0x006ffffd011b47 in dxgi (+0x231b47)`
+- Xvfb screenshots still show runtime popup:
+  - `Fatal error: Impossible to create DirectX12 device`
+  - `Error 0x80070057 (DXGI Unknown)`
+- Same popup appears even when forcing `-dx11`, so startup still hard-depends on successful DXGI/D3D12 device init on this stack.
+
+Artifacts:
+
+- `output/vkd3d-nvidia-cycle-20260227T225323Z.log`
+- `output/valve-exp-native-cycle-20260227T225746Z.log`
+- `output/valve-exp-xvfb3-20260227T225906Z.png`
+- `output/valve-exp-dx11-cycle-20260227T225935Z.log`
+- `output/manual-check-20260227T230034Z.png`
+- `output/steam-2537590.log` (contains `dxgi.dll` crash backtrace)
+
+Assessment update:
+
+- Compat/runtime path is now cleaner (true Valve Proton Experimental can be selected again).
+- Primary blocker remains DXGI/D3D12 device creation on ARM+FEX+Proton runtime; this is not resolved by launch args, wrapper env, or GE-vs-Valve Proton switch in current environment.
