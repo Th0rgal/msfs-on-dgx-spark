@@ -898,3 +898,45 @@ Artifacts:
 
 - `output/cachyos-exp-remap-test-20260227T203621Z.log`
 - `output/cachyos-runtime-cycle-20260227T203852Z.log`
+
+## 2026-02-27 (20:48-20:54 UTC, C: package mirror + clean-prefix GE retest)
+
+New cycle targeted an untried package-registration hypothesis:
+
+- Mirror full installed package tree into the prefix C: roaming path
+  (`.../AppData/Roaming/Microsoft Flight Simulator 2024/Packages`) using hardlinks.
+- Keep `UserCfg.opt` on C: path and retest with a clean prefix + forced GE-Proton.
+
+What was changed/tested:
+
+- Created C: package mirror with ~130 top-level package dirs.
+- Added reusable script:
+  - `scripts/25-test-cpath-mirror-cleanprefix-ge.sh`
+- Ran live cycles:
+  - `output/cpath-mirror-test-20260227T204803Z.log`
+  - `output/cpath-mirror-launch-20260227T204812Z.log`
+  - `output/cpath-mirror-ge-test-20260227T204942Z.log`
+  - `output/cleanprefix-ge-cycle-20260227T205202Z.log`
+
+Validation outcome:
+
+- Launch dispatch remained accepted (`GameAction` and `StartSession` increments).
+- GE runs still executed for ~40s and then exited (`App Running` -> `Fully Installed`).
+- No fresh `AsoboReport-Crash-2537590*.txt` was generated after `2026-02-27T20:13:14Z`.
+- Last known crash signature therefore remains unchanged:
+  - `Code=0xC0000005`
+  - `LastStates=" MainState:BOOT SubState:BOOT_INIT"`
+  - `NumRegisteredPackages=0`
+
+Additional observations:
+
+- `installscriptevalutor_log.txt` shows repeated translated install paths for
+  `MSFS2024` and `Steamworks Shared`, but no explicit install-script error lines.
+- `ProcessingInstallScript` and occasional `RunningInstallScript` stages continue
+  to appear before process creation.
+
+Assessment update:
+
+- C: package mirroring + clean prefix did not resolve startup exits.
+- Remaining blocker still appears to be runtime/platform behavior on ARM + FEX + Proton,
+  not Steam auth/dispatch or obvious package-path misconfiguration.
