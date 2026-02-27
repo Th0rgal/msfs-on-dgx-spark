@@ -868,3 +868,33 @@ Updated assessment:
 - Launch dispatch and auth are working; multiple new sessions were created and executed.
 - Runtime still consistently fails in early boot with the same crash signature.
 - Remaining blocker remains platform/runtime compatibility on this ARM + FEX + Proton stack, not install/auth/dispatch or UserCfg/overlay toggles.
+
+## 2026-02-27 (20:40 UTC, compat-layer root cause + CachyOS enforcement)
+
+New findings from the forum-driven compat deep dive:
+
+- Root compat bug identified in installed `proton-cachyos` metadata:
+  - `compatibilitytools.d/proton-cachyos-.../toolmanifest.vdf` required unknown tool appid `4185400`.
+  - This matches prior `AppError_51` / `Tool 4185400 unknown` behavior and prevented clean tool selection.
+- Patched dependency to `1628350` (Steam Linux Runtime sniper), then reloaded Steam.
+- Confirmed `compatibilitytools.vdf` overrides are still ignored in this headless Snap/FEX path (Steam continued selecting tool `1493710` by default).
+- Added deterministic bypass `scripts/20-fix-cachyos-compat.sh`:
+  - patches the bad `require_tool_appid`
+  - remaps `steamapps/common/Proton - Experimental` to `compatibilitytools.d/proton-cachyos-...`
+
+Validation:
+
+- Fresh launch sessions were produced via Steam pipe dispatch.
+- Command prefix now resolves to CachyOS runtime in real launch command:
+  - `.../compatibilitytools.d/proton-cachyos-.../proton waitforexitandrun ...`
+- Runtime behavior changed (short early exit around ~3s) and no new Asobo crash report was generated for CachyOS runs.
+- Last Asobo crash file remained the prior BOOT_INIT signature:
+  - `Code=0xC0000005`
+  - `TimeUTC=2026-02-27T20:34:53Z`
+  - `LastStates=" MainState:BOOT SubState:BOOT_INIT"`
+  - `NumRegisteredPackages=0`
+
+Artifacts:
+
+- `output/cachyos-exp-remap-test-20260227T203621Z.log`
+- `output/cachyos-runtime-cycle-20260227T203852Z.log`
