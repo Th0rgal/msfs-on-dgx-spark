@@ -184,7 +184,6 @@ If you are currently blocked at Steam Guard, you can keep one watcher running th
 ```
 
 
-
 For a single command that can enter Steam Guard (if provided), queue install, and trigger launch:
 
 ```bash
