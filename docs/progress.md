@@ -301,3 +301,29 @@ Immediate next command after re-authentication:
 cd ~/msfs-on-dgx-spark
 MSFS_APPID=2537590 ./scripts/08-finalize-auth-and-run-msfs.sh
 ```
+
+## 2026-02-27 (13:10 UTC)
+
+Fresh live pass on `spark-de79` with direct UI manipulation and verifier re-run:
+
+- Steam client is visible and logged in as `THOMAS`; headless stack is healthy (`Xvfb :1`, `openbox`, `steamwebhelper`, `x11vnc`, Sunshine).
+- Cleared modal overlays (age-gate/news popups) and reached Library view where `Microsoft Flight Simulator 2024` is visible in the games list/recent shelf.
+- Multiple install dispatch attempts were executed (row open/double-click, details-pane install region, install confirm region).
+- Verifier still reports no MSFS install queue because `appmanifest_2537590.acf` is absent.
+
+Observed behavior in this pass:
+
+- Steam UI navigation is stateful and frequently diverted by modal overlays/pages (age-gate/store/news), causing install clicks to be intercepted or redirected.
+- `steam://install/2537590` and repeated UI-trigger attempts still did not materialize the app manifest.
+
+Artifacts:
+
+- `/tmp/steam-state-2537590.png`
+- `output/verify-msfs-2537590-20260227T131053Z.log`
+- `output/steam-msfs-details-opened.png`
+- `output/steam-msfs-details-after-close-overlay.png`
+- `output/steam-geom-install-click.png`
+
+Current blocker remains unchanged:
+
+- `~/snap/steam/common/.local/share/Steam/steamapps/appmanifest_2537590.acf` is still missing, so download/launch cannot be validated end-to-end yet.
