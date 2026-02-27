@@ -1114,3 +1114,53 @@ Assessment update:
 
 - Compat/runtime path is now cleaner (true Valve Proton Experimental can be selected again).
 - Primary blocker remains DXGI/D3D12 device creation on ARM+FEX+Proton runtime; this is not resolved by launch args, wrapper env, or GE-vs-Valve Proton switch in current environment.
+
+## 2026-02-27 (23:19-23:29 UTC, clean Valve+SLR/seccomp check and NVIDIA-only ICD retries)
+
+This cycle targeted two untried causes:
+
+1. Residual GE contamination / wrapper contamination in Valve Experimental path.
+2. Wrong ICD/device path inside pressure-vessel causing DX12 device creation failure.
+
+What was tried:
+
+- Added `scripts/32-test-clean-valve-slr0-seccomp.sh` to run a clean-cycle test:
+  - restore pristine Valve `Proton - Experimental/proton`
+  - set local launch options (`STEAM_LINUX_RUNTIME=0`, `WINE_DISABLE_SECCOMP=1`, Proton log)
+  - dispatch via `steam.pipe` and capture state.
+- Added `scripts/33-wrap-valve-exp-nvidia-icd.sh` to force for MSFS only:
+  - NVIDIA-only ICD JSON (`/tmp/nvidia-only-icd.json`)
+  - NVIDIA-only library dir (`/tmp/nvlibs64` symlink set)
+  - `VK_ICD_FILENAMES` / `VK_DRIVER_FILES` and Proton logging.
+- Added one more wrapper variant in the same script to test reduced vkd3d requirements:
+  - `VKD3D_FEATURE_LEVEL=12_0`
+  - `VKD3D_CONFIG=nodxr`
+  - explicit ray-tracing extension disables.
+
+Key findings:
+
+- In clean Valve path, compat prefix is now consistently true Valve Experimental (`.../steamapps/common/Proton - Experimental/proton`) and not GE.
+- Localconfig launch options are still not reliably applied in this headless path; wrapper-based env injection remains the reliable method.
+- NVIDIA-only ICD wrapper did change runtime behavior materially:
+  - Proton log now consistently reports `Found device: NVIDIA Tegra NVIDIA GB10 (NVIDIA 580.95.5)`.
+  - Failure code changed from prior `0x80070057` path to `D3D12CreateDevice failed with error code 80004005`.
+- Root failure remains unchanged at the device-init layer:
+  - `vkd3d_create_vk_device: Failed to create Vulkan device, vr -3`.
+  - Even with `VKD3D_CONFIG=nodxr` and reduced extension set, device creation still fails.
+- Runtime popup still present on Xvfb:
+  - `Fatal error: Impossible to create DirectX12 device`
+  - `Error 0x80004005 (DXGI Unknown)`.
+
+Assessment update:
+
+- We are now reliably on NVIDIA adapter selection in Proton and have ruled out a large chunk of previous compat contamination.
+- Remaining blocker is lower-level Vulkan device creation under vkd3d on this ARM+FEX+Steam Runtime stack (`vr -3`), not dispatch/auth/tool selection.
+
+Artifacts:
+
+- `output/clean-valve-slr0-seccomp-20260227T231948Z.log`
+- `output/nvidia-icd-wrapper-cycle-20260227T232418Z.log`
+- `output/manual-check-20260227T232154Z.png`
+- `output/manual-check-20260227T232628Z.png`
+- `output/manual-check-20260227T232926Z.png`
+- `output/steam-2537590.log`
