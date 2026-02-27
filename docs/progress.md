@@ -1164,3 +1164,46 @@ Artifacts:
 - `output/manual-check-20260227T232628Z.png`
 - `output/manual-check-20260227T232926Z.png`
 - `output/steam-2537590.log`
+
+## 2026-02-27 (23:43-23:51 UTC, present_id/present_wait + hard no-overlay native tests)
+
+This cycle targeted two untried likely causes of the DX12 device-init failure:
+
+1. `vkd3d` Vulkan device creation instability related to present extensions (`VK_KHR_present_id` / `VK_KHR_present_wait`).
+2. Steam overlay injection (`gameoverlayrenderer.so`) in the native FEX + pressure-vessel path.
+
+What was tried:
+
+- Added `scripts/34-test-vkd3d-presentid-disable.sh`:
+  - wraps Valve Proton Experimental,
+  - applies `VKD3D_CONFIG=nodxr`, `VKD3D_FEATURE_LEVEL=12_0`,
+  - disables `VK_KHR_present_id`, `VK_KHR_present_wait`, `VK_NVX_binary_import`, `VK_NVX_image_view_handle`,
+  - launches via `steam.pipe` after native FEX Steam startup.
+- Added `scripts/35-test-native-no-overlay.sh`:
+  - temporarily moves both overlay renderer `.so` files out of place,
+  - strips `LD_PRELOAD` in Proton wrapper,
+  - relaunches and captures Xvfb screenshot state,
+  - restores overlay files on exit.
+
+Results:
+
+- Dispatch/session creation remained reliable (`GameAction` and `StartSession` advanced in both tests).
+- Fatal startup popup still reproduced in both runs (captured on Xvfb):
+  - `Impossible to create DirectX12 device`
+  - `Error 0x80004005 (DXGI Unknown)` in present-extension test screenshot.
+  - `Error 0x80070057 (DXGI Unknown)` in hard no-overlay test screenshot.
+- No fresh Asobo crash report was generated in this window; behavior remained pre-frame/device-init failure.
+
+Artifacts:
+
+- `output/vkd3d-presentid-disable-cycle-20260227T234345Z.log`
+- `output/vkd3d-presentid-disable-cycle-20260227T234611Z.log`
+- `output/native-xvfb3-msfs-20260227T234846Z.png`
+- `output/native-no-overlay-cycle-20260227T234939Z.log`
+- `output/native-no-overlay-20260227T234939Z.png`
+
+Assessment update:
+
+- Disabling `present_id/present_wait` did not clear DX12 init failure on this stack.
+- Hard overlay disable + `LD_PRELOAD` stripping did not clear DX12 init failure either.
+- Remaining blocker is still low-level DXGI/D3D12 device creation under ARM+FEX+Proton runtime on this environment.
