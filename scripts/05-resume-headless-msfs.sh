@@ -4,7 +4,7 @@ set -euo pipefail
 
 DISPLAY_NUM="${DISPLAY_NUM:-:1}"
 RESOLUTION="${RESOLUTION:-1920x1080x24}"
-MSFS_APPID="1250410"
+MSFS_APPID="${MSFS_APPID:-2537590}"
 ACTION="${1:-install}"   # install|launch
 
 find_steam_dir() {

@@ -193,3 +193,15 @@ Artifacts from this run:
 - `output/verify-20260227T090458Z.log` (updated verifier output)
 - `output/steam-state-20260227T090458Z.png` (Library with MSFS 2024 visible)
 - `output/steam-msfs2024-after-install-click-20260227T090739Z.png` (MSFS 2024 install dialog)
+
+## 2026-02-27 (MSFS 2024 entitlement pass)
+
+- Switched automation defaults to **MSFS 2024 AppID `2537590`** in runtime scripts:
+  - `scripts/05-resume-headless-msfs.sh`
+  - `scripts/09-verify-msfs-launch.sh`
+- Regenerated launcher guidance via `scripts/03-configure-msfs.sh` and updated next-step text for 2024 launch options.
+- Verified Steam account session is online (`connection_log.txt` shows successful logon for `U:1:391443739`).
+- Reproduced install flow in UI with rich captures:
+  - Install dialog appears for **Microsoft Flight Simulator 2024** and accepts click on **Install**.
+  - After dialog closes, Steam returns to game page still showing **INSTALL** and no manifest is created.
+- Current hard blocker: `~/snap/steam/common/.local/share/Steam/steamapps/appmanifest_2537590.acf` is still missing, so download/launch cannot proceed.
