@@ -112,6 +112,9 @@ NVIDIA GB10 Blackwell GPU
 
 # 7. Optional: wait for Steam auth, auto-trigger install, and monitor progress
 ./scripts/07-await-login-and-install.sh
+
+# 8. Optional: one-shot finalize (Steam Guard code -> install -> launch)
+./scripts/08-finalize-auth-and-run-msfs.sh <STEAM_GUARD_CODE>
 ```
 
 See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [docs/progress.md](docs/progress.md) for live validation notes.
@@ -140,7 +143,8 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 │   ├── 04-setup-streaming.sh  # Set up Sunshine for remote play
 │   ├── 05-resume-headless-msfs.sh # Resume headless Steam session + MSFS install/launch
 │   ├── 06-verify-msfs-state.sh # Verify readiness/install state + capture Steam screen
-│   └── 07-await-login-and-install.sh # Wait for Steam auth and auto-queue MSFS install
+│   ├── 07-await-login-and-install.sh # Wait for Steam auth and auto-queue MSFS install
+│   └── 08-finalize-auth-and-run-msfs.sh # One-shot auth/install/launch orchestrator
 └── docs/
     ├── setup-guide.md         # Detailed setup walkthrough
     ├── progress.md            # Live validation status and blockers

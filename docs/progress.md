@@ -48,3 +48,17 @@ Additional live validation on `spark-de79` at `2026-02-27T01:57:10Z`:
 - Steam remains blocked at email Steam Guard prompt for account `her3sy`; no authenticated SteamID is present yet.
 - MSFS install manifest remains absent (`appmanifest_1250410.acf`), confirming no queued install while unauthenticated.
 - Added `scripts/07-await-login-and-install.sh` to automatically continue once Steam auth succeeds: waits for non-zero SteamID, triggers `steam://install/1250410`, and prints manifest-based progress.
+
+## 2026-02-27 (02:37 UTC)
+
+Latest live verification on `spark-de79`:
+
+- `scripts/06-verify-msfs-state.sh` confirms runtime services active (`Xvfb :1`, `openbox`, `steamwebhelper`, `x11vnc`, Sunshine).
+- Steam UI is still at Steam Guard email code prompt for `her3sy`.
+- MSFS `1250410` manifest is still missing (install cannot start before authenticated Steam session).
+- Added `scripts/08-finalize-auth-and-run-msfs.sh` to orchestrate final mile: optional Guard code entry, auth wait, install queue, and launch trigger.
+
+Verification artifacts captured during this run:
+
+- `/tmp/steam-state-1250410.png`
+- `/tmp/verify-msfs-20260227T023730Z.log`

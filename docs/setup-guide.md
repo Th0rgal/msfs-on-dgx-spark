@@ -185,6 +185,12 @@ If you are currently blocked at Steam Guard, you can keep one watcher running th
 
 
 
+For a single command that can enter Steam Guard (if provided), queue install, and trigger launch:
+
+```bash
+./scripts/08-finalize-auth-and-run-msfs.sh <STEAM_GUARD_CODE>
+```
+
 ## Phase 4: Remote Streaming (Optional)
 
 If the DGX Spark is headless or you want to play from another device, use Sunshine + Moonlight.
