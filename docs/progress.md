@@ -480,3 +480,42 @@ Artifacts from this pass:
 - `output/ge-step1-library.png`
 - `output/ge-step2-selected.png`
 - `output/ge-step3-after-play.png`
+
+## 2026-02-27 (16:10 UTC)
+
+Additional recovery/fix cycle on `spark-de79` after manual Play crash reports:
+
+What was tried:
+
+- Forced app compatibility override to `GE-Proton10-32` for `2537590` by writing `config/compatibilitytools.vdf` via:
+  - `PROTON_TOOL=GE-Proton10-32 ./scripts/10-enable-steam-play.sh`
+- Performed controlled Steam restarts and re-ran launch dispatch via:
+  - `steam://rungameid/2537590`
+  - `steam -applaunch 2537590`
+- Tried Steam UI recovery paths:
+  - legacy `-vgui` startup (`steam -vgui -nochatui -nofriendsui`)
+  - `dbus-run-session` wrapper startup for Steam client initialization
+  - Openbox desktop/window re-home checks with `xdotool`
+
+Verified findings:
+
+- MSFS 2024 remains fully installed (`appmanifest_2537590.acf`, BuildID `21117911`, download 100%).
+- GE-Proton tool is registered and command prefix exists in `compat_log.txt`.
+- However, current Steam session is unauthenticated (`steamwebhelper ... -steamid=0`) after restart cycles, and no fresh `GameAction`/`StartSession` entries for `2537590` are generated in this state.
+- Client UI is degraded in headless mode (tiny helper windows / unusable surface), so automated dispatch does not reach an actual game launch path.
+
+Current blocker:
+
+- Not a content/install issue anymore; launch is blocked by Steam session/auth/UI integrity in this headless client state.
+- Need one stable authenticated Steam UI session (`steamid != 0`) before runtime crash-fix iteration can continue meaningfully.
+
+Artifacts:
+
+- `output/verify-msfs-20260227T160506Z.log`
+- `output/compatibilitytools-20260227T160434Z.vdf`
+- `output/steam-state-after-restart-20260227T160506Z.png`
+- `output/steam-desktop3-20260227T160739Z.png`
+- `output/steam-desktop0-20260227T160739Z.png`
+- `output/steam-after-ge3-20260227T160726Z.png`
+- `output/steam-vgui-recover-20260227T160821Z.log`
+- `output/steam-dbus-20260227T160908Z.log`
