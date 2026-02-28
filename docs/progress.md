@@ -1299,3 +1299,62 @@ Artifacts:
 
 Repo updates:
 - Added `scripts/38-test-display2-headless-monitor-cycle.sh`.
+
+## 2026-02-28 (01:00-01:03 UTC, display :2 + attempted SLR=0)
+
+New hypothesis tested:
+- If we disable Steam Linux Runtime (`STEAM_LINUX_RUNTIME=0`) on the NVIDIA-backed display path, the game may avoid the failing runtime/container combination.
+
+What was tried:
+- Added `scripts/39-test-display2-slr0-d3d12.sh`.
+- Ran native FEX Steam on `DISPLAY=:2`, restored pristine Proton Experimental, and injected launch options via localconfig:
+  - `STEAM_LINUX_RUNTIME=0 PROTON_LOG=1 ... %command% -FastLaunch`
+- Dispatched launch via `steam.pipe` and captured process/compat state and running-session crash marker.
+
+Result:
+- Dispatch accepted (`GameAction` and `StartSession` increased).
+- Steam still launched with sniper + pressure-vessel in effective command prefix (`waitforexitandrun` path unchanged).
+- `PROTON_LOG` did not materialize in this cycle, and app cmdline in running-session stayed empty.
+- Crash signature unchanged:
+  - `Where="CrashReport_Z::Init"`
+  - `FrameCount=0`
+  - `Cpu="GenuineIntel"`, `Brand="Cortex-X925"`
+  - `TimeUTC=2026-02-28T01:02:02Z`
+
+Artifacts:
+- `output/display2-slr0-d3d12-cycle-20260228T010049Z.log`
+- `output/display2-slr0-d3d12-20260228T010049Z.png`
+
+Assessment update:
+- localconfig LaunchOptions are not a reliable control plane in this session for runtime selection/args.
+- Effective launch path remains sniper/containerized regardless of attempted `SLR=0` launch options.
+
+## 2026-02-28 (01:05-01:08 UTC, sniper-entrypoint-bypass retest on display :2)
+
+New hypothesis tested:
+- Re-running the sniper-entrypoint bypass on NVIDIA display `:2` may differ from prior `:3` cycles and clear boot init.
+
+What was tried:
+- Re-ran `scripts/36-test-sniper-entrypoint-bypass.sh` with `DISPLAY_NUM=:2`.
+- Verified launcher dispatch and observed live process tree.
+
+Result:
+- Dispatch accepted, but runtime remained containerized (`srt-bwrap`/`pv-adverb` still present in game process tree).
+- No evidence of bypass altering effective runtime topology for MSFS launch.
+- The game remained in the same pre-frame init failure mode (no end-to-end boot achieved).
+
+Assessment update:
+- On this stack, entrypoint wrapper bypass does not remove pressure-vessel from the actual MSFS launch chain.
+- The blocker remains runtime/platform compatibility before first frame.
+
+## 2026-02-28 (source inspection: FEX CPUID override limits)
+
+What was checked:
+- Inspected current FEX source (`FEXCore/Source/Interface/Core/CPUID.cpp`) to verify whether brand/vendor can be overridden through config/env.
+
+Finding:
+- `FEX_CPUFEATUREREGISTERS` only maps to ARM ID-register feature parsing (`isar*`, `pfr*`, `midr`, etc.) and does **not** provide a direct x86 brand/vendor override hook.
+- CPUID brand string is derived from `PerCPUData.ProductName` populated from host MIDR mapping, so full Intel/AMD brand spoofing is not configurable via current exposed FEX options.
+
+Assessment update:
+- "Full CPUID brand/vendor spoofing" is not currently achievable in this environment using exposed FEX runtime config alone.
