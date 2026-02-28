@@ -118,6 +118,9 @@ NVIDIA GB10 Blackwell GPU
 
 # 9. Optional: verify MSFS launch process state
 ./scripts/09-verify-msfs-launch.sh
+
+# 10. Optional: run DGX runtime preflight repairs directly
+./scripts/53-preflight-runtime-repair.sh
 ```
 
 See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [docs/progress.md](docs/progress.md) for live validation notes.
@@ -150,6 +153,7 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 │   ├── 07-await-login-and-install.sh # Wait for Steam auth and auto-queue MSFS install
 │   ├── 08-finalize-auth-and-run-msfs.sh # One-shot auth/install/launch orchestrator
 │   ├── 52-install-pvadverb-fex-wrapper.sh # Repair pressure-vessel host pv-adverb path on ARM
+│   ├── 53-preflight-runtime-repair.sh # Repairs pv-adverb, Vulkan overrides, and MSFS package paths
 │   ├── 14-install-ge-proton.sh # Install latest GE-Proton into compatibilitytools.d
 └── docs/
     ├── setup-guide.md         # Detailed setup walkthrough

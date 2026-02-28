@@ -127,10 +127,13 @@ while true; do
   sleep "$POLL_SECONDS"
 done
 
-echo "[4/7] Ensuring Steam Play compatibility mappings..."
+echo "[4/8] Ensuring Steam Play compatibility mappings..."
 "$(dirname "$0")/10-enable-steam-play.sh" >/tmp/msfs-enable-steamplay.log 2>&1 || true
 
-echo "[5/7] Triggering install and checking manifest..."
+echo "[5/8] Running runtime preflight repairs..."
+"$(dirname "$0")/53-preflight-runtime-repair.sh" >/tmp/msfs-preflight-repair.log 2>&1 || true
+
+echo "[6/8] Triggering install and checking manifest..."
 if manifest_is_fully_installed "$MANIFEST"; then
   echo "Manifest already shows a fully downloaded install; skipping install trigger."
 else
@@ -175,7 +178,7 @@ if [ "$INSTALL_WAIT_SECONDS" -gt 0 ]; then
   done
 fi
 
-echo "[6/7] Launching MSFS via ~/launch-msfs.sh ..."
+echo "[7/8] Launching MSFS via ~/launch-msfs.sh ..."
 if [ -x "$(dirname "$0")/19-dispatch-via-steam-pipe.sh" ]; then
   WAIT_SECONDS=20 "$(dirname "$0")/19-dispatch-via-steam-pipe.sh" >/tmp/msfs-launch.log 2>&1 || true
 elif [ -x "$HOME/launch-msfs.sh" ]; then
@@ -194,7 +197,7 @@ if command -v import >/dev/null 2>&1; then
   echo "Launch screenshot: /tmp/msfs-launch-state-${MSFS_APPID}.png"
 fi
 
-echo "[7/7] Verifying launch process state..."
+echo "[8/8] Verifying launch process state..."
 if WAIT_SECONDS="$LAUNCH_VERIFY_WAIT_SECONDS" "$(dirname "$0")/09-verify-msfs-launch.sh"; then
   echo "Launch verification succeeded."
 else

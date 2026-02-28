@@ -258,6 +258,21 @@ Artifacts from this pass:
 
 ## 2026-02-27 (11:30 UTC)
 
+## 2026-02-28 (preflight hardening pass)
+
+Added a tracked runtime preflight repair path to improve first-frame reliability on DGX Spark:
+
+- New `scripts/53-preflight-runtime-repair.sh` to apply the recurring fixes before launch:
+  - installs host `pv-adverb` FEX wrapper when missing
+  - syncs pressure-vessel Vulkan override manifests into `/usr/lib/pressure-vessel/overrides/share/vulkan`
+  - repairs MSFS 2024 package bootstrap paths and `UserCfg.opt` to canonical `MSFS2024/Packages`
+  - enforces hardened per-app launch options to disable problematic imported Vulkan layers in pressure-vessel
+- Wired preflight into `scripts/08-finalize-auth-and-run-msfs.sh` so each one-shot run applies repairs automatically.
+
+Goal of this pass:
+
+- Convert previously manual/experimental recovery steps into a repeatable, tracked launch path for DGX runs.
+
 Deep-dive retry on `spark-de79` for MSFS 2024 (`AppID 2537590`):
 
 - Steam was previously authenticated (`steamid=76561198351709467`) and MSFS 2024 page showed `INSTALL`.
