@@ -1,5 +1,25 @@
 # Progress Log
 
+## 2026-02-28 (23:56-23:59 UTC, CI docs-reference + strict-mode guardrails)
+
+Validation from this checkout:
+
+- Added deterministic docs integrity checks to `scripts/99-ci-validate.sh`:
+  - scans `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` for `scripts/NN-*.sh` references,
+  - fails CI when a referenced script path does not exist.
+- Added strict-mode guardrails for core orchestrators:
+  - `scripts/54-launch-and-capture-evidence.sh`
+  - `scripts/55-run-until-stable-runtime.sh`
+  - `scripts/90-remote-dgx-stable-check.sh`
+  - CI now fails if `set -euo pipefail` is removed from any of these files.
+- Updated `README.md` contributing guidance to reflect the expanded CI checks.
+- Local verification:
+  - `./scripts/99-ci-validate.sh` passes in this workspace.
+
+Assessment update:
+
+- This closes two common regression gaps without introducing external CI dependencies: documentation drift to stale script paths and accidental strict-mode loss in high-impact launch/remote orchestration scripts.
+
 ## 2026-02-28 (23:34-23:40 UTC, CI guardrails bootstrap)
 
 Validation from this checkout:
