@@ -1,5 +1,36 @@
 # Progress Log
 
+## 2026-02-28 (13:17-13:22 UTC, live DGX: headless Steam window restore during auth recovery)
+
+Live checks on `spark-de79` from this checkout:
+
+- `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=120 ./scripts/90-remote-dgx-stable-check.sh`
+  - verification still fails at auth gate (`exit 7`, unauthenticated session).
+  - evidence synced locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T131756Z/output/auth-state-2537590-20260228T131758Z.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T131756Z/output/steam-debug-20260228T131758Z.log`
+- `DGX_PASS=... AUTO_REAUTH_ON_AUTH_FAILURE=1 REAUTH_LOGIN_WAIT_SECONDS=180 MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=120 ./scripts/90-remote-dgx-stable-check.sh`
+  - auth recovery still times out (`exit 2`) without credentials/Steam Guard code in this session.
+  - timeout confirms Steam windows exist but no visible login/auth dialog.
+  - evidence synced locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T131810Z/output/steam-debug-20260228T132121Z.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T131810Z/output/steam-debug-20260228T132121Z.png`
+
+Repo hardening in this pass:
+
+- Updated `scripts/58-ensure-steam-auth.sh`:
+  - added `AUTH_RESTORE_WINDOWS=1` (default),
+  - actively attempts to unminimize/raise/focus Steam windows during re-auth polling,
+  - emits explicit timeout note when restore mode was attempted.
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - forwards `AUTH_RESTORE_WINDOWS` to remote auth recovery.
+- Updated docs (`README.md`, `docs/setup-guide.md`, `docs/troubleshooting.md`) to document default window-restore behavior.
+
+Assessment update:
+
+- Launch/runtime path remains healthy; active blocker remains Steam account auth state.
+- Headless auth recovery is now more resilient when Steam dialogs are hidden/minimized instead of truly absent.
+
 ## 2026-02-28 (13:14-13:16 UTC, live DGX: headless auth fallback hardening for invisible Steam UI)
 
 Live checks on `spark-de79` from this checkout:

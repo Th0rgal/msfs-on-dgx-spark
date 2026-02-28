@@ -17,6 +17,7 @@ AUTH_AUTO_FILL="${AUTH_AUTO_FILL:-1}"
 AUTH_SUBMIT_LOGIN="${AUTH_SUBMIT_LOGIN:-1}"
 AUTH_USE_STEAM_LOGIN_CLI="${AUTH_USE_STEAM_LOGIN_CLI:-1}"
 AUTH_FORCE_OPEN_MAIN="${AUTH_FORCE_OPEN_MAIN:-1}"
+AUTH_RESTORE_WINDOWS="${AUTH_RESTORE_WINDOWS:-1}"
 
 STEAM_DIR="$(find_steam_dir || true)"
 if [ -z "$STEAM_DIR" ]; then
@@ -41,6 +42,28 @@ steam_login_dialog_visible() {
 steam_any_window_present() {
   command -v xwininfo >/dev/null 2>&1 || return 1
   DISPLAY="$DISPLAY_NUM" xwininfo -root -tree 2>/dev/null | grep -Eiq "steam|steamwebhelper|sign in to steam|steam guard"
+}
+
+restore_steam_windows() {
+  [ "$AUTH_RESTORE_WINDOWS" = "1" ] || return 1
+  command -v xdotool >/dev/null 2>&1 || return 1
+
+  local ids=()
+  mapfile -t ids < <(DISPLAY="$DISPLAY_NUM" xdotool search --class steam 2>/dev/null || true)
+  if [ "${#ids[@]}" -eq 0 ]; then
+    mapfile -t ids < <(DISPLAY="$DISPLAY_NUM" xdotool search --name "Steam|steamwebhelper|Sign in to Steam|Steam Guard|Friends|Library|Store" 2>/dev/null || true)
+  fi
+  if [ "${#ids[@]}" -eq 0 ]; then
+    return 1
+  fi
+
+  local id
+  for id in "${ids[@]}"; do
+    DISPLAY="$DISPLAY_NUM" xdotool windowmap "$id" >/dev/null 2>&1 || true
+    DISPLAY="$DISPLAY_NUM" xdotool windowraise "$id" >/dev/null 2>&1 || true
+  done
+  DISPLAY="$DISPLAY_NUM" xdotool windowactivate --sync "${ids[0]}" >/dev/null 2>&1 || true
+  return 0
 }
 
 open_steam_main_ui() {
@@ -109,6 +132,9 @@ fi
 if [ "$AUTH_FORCE_OPEN_MAIN" = "1" ]; then
   open_steam_main_ui || true
 fi
+if [ "$AUTH_RESTORE_WINDOWS" = "1" ]; then
+  restore_steam_windows || true
+fi
 
 cli_login_attempted=0
 if [ "$AUTH_USE_STEAM_LOGIN_CLI" = "1" ] && [ -n "$STEAM_USERNAME" ] && [ -n "$STEAM_PASSWORD" ]; then
@@ -144,6 +170,9 @@ while true; do
     steam_auth_status "$DISPLAY_NUM" "$STEAM_DIR" || true
     if steam_any_window_present; then
       echo "Observed Steam X11 windows, but no visible login/auth dialog was detected."
+      if [ "$AUTH_RESTORE_WINDOWS" = "1" ]; then
+        echo "Tried to restore/focus Steam windows automatically (`AUTH_RESTORE_WINDOWS=1`)."
+      fi
       echo "Hint: window manager/UI may be headless-minimized; run ./scripts/11-debug-steam-window-state.sh for evidence."
     fi
     echo "Hint: complete login/Steam Guard on VNC, or pass STEAM_GUARD_CODE and rerun."
@@ -155,6 +184,9 @@ while true; do
   fi
   if [ "$AUTH_FORCE_OPEN_MAIN" = "1" ]; then
     open_steam_main_ui || true
+  fi
+  if [ "$AUTH_RESTORE_WINDOWS" = "1" ]; then
+    restore_steam_windows || true
   fi
   if [ "$cli_login_attempted" -eq 0 ] && [ "$AUTH_USE_STEAM_LOGIN_CLI" = "1" ] && [ -n "$STEAM_USERNAME" ] && [ -n "$STEAM_PASSWORD" ]; then
     launch_cli_login || true

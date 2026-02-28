@@ -243,6 +243,8 @@ When remote auth recovery is enabled and the login UI is not visibly rendered in
 DGX_PASS='<password>' AUTO_REAUTH_ON_AUTH_FAILURE=1 STEAM_USERNAME='<steam_user>' STEAM_PASSWORD='<steam_pass>' AUTH_USE_STEAM_LOGIN_CLI=1 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
+Window restore is also enabled by default during re-auth (`AUTH_RESTORE_WINDOWS=1`) to unminimize/focus hidden Steam windows before timing out.
+
 Useful overrides:
 
 ```bash
