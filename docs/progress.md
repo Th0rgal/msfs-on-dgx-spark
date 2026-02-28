@@ -1,5 +1,31 @@
 # Progress Log
 
+## 2026-02-28 (15:06-15:08 UTC, local hardening: deterministic endpoint probing + dedupe)
+
+Local validation from this checkout:
+
+- Direct SSH probe still times out from this runner:
+  - `sshpass -p '...' ssh -o ConnectTimeout=8 th0rgal@100.77.4.93 'hostname'` -> timeout.
+- Verified deduplicated port-candidate behavior:
+  - `DGX_HOST=100.77.4.93 DGX_PORT_CANDIDATES='22,22,2222' ... ./scripts/90-remote-dgx-stable-check.sh`
+  - now probes `22` then `2222` exactly once each and reports `Ports tested: 22,2222`.
+- Verified explicit endpoint-candidate mode:
+  - `DGX_ENDPOINT_CANDIDATES='spark-de79:22,100.77.4.93:2222,100.77.4.93:2222' ... ./scripts/90-remote-dgx-stable-check.sh`
+  - duplicate endpoint removed before probing; failure summary now reports exact endpoint list (`Endpoints tested: ...`).
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - added `DGX_ENDPOINT_CANDIDATES` (`host` or `host:port`) for explicit ordered endpoint probing,
+  - added candidate normalization/deduplication for `DGX_HOST_CANDIDATES`, `DGX_PORT_CANDIDATES`, and `DGX_ENDPOINT_CANDIDATES`,
+  - improved failed-probe summary to report endpoint mode explicitly.
+- Updated `README.md` to document endpoint-candidate mode and normalization behavior.
+
+Assessment update:
+
+- Current blocker is still network path availability from this execution environment (`tailscaled` unavailable and SSH to `100.77.4.93` timing out).
+- Connection triage is now cleaner and deterministic, with no repeated probes from duplicate candidate entries.
+
 ## 2026-02-28 (14:58-15:01 UTC, local hardening: multi-port DGX SSH probing + tailscaled clarity)
 
 Local validation from this checkout:

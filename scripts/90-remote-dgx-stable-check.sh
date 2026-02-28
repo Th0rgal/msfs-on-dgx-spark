@@ -23,6 +23,7 @@ DGX_USER="${DGX_USER:-th0rgal}"
 DGX_PASS="${DGX_PASS:-}"
 DGX_PORT="${DGX_PORT:-22}"
 DGX_PORT_CANDIDATES="${DGX_PORT_CANDIDATES:-$DGX_PORT,22,2222}"
+DGX_ENDPOINT_CANDIDATES="${DGX_ENDPOINT_CANDIDATES:-}"
 DGX_TARGET_DIR="${DGX_TARGET_DIR:-\$HOME/msfs-on-dgx-spark-run-\$(date -u +%Y%m%dT%H%M%SZ)}"
 DGX_HOST_CANDIDATES="${DGX_HOST_CANDIDATES:-spark-de79,100.77.4.93}"
 DGX_DISCOVER_TAILSCALE_IPS="${DGX_DISCOVER_TAILSCALE_IPS:-1}"
@@ -194,6 +195,47 @@ append_host_candidate() {
   fi
 }
 
+normalize_csv_candidates() {
+  local csv="$1"
+  local normalized=()
+  IFS=',' read -r -a _entries <<< "$csv"
+  for _entry in "${_entries[@]}"; do
+    _entry="$(echo "$_entry" | xargs)"
+    [ -z "$_entry" ] && continue
+    local seen=0
+    for _existing in "${normalized[@]}"; do
+      if [ "$_existing" = "$_entry" ]; then
+        seen=1
+        break
+      fi
+    done
+    if [ "$seen" -eq 0 ]; then
+      normalized+=("$_entry")
+    fi
+  done
+  (IFS=','; echo "${normalized[*]}")
+}
+
+split_endpoint_candidate() {
+  local endpoint="$1"
+  local default_port="$2"
+  local host=""
+  local port=""
+  if [[ "$endpoint" == *:* ]]; then
+    host="${endpoint%%:*}"
+    port="${endpoint##*:}"
+  else
+    host="$endpoint"
+    port="$default_port"
+  fi
+  host="$(echo "$host" | xargs)"
+  port="$(echo "$port" | xargs)"
+  if [ -z "$host" ] || [ -z "$port" ]; then
+    return 1
+  fi
+  printf '%s,%s\n' "$host" "$port"
+}
+
 probe_ssh_candidate() {
   local host="$1"
   local port="$2"
@@ -241,30 +283,59 @@ if [ "$DGX_DISCOVER_TAILSCALE_IPS" = "1" ] && command -v tailscale >/dev/null 2>
   DGX_HOST_CANDIDATES="$discovered_hosts"
 fi
 
+DGX_HOST_CANDIDATES="$(normalize_csv_candidates "$DGX_HOST_CANDIDATES")"
+DGX_PORT_CANDIDATES="$(normalize_csv_candidates "$DGX_PORT_CANDIDATES")"
+DGX_ENDPOINT_CANDIDATES="$(normalize_csv_candidates "$DGX_ENDPOINT_CANDIDATES")"
+probe_target_summary="Ports tested: $DGX_PORT_CANDIDATES"
+if [ -n "$DGX_ENDPOINT_CANDIDATES" ]; then
+  probe_target_summary="Endpoints tested: $DGX_ENDPOINT_CANDIDATES"
+fi
+
 selected_host=""
 selected_port=""
 failed_candidates=()
-IFS=',' read -r -a host_candidates <<< "$DGX_HOST_CANDIDATES"
-IFS=',' read -r -a port_candidates <<< "$DGX_PORT_CANDIDATES"
-for host_candidate in "${host_candidates[@]}"; do
-  host_candidate="$(echo "$host_candidate" | xargs)"
-  [ -z "$host_candidate" ] && continue
-  for port_candidate in "${port_candidates[@]}"; do
-    port_candidate="$(echo "$port_candidate" | xargs)"
-    [ -z "$port_candidate" ] && continue
-    if probe_error="$(probe_ssh_candidate "$host_candidate" "$port_candidate")"; then
-      selected_host="$host_candidate"
-      selected_port="$port_candidate"
-      break 2
+if [ -n "$DGX_ENDPOINT_CANDIDATES" ]; then
+  IFS=',' read -r -a endpoint_candidates <<< "$DGX_ENDPOINT_CANDIDATES"
+  for endpoint_candidate in "${endpoint_candidates[@]}"; do
+    endpoint_candidate="$(echo "$endpoint_candidate" | xargs)"
+    [ -z "$endpoint_candidate" ] && continue
+    if split_result="$(split_endpoint_candidate "$endpoint_candidate" "$DGX_PORT")"; then
+      endpoint_host="${split_result%%,*}"
+      endpoint_port="${split_result##*,}"
+      if probe_error="$(probe_ssh_candidate "$endpoint_host" "$endpoint_port")"; then
+        selected_host="$endpoint_host"
+        selected_port="$endpoint_port"
+        break
+      else
+        failed_candidates+=("${endpoint_host}:${endpoint_port} -> ${probe_error}")
+      fi
     else
-      failed_candidates+=("${host_candidate}:${port_candidate} -> ${probe_error}")
+      failed_candidates+=("${endpoint_candidate} -> invalid endpoint candidate (expected host or host:port)")
     fi
   done
-done
+else
+  IFS=',' read -r -a host_candidates <<< "$DGX_HOST_CANDIDATES"
+  IFS=',' read -r -a port_candidates <<< "$DGX_PORT_CANDIDATES"
+  for host_candidate in "${host_candidates[@]}"; do
+    host_candidate="$(echo "$host_candidate" | xargs)"
+    [ -z "$host_candidate" ] && continue
+    for port_candidate in "${port_candidates[@]}"; do
+      port_candidate="$(echo "$port_candidate" | xargs)"
+      [ -z "$port_candidate" ] && continue
+      if probe_error="$(probe_ssh_candidate "$host_candidate" "$port_candidate")"; then
+        selected_host="$host_candidate"
+        selected_port="$port_candidate"
+        break 2
+      else
+        failed_candidates+=("${host_candidate}:${port_candidate} -> ${probe_error}")
+      fi
+    done
+  done
+fi
 
 if [ -z "$selected_host" ]; then
   echo "ERROR: unable to reach DGX over SSH for any host candidate: $DGX_HOST_CANDIDATES"
-  echo "Ports tested: $DGX_PORT_CANDIDATES"
+  echo "$probe_target_summary"
   echo "Hint: verify Tailscale connectivity, set DGX_PORT_CANDIDATES, or set DGX_HOST to a reachable endpoint."
   if [ "${#failed_candidates[@]}" -gt 0 ]; then
     echo "Per-candidate SSH probe errors:"
