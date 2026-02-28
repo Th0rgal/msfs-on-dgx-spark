@@ -1,5 +1,33 @@
 # Progress Log
 
+## 2026-02-28 (13:11-13:13 UTC, live DGX: unattended credential-based auth recovery path)
+
+Live checks on `spark-de79` from this checkout:
+
+- `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=90 ./scripts/90-remote-dgx-stable-check.sh`
+  - run still fails fast at auth gate with `exit 7` (`Steam session unauthenticated`), confirming launch path remains blocked by login state.
+- `DGX_PASS=... AUTO_REAUTH_ON_AUTH_FAILURE=1 REAUTH_LOGIN_WAIT_SECONDS=30 MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - remote auth recovery path executed and timed out with deterministic `exit 2` when no credentials/guard code were supplied.
+  - auth-failure evidence synced locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T131220Z/output/steam-debug-20260228T131255Z.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T131220Z/output/steam-debug-20260228T131255Z.png`
+
+Repo hardening in this pass:
+
+- Updated `scripts/58-ensure-steam-auth.sh`:
+  - added optional credential-form automation via `STEAM_USERNAME`/`STEAM_PASSWORD`,
+  - retained optional `STEAM_GUARD_CODE` typing,
+  - supports `AUTH_AUTO_FILL` and `AUTH_SUBMIT_LOGIN` toggles for controlled login automation.
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - forwards `STEAM_USERNAME`, `STEAM_PASSWORD`, `AUTH_AUTO_FILL`, and `AUTH_SUBMIT_LOGIN` into remote auth recovery.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` now document unattended credential+guard re-auth usage.
+
+Assessment update:
+
+- MSFS runtime path remains validated; current blocker remains Steam authentication state.
+- Remote automation now supports full unattended re-auth when credentials and (if required) Steam Guard code are provided.
+
 ## 2026-02-28 (13:07-13:10 UTC, live DGX: remote auth-recovery evidence hardening)
 
 Live checks on `spark-de79` from this checkout:

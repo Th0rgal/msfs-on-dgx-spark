@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Ensure Steam is authenticated in the active headless session (optionally via Steam Guard code).
+# Ensure Steam is authenticated in the active headless session
+# (optionally via login credentials + Steam Guard code).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,6 +11,10 @@ DISPLAY_NUM="$(resolve_display_num "$SCRIPT_DIR")"
 LOGIN_WAIT_SECONDS="${LOGIN_WAIT_SECONDS:-300}"
 POLL_SECONDS="${POLL_SECONDS:-10}"
 GUARD_CODE="${1:-${STEAM_GUARD_CODE:-}}"
+STEAM_USERNAME="${STEAM_USERNAME:-}"
+STEAM_PASSWORD="${STEAM_PASSWORD:-}"
+AUTH_AUTO_FILL="${AUTH_AUTO_FILL:-1}"
+AUTH_SUBMIT_LOGIN="${AUTH_SUBMIT_LOGIN:-1}"
 
 STEAM_DIR="$(find_steam_dir || true)"
 if [ -z "$STEAM_DIR" ]; then
@@ -26,12 +31,63 @@ if steam_session_authenticated "$DISPLAY_NUM" "$STEAM_DIR"; then
   exit 0
 fi
 
+steam_login_dialog_visible() {
+  command -v xdotool >/dev/null 2>&1 || return 1
+  DISPLAY="$DISPLAY_NUM" xdotool search --onlyvisible --name "Sign in to Steam" >/dev/null 2>&1
+}
+
+fill_login_form() {
+  command -v xdotool >/dev/null 2>&1 || return 1
+  [ -n "$STEAM_USERNAME" ] || return 1
+  [ -n "$STEAM_PASSWORD" ] || return 1
+
+  local win_id
+  win_id="$(DISPLAY="$DISPLAY_NUM" xdotool search --onlyvisible --name "Sign in to Steam" 2>/dev/null | head -n1 || true)"
+  [ -n "$win_id" ] || return 1
+
+  DISPLAY="$DISPLAY_NUM" xdotool windowactivate --sync "$win_id" || true
+  sleep 0.2
+  DISPLAY="$DISPLAY_NUM" xdotool key --window "$win_id" --clearmodifiers ctrl+a BackSpace || true
+  DISPLAY="$DISPLAY_NUM" xdotool type --window "$win_id" --delay 12 "$STEAM_USERNAME" || true
+  DISPLAY="$DISPLAY_NUM" xdotool key --window "$win_id" Tab || true
+  DISPLAY="$DISPLAY_NUM" xdotool key --window "$win_id" --clearmodifiers ctrl+a BackSpace || true
+  DISPLAY="$DISPLAY_NUM" xdotool type --window "$win_id" --delay 12 "$STEAM_PASSWORD" || true
+  if [ "$AUTH_SUBMIT_LOGIN" = "1" ]; then
+    DISPLAY="$DISPLAY_NUM" xdotool key --window "$win_id" Return || true
+  fi
+  return 0
+}
+
+type_guard_code() {
+  [ -n "$GUARD_CODE" ] || return 1
+  command -v xdotool >/dev/null 2>&1 || return 1
+
+  local win_id
+  win_id="$(DISPLAY="$DISPLAY_NUM" xdotool search --onlyvisible --name "Steam Guard|Sign in to Steam" 2>/dev/null | head -n1 || true)"
+  if [ -n "$win_id" ]; then
+    DISPLAY="$DISPLAY_NUM" xdotool windowactivate --sync "$win_id" || true
+    sleep 0.2
+    DISPLAY="$DISPLAY_NUM" xdotool key --window "$win_id" --delay 80 "$GUARD_CODE" Return || true
+  else
+    DISPLAY="$DISPLAY_NUM" xdotool key --delay 80 "$GUARD_CODE" Return || true
+  fi
+  return 0
+}
+
+if [ "$AUTH_AUTO_FILL" = "1" ] && steam_login_dialog_visible; then
+  if fill_login_form; then
+    echo "Submitted Steam login form on ${DISPLAY_NUM}."
+  else
+    echo "Steam login dialog visible but missing STEAM_USERNAME/STEAM_PASSWORD or xdotool."
+  fi
+fi
+
 if [ -n "$GUARD_CODE" ]; then
   echo "Attempting Steam Guard code entry on ${DISPLAY_NUM}..."
-  if command -v xdotool >/dev/null 2>&1; then
-    DISPLAY="$DISPLAY_NUM" xdotool key --delay 80 "$GUARD_CODE" Return || true
+  if type_guard_code; then
+    :
   else
-    echo "WARN: xdotool not installed; cannot auto-type Steam Guard code."
+    echo "WARN: unable to auto-type Steam Guard code (missing xdotool/window context)."
   fi
 else
   echo "No Steam Guard code supplied; waiting for manual login completion."
@@ -52,6 +108,13 @@ while true; do
     steam_auth_status "$DISPLAY_NUM" "$STEAM_DIR" || true
     echo "Hint: complete login/Steam Guard on VNC, or pass STEAM_GUARD_CODE and rerun."
     exit 2
+  fi
+
+  if [ "$AUTH_AUTO_FILL" = "1" ] && steam_login_dialog_visible; then
+    fill_login_form || true
+  fi
+  if [ -n "$GUARD_CODE" ]; then
+    type_guard_code || true
   fi
 
   printf "  waiting login... (%ss elapsed)\n" "$elapsed"

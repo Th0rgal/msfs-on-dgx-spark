@@ -252,6 +252,14 @@ STRICT_MIN_STABLE_SECONDS=45 STRICT_MAX_ATTEMPTS=2 \
 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
+Optional unattended re-auth gate (credential form + optional Steam Guard) before verification:
+
+```bash
+DGX_PASS='<password>' AUTO_REAUTH_ON_AUTH_FAILURE=1 \
+STEAM_USERNAME='<steam_user>' STEAM_PASSWORD='<steam_pass>' STEAM_GUARD_CODE='<code>' \
+REAUTH_LOGIN_WAIT_SECONDS=180 ./scripts/90-remote-dgx-stable-check.sh
+```
+
 When `STRICT_MIN_STABLE_SECONDS` is set, remote checks run in two stages:
 - baseline gate (`MIN_STABLE_SECONDS`/`MAX_ATTEMPTS`) proves local run-path health
 - strict gate (`STRICT_MIN_STABLE_SECONDS`/`STRICT_MAX_ATTEMPTS`) measures higher stability confidence

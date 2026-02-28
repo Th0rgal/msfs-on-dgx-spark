@@ -134,8 +134,8 @@ DGX_PASS='<password>' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=2 STRICT_MIN_STABLE_SEC
 # 14. Optional: staged reliability with automatic Steam runtime recovery between strict retries
 DGX_PASS='<password>' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 STRICT_MIN_STABLE_SECONDS=60 STRICT_MAX_ATTEMPTS=2 STRICT_RECOVER_BETWEEN_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh
 
-# 15. Optional: include remote Steam auth recovery before verification (requires fresh Steam Guard code when logged out)
-DGX_PASS='<password>' AUTO_REAUTH_ON_AUTH_FAILURE=1 STEAM_GUARD_CODE='<code>' REAUTH_LOGIN_WAIT_SECONDS=180 ./scripts/90-remote-dgx-stable-check.sh
+# 15. Optional: include remote Steam auth recovery before verification (supports username/password + Steam Guard)
+DGX_PASS='<password>' AUTO_REAUTH_ON_AUTH_FAILURE=1 STEAM_USERNAME='<steam_user>' STEAM_PASSWORD='<steam_pass>' STEAM_GUARD_CODE='<code>' REAUTH_LOGIN_WAIT_SECONDS=180 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
 `09-verify-msfs-launch.sh` now requires a stable runtime window (default `30s`) to avoid false positives from short-lived launch wrappers. Tune with `MIN_STABLE_SECONDS=<N>`.
@@ -147,7 +147,7 @@ Remote evidence fetch is performed even when remote verification fails, so stric
 `90-remote-dgx-stable-check.sh` can optionally run a staged gate when `STRICT_MIN_STABLE_SECONDS` is set: baseline success proves local run-path health; strict gate captures higher-stability confidence without conflating the two.
 When strict retries are enabled, `STRICT_RECOVER_BETWEEN_ATTEMPTS=1` can rebuild Steam runtime state between retries to reduce contamination from prior transient launch attempts.
 Default recovery-trigger exit codes are `2,3,4` (`no launch observed`, `transient launch`, and `launch seen but not stable in time window`); override with `RECOVER_ON_EXIT_CODES`.
-When auth drift is expected, `AUTO_REAUTH_ON_AUTH_FAILURE=1` runs `58-ensure-steam-auth.sh` remotely before verification; provide `STEAM_GUARD_CODE` for unattended re-auth.
+When auth drift is expected, `AUTO_REAUTH_ON_AUTH_FAILURE=1` runs `58-ensure-steam-auth.sh` remotely before verification; for unattended recovery provide `STEAM_USERNAME`/`STEAM_PASSWORD` (login form) and optionally `STEAM_GUARD_CODE` (2FA).
 Auth checks now require strong Steam session evidence by default (`steamid` via process/log); UI-only detection is treated as unauthenticated unless `ALLOW_UI_AUTH_FALLBACK=1` is explicitly set.
 `90-remote-dgx-stable-check.sh` forwards `ALLOW_UI_AUTH_FALLBACK` and `FATAL_EXIT_CODES` to the remote runners, and also accepts trailing `KEY=VALUE` overrides for convenience (for example `./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1`).
 When `AUTO_REAUTH_ON_AUTH_FAILURE=1` is enabled and auth recovery fails, `90-remote-dgx-stable-check.sh` now captures `steam-debug-*.log/.png` before exit (`AUTH_DEBUG_ON_REAUTH_FAILURE=1` by default), ensuring remote auth failures still sync actionable evidence locally.
@@ -188,7 +188,7 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 │   ├── 55-run-until-stable-runtime.sh # Repeat launch+verify cycles until stable runtime succeeds
 │   ├── 56-run-staged-stability-check.sh # Baseline + strict staged stability gates
 │   ├── 57-recover-steam-runtime.sh # Rebuild Steam runtime namespace between retries
-│   ├── 58-ensure-steam-auth.sh # Ensure authenticated Steam session (optional Steam Guard automation)
+│   ├── 58-ensure-steam-auth.sh # Ensure authenticated Steam session (optional credential + Steam Guard automation)
 │   ├── 90-remote-dgx-stable-check.sh # Sync current checkout to DGX and run staged checks remotely
 │   ├── 14-install-ge-proton.sh # Install latest GE-Proton into compatibilitytools.d
 └── docs/
