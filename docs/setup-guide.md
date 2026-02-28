@@ -244,6 +244,18 @@ DGX_HOST=100.77.4.93 DGX_USER=th0rgal MSFS_APPID=2537590 MIN_STABLE_SECONDS=20 \
 MAX_ATTEMPTS=2 WAIT_SECONDS=120 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
+Optional staged gate (baseline + strict):
+
+```bash
+DGX_PASS='<password>' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 \
+STRICT_MIN_STABLE_SECONDS=45 STRICT_MAX_ATTEMPTS=2 \
+./scripts/90-remote-dgx-stable-check.sh
+```
+
+When `STRICT_MIN_STABLE_SECONDS` is set, remote checks run in two stages:
+- baseline gate (`MIN_STABLE_SECONDS`/`MAX_ATTEMPTS`) proves local run-path health
+- strict gate (`STRICT_MIN_STABLE_SECONDS`/`STRICT_MAX_ATTEMPTS`) measures higher stability confidence
+
 ## Phase 4: Remote Streaming (Optional)
 
 If the DGX Spark is headless or you want to play from another device, use Sunshine + Moonlight.

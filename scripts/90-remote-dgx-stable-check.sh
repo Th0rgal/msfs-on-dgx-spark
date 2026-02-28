@@ -15,6 +15,8 @@ MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-20}"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-2}"
 WAIT_SECONDS="${WAIT_SECONDS:-120}"
 ATTEMPT_PAUSE_SECONDS="${ATTEMPT_PAUSE_SECONDS:-12}"
+STRICT_MIN_STABLE_SECONDS="${STRICT_MIN_STABLE_SECONDS:-}"
+STRICT_MAX_ATTEMPTS="${STRICT_MAX_ATTEMPTS:-3}"
 FETCH_EVIDENCE="${FETCH_EVIDENCE:-1}"
 LOCAL_EVIDENCE_DIR="${LOCAL_EVIDENCE_DIR:-$REPO_ROOT/output/remote-runs}"
 
@@ -66,6 +68,13 @@ echo "Uploading checkout to ${DGX_USER}@${DGX_HOST}..."
 "${SCP_CMD[@]}" "$TMP_TAR" "${DGX_USER}@${DGX_HOST}:/tmp/msfs-on-dgx-spark-sync.tgz"
 
 echo "Running remote stable-runtime verification..."
+if [ -n "$STRICT_MIN_STABLE_SECONDS" ]; then
+  remote_runner="./scripts/56-run-staged-stability-check.sh"
+else
+  remote_runner="./scripts/55-run-until-stable-runtime.sh"
+fi
+
+set +e
 "${SSH_CMD[@]}" "set -euo pipefail
 TARGET_DIR='${RESOLVED_TARGET_DIR}'
 mkdir -p \"\$TARGET_DIR\"
@@ -76,12 +85,22 @@ MIN_STABLE_SECONDS='${MIN_STABLE_SECONDS}' \
 MAX_ATTEMPTS='${MAX_ATTEMPTS}' \
 WAIT_SECONDS='${WAIT_SECONDS}' \
 ATTEMPT_PAUSE_SECONDS='${ATTEMPT_PAUSE_SECONDS}' \
-./scripts/55-run-until-stable-runtime.sh
+STRICT_MIN_STABLE_SECONDS='${STRICT_MIN_STABLE_SECONDS}' \
+STRICT_MAX_ATTEMPTS='${STRICT_MAX_ATTEMPTS}' \
+BASELINE_MIN_STABLE_SECONDS='${MIN_STABLE_SECONDS}' \
+BASELINE_MAX_ATTEMPTS='${MAX_ATTEMPTS}' \
+\"${remote_runner}\"
 echo
 echo \"Remote run directory: \$TARGET_DIR\"
 echo \"Latest verify log:\"
 ls -1t \"\$TARGET_DIR\"/output/verify-launch-${MSFS_APPID}-*.log 2>/dev/null | head -n 1 || true
 "
+remote_rc=$?
+set -e
+
+if [ "$remote_rc" -ne 0 ]; then
+  echo "Remote runner exited with code: $remote_rc"
+fi
 
 if [ "$FETCH_EVIDENCE" = "1" ]; then
   echo "Fetching remote evidence to local checkout..."
@@ -90,3 +109,5 @@ if [ "$FETCH_EVIDENCE" = "1" ]; then
   "${SCP_CMD[@]}" -r "${DGX_USER}@${DGX_HOST}:${RESOLVED_TARGET_DIR}/output" "$local_run_dir/"
   echo "Local evidence copied to: $local_run_dir/output"
 fi
+
+exit "$remote_rc"

@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-02-28 (12:03-12:09 UTC, live DGX: staged stability gating + fresh reproducibility)
+
+Live validation on `spark-de79` with this checkout:
+
+- Re-ran remote clean-check baseline with updated scripts:
+  - `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - Result: success on attempt 1 (`verify exit code: 0`)
+  - Remote run dir: `/home/th0rgal/msfs-on-dgx-spark-run-20260228T120630Z`
+- Ran new staged reliability gate:
+  - `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 STRICT_MIN_STABLE_SECONDS=45 STRICT_MAX_ATTEMPTS=2 ./scripts/90-remote-dgx-stable-check.sh`
+  - Baseline stage passed (30s stable window, attempt 1)
+  - Strict stage failed after 2 attempts with consistent transient runtime (`~35s`, `<45s`)
+  - Remote run dir: `/home/th0rgal/msfs-on-dgx-spark-run-20260228T120732Z`
+
+Repo hardening in this pass:
+
+- Added `scripts/56-run-staged-stability-check.sh`:
+  - Stage 1 proves baseline local-run health (`BASELINE_MIN_STABLE_SECONDS`, `BASELINE_MAX_ATTEMPTS`)
+  - Stage 2 probes higher confidence stability (`STRICT_MIN_STABLE_SECONDS`, `STRICT_MAX_ATTEMPTS`)
+  - Returns explicit boundary: baseline pass + strict fail (`exit 3`) instead of conflating outcomes
+- Extended `scripts/90-remote-dgx-stable-check.sh`:
+  - supports optional staged mode when `STRICT_MIN_STABLE_SECONDS` is set
+  - preserves existing behavior when strict mode is unset
+  - always fetches remote `output/` evidence even when remote verification exits non-zero
+    (validated with strict-gate failure run: `/home/th0rgal/msfs-on-dgx-spark-run-20260228T121143Z` copied locally)
+- Updated README/setup guidance to document staged remote checks and trust-boundary interpretation.
+
+Assessment update:
+
+- \"MSFS can run locally on DGX Spark\" remains reproducibly true at 30s stability.
+- Long-window stability remains the active reliability gap, now tracked by an explicit strict gate.
+
 ## 2026-02-28 (11:56-11:58 UTC, live DGX: fresh proof run + remote sync hardening)
 
 Live reproducibility check on `spark-de79` from this checkout:
