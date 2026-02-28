@@ -33,7 +33,7 @@ fi
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
 LOG="$HOME/msfs-on-dgx-spark/output/native-fex-snaphome-$TS.log"
 nohup env HOME="$SNAP_HOME" DISPLAY="$DISPLAY_NUM" XDG_RUNTIME_DIR="/run/user/$(id -u)" \
-  dbus-run-session -- bash -lc "cd '$STEAM_LAUNCHER_DIR' && FEXBash -c ./steam -silent" >"$LOG" 2>&1 &
+  dbus-run-session -- bash -lc "cd '$STEAM_LAUNCHER_DIR' && FEX_HIDEHYPERVISORBIT=1 FEXBash -c ./steam -silent" >"$LOG" 2>&1 &
 
 echo "Launched native Steam with Snap HOME."
 echo "  DISPLAY=$DISPLAY_NUM"

@@ -17,7 +17,8 @@ mkdir -p "$HOME/.fex-emu"
 cat > "$HOME/.fex-emu/Config.json" <<JSON
 {
   "Config": {
-    "RootFS": "$ROOTFS_NAME"
+    "RootFS": "$ROOTFS_NAME",
+    "HideHypervisorBit": true
   },
   "ThunksDB": {
     "Vulkan": 1,

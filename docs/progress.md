@@ -1207,3 +1207,60 @@ Assessment update:
 - Disabling `present_id/present_wait` did not clear DX12 init failure on this stack.
 - Hard overlay disable + `LD_PRELOAD` stripping did not clear DX12 init failure either.
 - Remaining blocker is still low-level DXGI/D3D12 device creation under ARM+FEX+Proton runtime on this environment.
+
+## 2026-02-28 (00:09-00:13 UTC, sniper entrypoint pass-through A/B)
+
+New untried hypothesis:
+- `vkd3d` failure could be caused by Steam Linux Runtime (sniper/pressure-vessel) containerization around Proton.
+
+What was tried:
+- Added `scripts/36-test-sniper-entrypoint-bypass.sh`.
+- Temporarily replaced `SteamLinuxRuntime_sniper/_v2-entry-point` with a pass-through wrapper for this run only (restored on exit).
+- Re-launched via native FEX Steam + `steam.pipe` dispatch.
+
+What changed:
+- For the game path, `srt-bwrap`/`pv-adverb` were bypassed; Proton launched directly under FEX for MSFS.
+- A fresh running-session crash marker remained pre-frame:
+  - `Where="CrashReport_Z::Init"`
+  - `FrameCount=0`
+  - `LastStates="<no global flow>@"`
+  - latest observed `TimeUTC=2026-02-28T00:10:46Z`
+- Fatal popup still present in screenshot:
+  - `Impossible to create DirectX12 device`
+  - `0x80070057 (DXGI Unknown)`
+
+Artifacts:
+- `output/sniper-entrypoint-bypass-cycle-20260228T000953Z.log`
+- `output/sniper-entrypoint-bypass-20260228T000953Z.png`
+
+Assessment update:
+- Pressure-vessel containerization for the game process is not the primary blocker.
+- Failure remains at pre-frame DX12/DXGI init on this stack.
+
+## 2026-02-28 (00:15-00:18 UTC, FEX hypervisor-bit hide retest)
+
+New untried hypothesis:
+- Early init/DRM may react to emulation fingerprinting (`hypervisor` CPUID bit and mixed CPU identity in crash reports).
+
+What was tried:
+- Updated `scripts/27-launch-native-fex-steam-on-snap-home.sh` to launch Steam with:
+  - `FEX_HIDEHYPERVISORBIT=1`
+- Added `scripts/37-test-hide-hypervisor-runtime.sh` to validate flag behavior and run full launch cycle.
+- Also updated `scripts/26-enable-userns-and-fex-thunks.sh` to persist current FEX config shape with `HideHypervisorBit` key.
+
+Validation:
+- `FEX_HIDEHYPERVISORBIT=1 FEXBash ... /proc/cpuinfo` removes `hypervisor` flag as expected.
+- Launch dispatch remained accepted and app process stayed alive through the observation window.
+- No newer crash file replaced the latest running-session crash marker (`TimeUTC=2026-02-28T00:10:46Z`).
+- Live screenshot still shows same fatal dialog:
+  - `Impossible to create DirectX12 device`
+  - `0x80070057 (DXGI Unknown)`
+
+Artifacts:
+- `output/hide-hypervisor-cycle-20260228T001533Z.log`
+- `output/hide-hypervisor-20260228T001533Z.png`
+- `output/hide-hypervisor-postcheck-20260228T001802Z.png`
+
+Assessment update:
+- Hiding CPUID hypervisor bit did not clear DX12 device creation failure.
+- Remaining blocker is still runtime/platform compatibility at DXGI/D3D12 init under ARM+FEX+Proton.
