@@ -50,6 +50,7 @@ AUTO_LOAD_LOCAL_TAILSCALE_AUTHKEY_FILE="${AUTO_LOAD_LOCAL_TAILSCALE_AUTHKEY_FILE
 REQUIRE_LOCAL_TAILSCALE_AUTHKEY_FILE_PERMS="${REQUIRE_LOCAL_TAILSCALE_AUTHKEY_FILE_PERMS:-1}"
 LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS="${LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS:-30}"
 LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS="${LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS:-300}"
+LOCAL_TAILSCALE_INTERACTIVE_LOGIN="${LOCAL_TAILSCALE_INTERACTIVE_LOGIN:-0}"
 LOCAL_TAILSCALE_ACCEPT_ROUTES="${LOCAL_TAILSCALE_ACCEPT_ROUTES:-0}"
 LOCAL_TAILSCALE_BOOTSTRAP_RETRIES="${LOCAL_TAILSCALE_BOOTSTRAP_RETRIES:-2}"
 LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS="${LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS:-2}"
@@ -304,13 +305,24 @@ bootstrap_local_tailscale_userspace() {
   fi
 
   if ! is_tailscale_running && [ -z "$LOCAL_TAILSCALE_AUTHKEY" ]; then
-    echo "Attempting interactive tailscale login URL retrieval..."
-    login_log_file="$(mktemp)"
-    if ! tailscale_cmd login --timeout "${LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS}s" >"$login_log_file" 2>&1; then
-      echo "WARN: tailscale login URL retrieval did not complete."
+    if [ "$LOCAL_TAILSCALE_INTERACTIVE_LOGIN" = "1" ]; then
+      echo "Attempting interactive tailscale login URL retrieval..."
+      login_log_file="$(mktemp)"
+      if ! tailscale_cmd login --timeout "${LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS}s" >"$login_log_file" 2>&1; then
+        echo "WARN: tailscale login URL retrieval did not complete."
+      fi
+      sed -n '1,30p' "$login_log_file" || true
+      rm -f "$login_log_file"
+    else
+      login_url="$(tailscale_cmd status 2>/dev/null | sed -n 's/^Log in at:[[:space:]]*//p' | head -n 1 || true)"
+      if [ -n "$login_url" ]; then
+        echo "Local tailscale needs login: $login_url"
+      else
+        echo "Local tailscale needs login. Run:"
+        echo "  tailscale --socket '$LOCAL_TAILSCALE_SOCKET' login"
+      fi
+      echo "Set LOCAL_TAILSCALE_INTERACTIVE_LOGIN=1 to let this script run the interactive login flow."
     fi
-    sed -n '1,30p' "$login_log_file" || true
-    rm -f "$login_log_file"
   fi
 
   if ! is_tailscale_running; then

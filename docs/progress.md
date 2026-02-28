@@ -1,5 +1,34 @@
 # Progress Log
 
+## 2026-02-28 (16:55-17:02 UTC, non-blocking userspace tailscale login gate)
+
+Validation from this checkout:
+
+- Direct DGX SSH remains unreachable before local tailscale auth:
+  - `sshpass -p '...' ssh -o ConnectTimeout=8 th0rgal@100.77.4.93 'hostname'`
+  - result: `ssh: connect to host 100.77.4.93 port 22: Connection timed out`.
+- Userspace bootstrap now fails quickly with explicit login guidance instead of hanging on interactive login retrieval by default:
+  - `DGX_PASS=... BOOTSTRAP_LOCAL_TAILSCALE=1 MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - expected key output when unauthenticated:
+    - `Local tailscale needs login: https://login.tailscale.com/...`
+    - `Set LOCAL_TAILSCALE_INTERACTIVE_LOGIN=1 to let this script run the interactive login flow.`
+    - `ERROR: local tailscale is not in Running state after bootstrap.`
+- `bash -n scripts/90-remote-dgx-stable-check.sh` (pass).
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - added `LOCAL_TAILSCALE_INTERACTIVE_LOGIN` (default `0`),
+  - made interactive `tailscale login` opt-in,
+  - prints deterministic login URL guidance from `tailscale status` when login is required.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` now describe opt-in interactive login behavior and when to enable it.
+
+Assessment update:
+
+- End-to-end remote DGX validation from this runner still requires completing local userspace Tailscale auth.
+- The remote-check command path is now safer for unattended runs (no long interactive-login stalls by default).
+
 ## 2026-02-28 (15:52-16:55 UTC, auto-load tailscale authkey file + longer interactive login window)
 
 Validation from this checkout:
