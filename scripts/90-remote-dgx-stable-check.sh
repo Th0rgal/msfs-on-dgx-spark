@@ -273,8 +273,8 @@ bootstrap_local_tailscale_userspace() {
       tail -n 40 "$attempt_log" || true
       if ! is_process_zombie_or_missing "$bootstrap_pid"; then
         kill "$bootstrap_pid" >/dev/null 2>&1 || true
-        wait "$bootstrap_pid" >/dev/null 2>&1 || true
       fi
+      wait "$bootstrap_pid" >/dev/null 2>&1 || true
       if [ "$bootstrap_try" -lt "$LOCAL_TAILSCALE_BOOTSTRAP_RETRIES" ] && [ "$LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS" -gt 0 ]; then
         sleep "$LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS"
       fi
