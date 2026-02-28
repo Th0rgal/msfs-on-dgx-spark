@@ -37,6 +37,7 @@ FATAL_EXIT_CODES="${FATAL_EXIT_CODES-7}"
 AUTO_REAUTH_ON_AUTH_FAILURE="${AUTO_REAUTH_ON_AUTH_FAILURE:-0}"
 STEAM_GUARD_CODE="${STEAM_GUARD_CODE:-}"
 REAUTH_LOGIN_WAIT_SECONDS="${REAUTH_LOGIN_WAIT_SECONDS:-300}"
+AUTH_DEBUG_ON_REAUTH_FAILURE="${AUTH_DEBUG_ON_REAUTH_FAILURE:-1}"
 ALLOW_UI_AUTH_FALLBACK="${ALLOW_UI_AUTH_FALLBACK:-0}"
 FETCH_EVIDENCE="${FETCH_EVIDENCE:-1}"
 LOCAL_EVIDENCE_DIR="${LOCAL_EVIDENCE_DIR:-$REPO_ROOT/output/remote-runs}"
@@ -101,12 +102,24 @@ TARGET_DIR='${RESOLVED_TARGET_DIR}'
 mkdir -p \"\$TARGET_DIR\"
 tar xzf /tmp/msfs-on-dgx-spark-sync.tgz -C \"\$TARGET_DIR\"
 cd \"\$TARGET_DIR\"
+mkdir -p output
 if [ \"${AUTO_REAUTH_ON_AUTH_FAILURE}\" = \"1\" ]; then
   echo \"Running optional Steam auth recovery gate before verification...\"
+  set +e
   LOGIN_WAIT_SECONDS='${REAUTH_LOGIN_WAIT_SECONDS}' \
   STEAM_GUARD_CODE='${STEAM_GUARD_CODE}' \
   ALLOW_UI_AUTH_FALLBACK='${ALLOW_UI_AUTH_FALLBACK}' \
   ./scripts/58-ensure-steam-auth.sh
+  auth_recover_rc=\$?
+  set -e
+  if [ \"\$auth_recover_rc\" -ne 0 ]; then
+    echo \"Auth recovery failed (exit \$auth_recover_rc).\"
+    if [ \"${AUTH_DEBUG_ON_REAUTH_FAILURE}\" = \"1\" ]; then
+      echo \"Capturing Steam UI/process diagnostics for auth failure...\"
+      OUT_DIR=\"\$TARGET_DIR/output\" ./scripts/11-debug-steam-window-state.sh || true
+    fi
+    exit \"\$auth_recover_rc\"
+  fi
 fi
 MSFS_APPID='${MSFS_APPID}' \
 MIN_STABLE_SECONDS='${MIN_STABLE_SECONDS}' \
@@ -119,6 +132,7 @@ WAIT_SECONDS='${WAIT_SECONDS}' \
   STRICT_RECOVER_BETWEEN_ATTEMPTS='${STRICT_RECOVER_BETWEEN_ATTEMPTS}' \
   RECOVER_ON_EXIT_CODES='${RECOVER_ON_EXIT_CODES}' \
   FATAL_EXIT_CODES='${FATAL_EXIT_CODES}' \
+  AUTH_DEBUG_ON_REAUTH_FAILURE='${AUTH_DEBUG_ON_REAUTH_FAILURE}' \
   ALLOW_UI_AUTH_FALLBACK='${ALLOW_UI_AUTH_FALLBACK}' \
   BASELINE_MIN_STABLE_SECONDS='${MIN_STABLE_SECONDS}' \
   BASELINE_MAX_ATTEMPTS='${MAX_ATTEMPTS}' \

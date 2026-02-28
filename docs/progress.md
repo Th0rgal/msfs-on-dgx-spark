@@ -1,5 +1,34 @@
 # Progress Log
 
+## 2026-02-28 (13:07-13:10 UTC, live DGX: remote auth-recovery evidence hardening)
+
+Live checks on `spark-de79` from this checkout:
+
+- `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=90 ./scripts/90-remote-dgx-stable-check.sh`
+  - run reached auth gate and exited with `exit 7` (`Steam session unauthenticated`).
+  - remote evidence synced locally under:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T130706Z/output/`
+- `DGX_PASS=... AUTO_REAUTH_ON_AUTH_FAILURE=1 REAUTH_LOGIN_WAIT_SECONDS=20 ... ./scripts/90-remote-dgx-stable-check.sh`
+  - remote re-auth timed out (`exit 2`) as expected in an unauthenticated session without Steam Guard code.
+  - re-auth failure now emits `steam-debug-*.log/.png` and syncs evidence locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T130939Z/output/steam-debug-20260228T131003Z.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T130939Z/output/steam-debug-20260228T131003Z.png`
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - added `AUTH_DEBUG_ON_REAUTH_FAILURE` (default `1`),
+  - ensures remote `output/` exists before auth-gate checks,
+  - captures `11-debug-steam-window-state.sh` diagnostics when `58-ensure-steam-auth.sh` fails,
+  - preserves non-zero auth-recovery exit code while still enabling evidence fetch.
+- Updated `scripts/11-debug-steam-window-state.sh`:
+  - now auto-resolves active display using `lib-display.sh` when `DISPLAY_NUM` is not set.
+
+Assessment update:
+
+- Current launch blocker remains Steam auth state (session logged out).
+- Remote unattended runs are now more diagnosable because auth-recovery failures always produce synced debug artifacts.
+
 ## 2026-02-28 (13:02-13:05 UTC, live DGX: auth-gate diagnostics hardening + UI-signal trust fix)
 
 Live checks on `spark-de79` from this checkout:
