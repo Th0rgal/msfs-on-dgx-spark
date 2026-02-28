@@ -37,6 +37,14 @@ DGX_SSH_PROXY_JUMP="${DGX_SSH_PROXY_JUMP:-}"
 DGX_SSH_PROXY_COMMAND="${DGX_SSH_PROXY_COMMAND:-}"
 DGX_SSH_EXTRA_OPTS_CSV="${DGX_SSH_EXTRA_OPTS_CSV:-}"
 DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE="${DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE:-1}"
+BOOTSTRAP_LOCAL_TAILSCALE="${BOOTSTRAP_LOCAL_TAILSCALE:-0}"
+LOCAL_TAILSCALE_SOCKET="${LOCAL_TAILSCALE_SOCKET:-}"
+LOCAL_TAILSCALE_STATE="${LOCAL_TAILSCALE_STATE:-}"
+LOCAL_TAILSCALE_LOG="${LOCAL_TAILSCALE_LOG:-}"
+LOCAL_TAILSCALE_SOCKS5_ADDR="${LOCAL_TAILSCALE_SOCKS5_ADDR:-127.0.0.1:1055}"
+LOCAL_TAILSCALE_AUTHKEY="${LOCAL_TAILSCALE_AUTHKEY:-}"
+LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS="${LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS:-30}"
+LOCAL_TAILSCALE_ACCEPT_ROUTES="${LOCAL_TAILSCALE_ACCEPT_ROUTES:-0}"
 
 MSFS_APPID="${MSFS_APPID:-2537590}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-20}"
@@ -91,10 +99,105 @@ if ! command -v scp >/dev/null 2>&1; then
   echo "ERROR: scp is required."
   exit 1
 fi
+if [ "$BOOTSTRAP_LOCAL_TAILSCALE" = "1" ]; then
+  if [ -z "$LOCAL_TAILSCALE_SOCKET" ]; then
+    LOCAL_TAILSCALE_SOCKET="/tmp/msfs-on-dgx-spark-tailscaled.sock"
+  fi
+  if [ -z "$LOCAL_TAILSCALE_STATE" ]; then
+    LOCAL_TAILSCALE_STATE="/tmp/msfs-on-dgx-spark-tailscaled.state"
+  fi
+  if [ -z "$LOCAL_TAILSCALE_LOG" ]; then
+    LOCAL_TAILSCALE_LOG="/tmp/msfs-on-dgx-spark-tailscaled.log"
+  fi
+  if ! command -v tailscale >/dev/null 2>&1; then
+    echo "ERROR: BOOTSTRAP_LOCAL_TAILSCALE=1 requires tailscale."
+    exit 1
+  fi
+  if ! command -v tailscaled >/dev/null 2>&1; then
+    echo "ERROR: BOOTSTRAP_LOCAL_TAILSCALE=1 requires tailscaled."
+    exit 1
+  fi
+fi
 
 if [ -n "$DGX_HOST" ]; then
   DGX_HOST_CANDIDATES="$DGX_HOST"
 fi
+
+tailscale_cmd() {
+  if [ -n "$LOCAL_TAILSCALE_SOCKET" ]; then
+    tailscale --socket "$LOCAL_TAILSCALE_SOCKET" "$@"
+  else
+    tailscale "$@"
+  fi
+}
+
+is_tailscale_daemon_ready() {
+  command -v tailscale >/dev/null 2>&1 && tailscale_cmd status >/dev/null 2>&1
+}
+
+is_tailscale_running() {
+  command -v tailscale >/dev/null 2>&1 \
+    && tailscale_cmd status --json 2>/dev/null | tr -d '\n' | grep -q '"BackendState":"Running"'
+}
+
+bootstrap_local_tailscale_userspace() {
+  if [ "$BOOTSTRAP_LOCAL_TAILSCALE" != "1" ]; then
+    return 0
+  fi
+
+  if ! is_tailscale_daemon_ready; then
+    echo "Bootstrapping local userspace tailscaled (socket: $LOCAL_TAILSCALE_SOCKET)..."
+    mkdir -p "$(dirname "$LOCAL_TAILSCALE_SOCKET")" "$(dirname "$LOCAL_TAILSCALE_STATE")" "$(dirname "$LOCAL_TAILSCALE_LOG")"
+    nohup tailscaled \
+      --tun=userspace-networking \
+      --socks5-server="$LOCAL_TAILSCALE_SOCKS5_ADDR" \
+      --state="$LOCAL_TAILSCALE_STATE" \
+      --socket="$LOCAL_TAILSCALE_SOCKET" \
+      >"$LOCAL_TAILSCALE_LOG" 2>&1 &
+    daemon_wait=0
+    until is_tailscale_daemon_ready; do
+      daemon_wait=$((daemon_wait + 1))
+      if [ "$daemon_wait" -ge 20 ]; then
+        echo "ERROR: tailscaled did not become ready (socket: $LOCAL_TAILSCALE_SOCKET)."
+        echo "Hint: check $LOCAL_TAILSCALE_LOG"
+        return 1
+      fi
+      sleep 1
+    done
+  fi
+
+  if ! is_tailscale_running; then
+    echo "Bringing local tailscale online..."
+    up_cmd=(tailscale_cmd up --timeout "${LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS}s")
+    if [ "$LOCAL_TAILSCALE_ACCEPT_ROUTES" = "1" ]; then
+      up_cmd+=(--accept-routes)
+    fi
+    if [ -n "$LOCAL_TAILSCALE_AUTHKEY" ]; then
+      up_cmd+=(--auth-key "$LOCAL_TAILSCALE_AUTHKEY")
+    fi
+    "${up_cmd[@]}" || true
+  fi
+
+  if ! is_tailscale_running; then
+    echo "ERROR: local tailscale is not in Running state after bootstrap."
+    echo "Hint: set LOCAL_TAILSCALE_AUTHKEY or run:"
+    echo "  tailscale --socket '$LOCAL_TAILSCALE_SOCKET' login"
+    echo "  tailscale --socket '$LOCAL_TAILSCALE_SOCKET' up"
+    echo "Log: $LOCAL_TAILSCALE_LOG"
+    return 1
+  fi
+
+  if [ -z "$DGX_SSH_PROXY_JUMP" ] && [ -z "$DGX_SSH_PROXY_COMMAND" ]; then
+    if ! command -v nc >/dev/null 2>&1; then
+      echo "ERROR: userspace tailscale bootstrap requires nc for SOCKS proxying."
+      return 1
+    fi
+    DGX_SSH_PROXY_COMMAND="nc -x ${LOCAL_TAILSCALE_SOCKS5_ADDR} -X 5 %h %p"
+    echo "Using userspace tailscale SOCKS proxy for SSH: $DGX_SSH_PROXY_COMMAND"
+  fi
+}
+
+bootstrap_local_tailscale_userspace
 
 BASE_SSH_COMMON_OPTS=(
   -o StrictHostKeyChecking=no
@@ -144,10 +247,6 @@ if [ -n "$DGX_PASS" ]; then
     exit 1
   fi
 fi
-
-is_tailscale_daemon_ready() {
-  command -v tailscale >/dev/null 2>&1 && tailscale status >/dev/null 2>&1
-}
 
 is_tailscale_ip() {
   local ip="$1"
@@ -221,13 +320,19 @@ print_reachability_diagnostics() {
   if command -v tailscale >/dev/null 2>&1; then
     echo "-- tailscale status --"
     if is_tailscale_daemon_ready; then
-      tailscale status 2>/dev/null | sed -n '1,40p' || true
+      tailscale_cmd status 2>/dev/null | sed -n '1,40p' || true
+      echo "-- tailscale backend state --"
+      if is_tailscale_running; then
+        echo "Running"
+      else
+        tailscale_cmd status --json 2>/dev/null | tr -d '\n' | sed -n 's/.*"BackendState":"\([^"]*\)".*/\1/p' | sed -n '1p'
+      fi
     else
       echo "tailscale daemon unavailable (tailscaled not running or inaccessible)"
     fi
     echo "-- tailscale ping (best-effort) --"
     if is_tailscale_daemon_ready; then
-      tailscale ping -c 2 spark-de79 2>/dev/null || true
+      tailscale_cmd ping -c 2 spark-de79 2>/dev/null || true
     else
       echo "tailscale ping skipped (daemon unavailable)"
     fi
@@ -352,12 +457,12 @@ probe_ssh_candidate() {
 
 if [ "$DGX_DISCOVER_TAILSCALE_IPS" = "1" ] && command -v tailscale >/dev/null 2>&1; then
   discovered_hosts="$DGX_HOST_CANDIDATES"
-  if is_tailscale_daemon_ready; then
+  if is_tailscale_running; then
     IFS=',' read -r -a _candidate_hosts <<< "$DGX_HOST_CANDIDATES"
     for candidate in "${_candidate_hosts[@]}"; do
       candidate="$(echo "$candidate" | xargs)"
       [ -z "$candidate" ] && continue
-      if resolved_ip="$(tailscale ip -4 "$candidate" 2>/dev/null | head -n 1)"; then
+      if resolved_ip="$(tailscale_cmd ip -4 "$candidate" 2>/dev/null | head -n 1)"; then
         resolved_ip="$(echo "$resolved_ip" | xargs)"
         if [ -n "$resolved_ip" ]; then
           discovered_hosts="$(append_host_candidate "$resolved_ip" "$discovered_hosts")"
@@ -365,7 +470,7 @@ if [ "$DGX_DISCOVER_TAILSCALE_IPS" = "1" ] && command -v tailscale >/dev/null 2>
       fi
     done
   else
-    echo "WARN: skipping Tailscale IP discovery because tailscaled is unavailable."
+    echo "WARN: skipping Tailscale IP discovery because tailscaled is unavailable or not running."
   fi
   DGX_HOST_CANDIDATES="$discovered_hosts"
 fi
@@ -379,7 +484,7 @@ if [ -n "$DGX_ENDPOINT_CANDIDATES" ]; then
 fi
 
 if [ "$DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE" = "1" ] && [ -z "$DGX_SSH_PROXY_JUMP" ] && [ -z "$DGX_SSH_PROXY_COMMAND" ]; then
-  if ! is_tailscale_daemon_ready; then
+  if ! is_tailscale_running; then
     requires_tailscale=0
     if [ -n "$DGX_ENDPOINT_CANDIDATES" ]; then
       if all_endpoints_require_tailscale "$DGX_ENDPOINT_CANDIDATES" "$DGX_PORT"; then
@@ -389,9 +494,9 @@ if [ "$DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE" = "1" ] && [ -z "$DGX_SSH_PROXY_J
       requires_tailscale=1
     fi
     if [ "$requires_tailscale" -eq 1 ]; then
-      echo "ERROR: local tailscaled is unavailable and all DGX candidates are Tailscale endpoints."
+      echo "ERROR: local tailscale is not Running and all DGX candidates are Tailscale endpoints."
       echo "$probe_target_summary"
-      echo "Hint: start tailscaled, set DGX_SSH_PROXY_JUMP / DGX_SSH_PROXY_COMMAND, or provide a non-Tailscale DGX_HOST/DGX_ENDPOINT_CANDIDATES."
+      echo "Hint: start/authenticate tailscaled, enable BOOTSTRAP_LOCAL_TAILSCALE=1, set DGX_SSH_PROXY_JUMP / DGX_SSH_PROXY_COMMAND, or provide a non-Tailscale DGX_HOST/DGX_ENDPOINT_CANDIDATES."
       print_reachability_diagnostics "$DGX_HOST_CANDIDATES" "$DGX_PORT_CANDIDATES"
       exit 1
     fi

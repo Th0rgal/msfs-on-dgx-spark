@@ -152,6 +152,9 @@ DGX_PASS='<password>' AUTO_REAUTH_ON_AUTH_FAILURE=1 STEAM_USERNAME='<steam_user>
 #   EOF
 #   chmod 600 ~/.config/msfs-on-dgx-spark/steam-auth.env
 DGX_PASS='<password>' ./scripts/90-remote-dgx-stable-check.sh
+
+# 18. Optional: bootstrap local userspace tailscale + SOCKS proxy when this runner has no system tailscaled
+DGX_PASS='<password>' BOOTSTRAP_LOCAL_TAILSCALE=1 LOCAL_TAILSCALE_AUTHKEY='<tskey-auth-...>' ./scripts/90-remote-dgx-stable-check.sh
 ```
 
 `09-verify-msfs-launch.sh` now requires a stable runtime window (default `30s`) to avoid false positives from short-lived launch wrappers. Tune with `MIN_STABLE_SECONDS=<N>`.
@@ -163,6 +166,7 @@ When the auth gate fails, `54-launch-and-capture-evidence.sh` now captures Steam
 Remote evidence fetch is performed even when remote verification fails, so strict-gate/transient runs still produce local artifacts.
 `90-remote-dgx-stable-check.sh` can optionally run a staged gate when `STRICT_MIN_STABLE_SECONDS` is set: baseline success proves local run-path health; strict gate captures higher-stability confidence without conflating the two.
 `90-remote-dgx-stable-check.sh` supports `DGX_PORT=<port>` for non-default SSH ports and `DGX_PORT_CANDIDATES=22,2222,...` to probe multiple ports automatically before failing; candidates are normalized/deduplicated before probing. It also accepts `DGX_ENDPOINT_CANDIDATES=host1:22,host2:2222,...` when you need explicit host+port pair ordering, and auto-discovers Tailscale IPv4 endpoints from the candidate host list by default (`DGX_DISCOVER_TAILSCALE_IPS=1`, disable with `0`). For routed access, use `DGX_SSH_PROXY_JUMP=user@jump-host` or `DGX_SSH_PROXY_COMMAND='ssh -W %h:%p jump-host'` (mutually exclusive), and optional `DGX_SSH_EXTRA_OPTS_CSV='IdentityFile=/path/key,UserKnownHostsFile=/dev/null'` for additional `ssh -o` options. When all targets are Tailscale-only and local `tailscaled` is unavailable, the script now fails fast by default (`DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=1`, set `0` to force full SSH probing anyway).
+For non-systemd/local-container runners, set `BOOTSTRAP_LOCAL_TAILSCALE=1` to start userspace `tailscaled` and auto-wire SSH through `nc -x <LOCAL_TAILSCALE_SOCKS5_ADDR> -X 5`; provide `LOCAL_TAILSCALE_AUTHKEY` for unattended login, or run `tailscale --socket <LOCAL_TAILSCALE_SOCKET> login` once interactively.
 When strict retries are enabled, `STRICT_RECOVER_BETWEEN_ATTEMPTS=1` can rebuild Steam runtime state between retries to reduce contamination from prior transient launch attempts.
 Default recovery-trigger exit codes are `2,3,4` (`no launch observed`, `transient launch`, and `launch seen but not stable in time window`); override with `RECOVER_ON_EXIT_CODES`.
 When auth drift is expected, `AUTO_REAUTH_ON_AUTH_FAILURE=1` runs `58-ensure-steam-auth.sh` remotely before verification; for unattended recovery provide `STEAM_USERNAME`/`STEAM_PASSWORD` (login form) and optionally `STEAM_GUARD_CODE` (2FA).

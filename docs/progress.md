@@ -1,5 +1,34 @@
 # Progress Log
 
+## 2026-02-28 (15:26-15:31 UTC, userspace tailscale bootstrap path for non-systemd runners)
+
+Validation from this checkout:
+
+- `bash -n scripts/90-remote-dgx-stable-check.sh` (pass).
+- Default mode check (unchanged fail-closed behavior):
+  - `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - exits with explicit root-cause diagnostics:
+    - `ERROR: local tailscale is not Running and all DGX candidates are Tailscale endpoints.`
+- Bootstrap mode check:
+  - `BOOTSTRAP_LOCAL_TAILSCALE=1 LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS=8 DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - exits fail-closed with deterministic bootstrap diagnostics:
+    - `ERROR: tailscaled did not become ready (socket: /tmp/msfs-on-dgx-spark-tailscaled.sock).`
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - added optional userspace local tailscale bootstrap (`BOOTSTRAP_LOCAL_TAILSCALE=1`),
+  - added local bootstrap controls: `LOCAL_TAILSCALE_SOCKET`, `LOCAL_TAILSCALE_STATE`, `LOCAL_TAILSCALE_LOG`, `LOCAL_TAILSCALE_SOCKS5_ADDR`, `LOCAL_TAILSCALE_AUTHKEY`, `LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS`, `LOCAL_TAILSCALE_ACCEPT_ROUTES`,
+  - distinguishes daemon availability vs backend `Running` state, and keeps Tailscale-only probes fail-closed when not running,
+  - when bootstrap is active and no explicit SSH proxy is set, auto-wires SSH/SCP via SOCKS (`nc -x ... -X 5`) for userspace tailscale routing.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` now document the new userspace bootstrap flow and auth-key/manual-login paths.
+
+Assessment update:
+
+- Local runner still cannot reach DGX directly because no authenticated/running Tailscale path is available here.
+- Remote verification logic now supports non-systemd environments without requiring script patching: provide a valid Tailscale auth flow (`LOCAL_TAILSCALE_AUTHKEY` or one-time interactive login) and rerun.
+
 ## 2026-02-28 (15:22-15:26 UTC, dispatch fallback chain + Steam UI normalization before fallback)
 
 Validation from this checkout:

@@ -110,6 +110,7 @@ DGX_PASS='<password>' DGX_SSH_PROXY_COMMAND='ssh -W %h:%p jump-host' ./scripts/9
 ```
 
 By default, `90-remote-dgx-stable-check.sh` now exits early when all DGX candidates resolve to Tailscale endpoints and local `tailscaled` is unavailable (`DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=1`). Set `DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=0` only when you intentionally want full SSH timeout probing.
+For containerized/non-systemd runners, use `BOOTSTRAP_LOCAL_TAILSCALE=1` to start a userspace `tailscaled` and route SSH through its SOCKS proxy. For unattended bootstrap, pass `LOCAL_TAILSCALE_AUTHKEY`; otherwise run `tailscale --socket /tmp/msfs-on-dgx-spark-tailscaled.sock login` once and rerun the check.
 
 If auth recovery times out and debug logs show no visible Steam/login windows, `58-ensure-steam-auth.sh` now reports that condition explicitly; use `AUTH_USE_STEAM_LOGIN_CLI=1` (default) with credentials to avoid depending on visible UI prompts.
 It also attempts Steam window restore/focus by default (`AUTH_RESTORE_WINDOWS=1`) so headless-minimized dialogs can be surfaced automatically.

@@ -297,6 +297,23 @@ DGX_SSH_EXTRA_OPTS_CSV='IdentityFile=/path/to/key,UserKnownHostsFile=/dev/null' 
 
 If all configured DGX targets are Tailscale-only and local `tailscaled` is unavailable, remote checks now fail fast by default (`DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=1`). Set `DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=0` to force full timeout-based SSH probing.
 
+In non-systemd runners, you can bootstrap a local userspace Tailscale daemon and route SSH/SCP through its SOCKS endpoint automatically:
+
+```bash
+DGX_PASS='<password>' BOOTSTRAP_LOCAL_TAILSCALE=1 \
+LOCAL_TAILSCALE_AUTHKEY='<tskey-auth-...>' \
+./scripts/90-remote-dgx-stable-check.sh
+```
+
+If you omit `LOCAL_TAILSCALE_AUTHKEY`, authenticate once with:
+
+```bash
+tailscale --socket /tmp/msfs-on-dgx-spark-tailscaled.sock login
+tailscale --socket /tmp/msfs-on-dgx-spark-tailscaled.sock up
+```
+
+Then re-run the remote check command with `BOOTSTRAP_LOCAL_TAILSCALE=1`.
+
 Optional staged gate (baseline + strict):
 
 ```bash
