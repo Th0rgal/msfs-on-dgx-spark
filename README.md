@@ -150,6 +150,7 @@ Default recovery-trigger exit codes are `2,3,4` (`no launch observed`, `transien
 When auth drift is expected, `AUTO_REAUTH_ON_AUTH_FAILURE=1` runs `58-ensure-steam-auth.sh` remotely before verification; provide `STEAM_GUARD_CODE` for unattended re-auth.
 Auth checks now require strong Steam session evidence by default (`steamid` via process/log); UI-only detection is treated as unauthenticated unless `ALLOW_UI_AUTH_FALLBACK=1` is explicitly set.
 `90-remote-dgx-stable-check.sh` forwards `ALLOW_UI_AUTH_FALLBACK` and `FATAL_EXIT_CODES` to the remote runners, and also accepts trailing `KEY=VALUE` overrides for convenience (for example `./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1`).
+`FATAL_EXIT_CODES=''` is treated as an intentional empty list (fatal auth exits disabled), not auto-reset to defaults.
 
 See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [docs/progress.md](docs/progress.md) for live validation notes.
 

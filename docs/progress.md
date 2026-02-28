@@ -13,6 +13,9 @@ Live checks on `spark-de79` from this checkout:
 - Re-ran after auth-detector patch:
   - `output/remote-runs/msfs-on-dgx-spark-run-20260228T130448Z/output/auth-state-2537590-20260228T130450Z.log`
   - auth status now reports `unauthenticated` (not misleading `ui-only evidence`) when no visible Steam window exists.
+- Verified remote fatal-policy override behavior:
+  - `DGX_PASS=... ALLOW_UI_AUTH_FALLBACK=1 FATAL_EXIT_CODES='' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=60 ./scripts/90-remote-dgx-stable-check.sh`
+  - retry runner now shows `Fatal exit codes:` (empty) and exits with summary code `1` instead of hard-failing immediately with code `7`.
 
 Repo hardening in this pass:
 
@@ -26,6 +29,7 @@ Repo hardening in this pass:
 - Updated docs:
   - `README.md` documents new auth-debug artifact capture.
   - `docs/troubleshooting.md` includes auth-debug outputs for exit-code `7` triage.
+  - `README.md` now clarifies that `FATAL_EXIT_CODES=''` is honored as an explicit empty list.
 
 Assessment update:
 
