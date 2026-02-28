@@ -51,28 +51,11 @@ steam_any_window_present() {
 
 restore_steam_windows() {
   [ "$AUTH_RESTORE_WINDOWS" = "1" ] || return 1
-  command -v xdotool >/dev/null 2>&1 || return 1
-
-  local ids=()
-  mapfile -t ids < <(DISPLAY="$DISPLAY_NUM" xdotool search --class steam 2>/dev/null || true)
-  if [ "${#ids[@]}" -eq 0 ]; then
-    mapfile -t ids < <(DISPLAY="$DISPLAY_NUM" xdotool search --name "Steam|steamwebhelper|Sign in to Steam|Steam Guard|Friends|Library|Store" 2>/dev/null || true)
+  if [ "$AUTH_NORMALIZE_WINDOWS" = "1" ]; then
+    steam_force_show_windows "$DISPLAY_NUM" "$AUTH_WINDOW_WIDTH" "$AUTH_WINDOW_HEIGHT" "$AUTH_WINDOW_X" "$AUTH_WINDOW_Y"
+  else
+    steam_force_show_windows "$DISPLAY_NUM"
   fi
-  if [ "${#ids[@]}" -eq 0 ]; then
-    return 1
-  fi
-
-  local id
-  for id in "${ids[@]}"; do
-    DISPLAY="$DISPLAY_NUM" xdotool windowmap "$id" >/dev/null 2>&1 || true
-    if [ "$AUTH_NORMALIZE_WINDOWS" = "1" ]; then
-      DISPLAY="$DISPLAY_NUM" xdotool windowsize "$id" "$AUTH_WINDOW_WIDTH" "$AUTH_WINDOW_HEIGHT" >/dev/null 2>&1 || true
-      DISPLAY="$DISPLAY_NUM" xdotool windowmove "$id" "$AUTH_WINDOW_X" "$AUTH_WINDOW_Y" >/dev/null 2>&1 || true
-    fi
-    DISPLAY="$DISPLAY_NUM" xdotool windowraise "$id" >/dev/null 2>&1 || true
-  done
-  DISPLAY="$DISPLAY_NUM" xdotool windowactivate --sync "${ids[0]}" >/dev/null 2>&1 || true
-  return 0
 }
 
 open_steam_main_ui() {
@@ -101,7 +84,7 @@ fill_login_form() {
   win_id="$(DISPLAY="$DISPLAY_NUM" xdotool search --onlyvisible --name "Sign in to Steam" 2>/dev/null | head -n1 || true)"
   [ -n "$win_id" ] || return 1
 
-  DISPLAY="$DISPLAY_NUM" xdotool windowactivate --sync "$win_id" || true
+  DISPLAY="$DISPLAY_NUM" xdotool windowactivate "$win_id" || true
   sleep 0.2
   DISPLAY="$DISPLAY_NUM" xdotool key --window "$win_id" --clearmodifiers ctrl+a BackSpace || true
   DISPLAY="$DISPLAY_NUM" xdotool type --window "$win_id" --delay 12 "$STEAM_USERNAME" || true
@@ -121,7 +104,7 @@ type_guard_code() {
   local win_id
   win_id="$(DISPLAY="$DISPLAY_NUM" xdotool search --onlyvisible --name "Steam Guard|Sign in to Steam" 2>/dev/null | head -n1 || true)"
   if [ -n "$win_id" ]; then
-    DISPLAY="$DISPLAY_NUM" xdotool windowactivate --sync "$win_id" || true
+    DISPLAY="$DISPLAY_NUM" xdotool windowactivate "$win_id" || true
     sleep 0.2
     DISPLAY="$DISPLAY_NUM" xdotool key --window "$win_id" --delay 80 "$GUARD_CODE" Return || true
   else

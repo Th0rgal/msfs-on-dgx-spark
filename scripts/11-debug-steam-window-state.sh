@@ -36,6 +36,16 @@ window_dump() {
   done
 }
 
+window_dump_any() {
+  if command -v xwininfo >/dev/null 2>&1; then
+    DISPLAY="$DISPLAY_NUM" xwininfo -root -tree 2>/dev/null \
+      | sed -n 's/^ *\(0x[0-9a-f][0-9a-f]*\) "\(.*\)".*/\1 \2/pI' \
+      | awk 'BEGIN { IGNORECASE=1 } $0 ~ /(steam|steamwebhelper|sign in to steam|steam guard|friends|library|store)/ { print }'
+  else
+    echo "(xwininfo not installed)"
+  fi
+}
+
 {
   echo "timestamp_utc=${TS}"
   echo "display=${DISPLAY_NUM}"
@@ -54,6 +64,9 @@ window_dump() {
   echo
   echo "[visible_steam_windows]"
   window_dump
+  echo
+  echo "[steam_windows_any]"
+  window_dump_any
   echo
   echo "[steam_processes]"
   pgrep -af "steam |steamwebhelper|fex_launcher" || true
