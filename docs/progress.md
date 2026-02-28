@@ -1,5 +1,24 @@
 # Progress Log
 
+## 2026-02-28 (14:52-14:55 UTC, local hardening: DGX network preflight diagnostics)
+
+Local/remote validation from this checkout:
+
+- Ran `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=30 ./scripts/90-remote-dgx-stable-check.sh`.
+- Both DGX host candidates timed out on SSH (`spark-de79`, `100.77.4.93`), matching current reachability blocker.
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh` with deterministic preflight diagnostics emitted on SSH reachability failure:
+  - UTC timestamp, local route summary, host resolution output,
+  - best-effort `tailscale status`/`tailscale ping`,
+  - per-host ICMP and TCP/22 probe results.
+
+Assessment update:
+
+- Current blocker remains DGX network reachability (no SSH path), not launch orchestration logic.
+- Failure evidence is now self-contained in one command run, reducing triage time when Tailscale pathing regresses.
+
 ## 2026-02-28 (14:05-14:15 UTC, local hardening: launch classification + dispatch fallback; DGX connectivity timeout)
 
 Local hardening completed in this checkout:

@@ -103,6 +103,41 @@ if [ -n "$DGX_PASS" ]; then
   SCP_BASE_CMD=(sshpass -p "$DGX_PASS" "${SCP_BASE_CMD[@]}")
 fi
 
+print_reachability_diagnostics() {
+  local host_list="$1"
+  echo
+  echo "===== DGX reachability diagnostics ====="
+  date -u +"UTC now: %Y-%m-%dT%H:%M:%SZ" || true
+  if command -v tailscale >/dev/null 2>&1; then
+    echo "-- tailscale status --"
+    tailscale status 2>/dev/null | sed -n '1,40p' || true
+    echo "-- tailscale ping (best-effort) --"
+    tailscale ping -c 2 spark-de79 2>/dev/null || true
+  else
+    echo "tailscale: not installed on local host"
+  fi
+  if command -v ip >/dev/null 2>&1; then
+    echo "-- local routes (first lines) --"
+    ip route show 2>/dev/null | sed -n '1,20p' || true
+  fi
+  IFS=',' read -r -a _diag_hosts <<< "$host_list"
+  for _h in "${_diag_hosts[@]}"; do
+    _h="$(echo "$_h" | xargs)"
+    [ -z "$_h" ] && continue
+    echo "-- host: $_h --"
+    if command -v getent >/dev/null 2>&1; then
+      getent hosts "$_h" 2>/dev/null || echo "getent: unresolved"
+    fi
+    if command -v ping >/dev/null 2>&1; then
+      ping -c 1 -W 2 "$_h" >/dev/null 2>&1 && echo "icmp: reachable" || echo "icmp: no-reply"
+    fi
+    if command -v nc >/dev/null 2>&1; then
+      nc -z -w 2 "$_h" 22 >/dev/null 2>&1 && echo "tcp/22: open" || echo "tcp/22: closed-or-timeout"
+    fi
+  done
+  echo "===== end diagnostics ====="
+}
+
 selected_host=""
 IFS=',' read -r -a host_candidates <<< "$DGX_HOST_CANDIDATES"
 for host_candidate in "${host_candidates[@]}"; do
@@ -118,6 +153,7 @@ done
 if [ -z "$selected_host" ]; then
   echo "ERROR: unable to reach DGX over SSH for any host candidate: $DGX_HOST_CANDIDATES"
   echo "Hint: verify Tailscale connectivity or set DGX_HOST to a reachable endpoint."
+  print_reachability_diagnostics "$DGX_HOST_CANDIDATES"
   exit 1
 fi
 DGX_HOST="$selected_host"
