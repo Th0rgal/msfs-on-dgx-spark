@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-02-28 (15:46-15:55 UTC, tailscale authkey-file fail-closed bootstrap hardening)
+
+Validation from this checkout:
+
+- Direct DGX route remains unreachable from this runner:
+  - `sshpass -p '...' ssh -o ConnectTimeout=8 th0rgal@100.77.4.93 'hostname'`
+  - result: `ssh: connect to host 100.77.4.93 port 22: Connection timed out`.
+- Remote check still fails closed with explicit reachability diagnostics when local tailscale is not Running:
+  - `DGX_PASS=... MAX_ATTEMPTS=1 MIN_STABLE_SECONDS=30 FETCH_EVIDENCE=0 ./scripts/90-remote-dgx-stable-check.sh`
+  - key message remains deterministic:
+    - `ERROR: local tailscale is not Running and all DGX candidates are Tailscale endpoints.`
+- Script/lint + authkey-file guardrail checks:
+  - `bash -n scripts/90-remote-dgx-stable-check.sh` (pass),
+  - with `BOOTSTRAP_LOCAL_TAILSCALE=1` and both authkey sources set, exits with explicit mutual-exclusion error,
+  - with `BOOTSTRAP_LOCAL_TAILSCALE=1` and `LOCAL_TAILSCALE_AUTHKEY_FILE` mode `644`, exits with explicit permission error.
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - added `LOCAL_TAILSCALE_AUTHKEY_FILE` for unattended userspace tailscale bootstrap without exposing auth keys in command history,
+  - added `REQUIRE_LOCAL_TAILSCALE_AUTHKEY_FILE_PERMS` (default `1`) to enforce mode `600` on authkey files,
+  - fail-closed checks for authkey source configuration:
+    - mutual exclusion (`LOCAL_TAILSCALE_AUTHKEY` vs `LOCAL_TAILSCALE_AUTHKEY_FILE`),
+    - missing/empty authkey file detection.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` now document file-based authkey loading and permission requirements.
+
+Assessment update:
+
+- Current blocker remains network/Tailscale auth path from this runner to DGX.
+- Bootstrap now supports safer non-interactive authkey handling and stronger local secret hygiene for CI/container runners.
+
 ## 2026-02-28 (16:41-16:44 UTC, userspace tailscale bootstrap parser/retry hardening)
 
 Validation from this checkout:

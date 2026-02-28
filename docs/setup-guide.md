@@ -305,6 +305,18 @@ LOCAL_TAILSCALE_AUTHKEY='<tskey-auth-...>' \
 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
+Or source the auth key from a local file (recommended to avoid shell history leaks):
+
+```bash
+cat > ~/.config/msfs-on-dgx-spark/tailscale-authkey <<'EOF'
+tskey-auth-...
+EOF
+chmod 600 ~/.config/msfs-on-dgx-spark/tailscale-authkey
+DGX_PASS='<password>' BOOTSTRAP_LOCAL_TAILSCALE=1 \
+LOCAL_TAILSCALE_AUTHKEY_FILE="$HOME/.config/msfs-on-dgx-spark/tailscale-authkey" \
+./scripts/90-remote-dgx-stable-check.sh
+```
+
 If you omit `LOCAL_TAILSCALE_AUTHKEY`, authenticate once with:
 
 ```bash
@@ -316,6 +328,7 @@ Then re-run the remote check command with `BOOTSTRAP_LOCAL_TAILSCALE=1`.
 By default, userspace state is persisted at `${XDG_STATE_HOME:-$HOME/.local/state}/msfs-on-dgx-spark/tailscaled.state` so login can be reused on later runs. Override with `LOCAL_TAILSCALE_STATE=...` when needed.
 If login URL retrieval times out before you can complete browser auth, raise `LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS` (for example `LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS=120`).
 If userspace daemon startup is flaky in your runner, tune bootstrap retries with `LOCAL_TAILSCALE_BOOTSTRAP_RETRIES` and `LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS`; bootstrap now also removes stale sockets and isolates retry socket/log paths automatically.
+`LOCAL_TAILSCALE_AUTHKEY_FILE` is fail-closed by default: it must exist, be non-empty, and be mode `600` (`REQUIRE_LOCAL_TAILSCALE_AUTHKEY_FILE_PERMS=1`).
 
 Optional staged gate (baseline + strict):
 
