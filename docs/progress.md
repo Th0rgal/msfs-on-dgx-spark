@@ -1,5 +1,36 @@
 # Progress Log
 
+## 2026-02-28 (16:41-16:44 UTC, userspace tailscale bootstrap parser/retry hardening)
+
+Validation from this checkout:
+
+- `bash -n scripts/90-remote-dgx-stable-check.sh` (pass).
+- Bootstrap smoke run after patch:
+  - `DGX_PASS=... BOOTSTRAP_LOCAL_TAILSCALE=1 LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS=8 LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS=8 LOCAL_TAILSCALE_BOOTSTRAP_RETRIES=2 LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS=1 SSH_CONNECT_TIMEOUT_SECONDS=3 DGX_PROBE_ATTEMPTS=1 MAX_ATTEMPTS=1 FETCH_EVIDENCE=0 ./scripts/90-remote-dgx-stable-check.sh`
+  - now reaches expected auth gate (`NeedsLogin`) and emits interactive login URLs instead of false daemon-readiness timeout:
+    - `To authenticate, visit: https://login.tailscale.com/...`
+    - final fail-closed state remains explicit until authenticated:
+      - `ERROR: local tailscale is not in Running state after bootstrap.`
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - fixed Tailscale backend JSON parsing to handle whitespace (`"BackendState": "..."`) in readiness/running checks,
+  - userspace bootstrap now removes stale sockets before start,
+  - added retry controls for daemon startup:
+    - `LOCAL_TAILSCALE_BOOTSTRAP_RETRIES` (default `2`)
+    - `LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS` (default `2`)
+  - each bootstrap retry now uses isolated socket/log paths and optional SOCKS port increment,
+  - forces `PORT=0` for `tailscaled` bootstrap to avoid inherited fixed-port collisions from host env,
+  - kills non-ready attempt processes before retrying to avoid cross-attempt contamination.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` now document bootstrap retry controls and stale-socket isolation behavior.
+
+Assessment update:
+
+- This pass closes a concrete false-negative path in userspace tailscale bootstrap detection.
+- Live DGX verification is still blocked in this runner until Tailscale auth is completed from the emitted login URL (or a valid `LOCAL_TAILSCALE_AUTHKEY` is provided).
+
 ## 2026-02-28 (16:33-16:36 UTC, userspace tailscale persistence + bootstrap diagnostics hardening)
 
 Validation from this checkout:

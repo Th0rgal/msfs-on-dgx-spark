@@ -47,6 +47,8 @@ LOCAL_TAILSCALE_AUTHKEY="${LOCAL_TAILSCALE_AUTHKEY:-}"
 LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS="${LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS:-30}"
 LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS="${LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS:-30}"
 LOCAL_TAILSCALE_ACCEPT_ROUTES="${LOCAL_TAILSCALE_ACCEPT_ROUTES:-0}"
+LOCAL_TAILSCALE_BOOTSTRAP_RETRIES="${LOCAL_TAILSCALE_BOOTSTRAP_RETRIES:-2}"
+LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS="${LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS:-2}"
 
 MSFS_APPID="${MSFS_APPID:-2537590}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-20}"
@@ -139,12 +141,12 @@ is_tailscale_daemon_ready() {
     return 1
   fi
   status_json="$(tailscale_cmd status --json 2>/dev/null || true)"
-  echo "$status_json" | tr -d '\n' | grep -q '"BackendState":"'
+  echo "$status_json" | tr -d '\n' | grep -Eq '"BackendState"[[:space:]]*:'
 }
 
 is_tailscale_running() {
   command -v tailscale >/dev/null 2>&1 \
-    && tailscale_cmd status --json 2>/dev/null | tr -d '\n' | grep -q '"BackendState":"Running"'
+    && tailscale_cmd status --json 2>/dev/null | tr -d '\n' | grep -Eq '"BackendState"[[:space:]]*:[[:space:]]*"Running"'
 }
 
 is_process_zombie_or_missing() {
@@ -157,6 +159,18 @@ is_process_zombie_or_missing() {
   [[ "$proc_state" == Z* ]]
 }
 
+increment_socks5_addr_port() {
+  local addr="$1"
+  local increment="$2"
+  local host="${addr%:*}"
+  local port="${addr##*:}"
+  if [ -z "$host" ] || [ -z "$port" ] || ! [[ "$port" =~ ^[0-9]+$ ]]; then
+    echo "$addr"
+    return 0
+  fi
+  echo "${host}:$((port + increment))"
+}
+
 bootstrap_local_tailscale_userspace() {
   if [ "$BOOTSTRAP_LOCAL_TAILSCALE" != "1" ]; then
     return 0
@@ -166,32 +180,69 @@ bootstrap_local_tailscale_userspace() {
     echo "Bootstrapping local userspace tailscaled (socket: $LOCAL_TAILSCALE_SOCKET)..."
     echo "Using local userspace tailscale state: $LOCAL_TAILSCALE_STATE"
     mkdir -p "$(dirname "$LOCAL_TAILSCALE_SOCKET")" "$(dirname "$LOCAL_TAILSCALE_STATE")" "$(dirname "$LOCAL_TAILSCALE_LOG")"
-    nohup tailscaled \
-      --tun=userspace-networking \
-      --socks5-server="$LOCAL_TAILSCALE_SOCKS5_ADDR" \
-      --state="$LOCAL_TAILSCALE_STATE" \
-      --socket="$LOCAL_TAILSCALE_SOCKET" \
-      >"$LOCAL_TAILSCALE_LOG" 2>&1 &
-    bootstrap_pid=$!
-    daemon_wait=0
-    until is_tailscale_daemon_ready; do
-      if is_process_zombie_or_missing "$bootstrap_pid"; then
-        echo "ERROR: userspace tailscaled exited before becoming ready (pid: $bootstrap_pid)."
-        echo "Hint: check $LOCAL_TAILSCALE_LOG"
-        echo "Log tail:"
-        tail -n 40 "$LOCAL_TAILSCALE_LOG" || true
-        return 1
+    if [ -S "$LOCAL_TAILSCALE_SOCKET" ]; then
+      echo "Removing stale tailscaled socket before bootstrap: $LOCAL_TAILSCALE_SOCKET"
+      rm -f "$LOCAL_TAILSCALE_SOCKET"
+    fi
+    bootstrap_try=1
+    bootstrap_started=0
+    while [ "$bootstrap_try" -le "$LOCAL_TAILSCALE_BOOTSTRAP_RETRIES" ]; do
+      attempt_socket="$LOCAL_TAILSCALE_SOCKET"
+      attempt_log="$LOCAL_TAILSCALE_LOG"
+      attempt_socks="$LOCAL_TAILSCALE_SOCKS5_ADDR"
+      if [ "$bootstrap_try" -gt 1 ]; then
+        attempt_socket="${LOCAL_TAILSCALE_SOCKET}.retry${bootstrap_try}"
+        attempt_log="${LOCAL_TAILSCALE_LOG}.retry${bootstrap_try}"
+        attempt_socks="$(increment_socks5_addr_port "$LOCAL_TAILSCALE_SOCKS5_ADDR" $((bootstrap_try - 1)))"
       fi
-      daemon_wait=$((daemon_wait + 1))
-      if [ "$daemon_wait" -ge 20 ]; then
-        echo "ERROR: tailscaled did not become ready (socket: $LOCAL_TAILSCALE_SOCKET)."
-        echo "Hint: check $LOCAL_TAILSCALE_LOG"
-        echo "Log tail:"
-        tail -n 40 "$LOCAL_TAILSCALE_LOG" || true
-        return 1
+      rm -f "$attempt_socket"
+      echo "Bootstrap attempt ${bootstrap_try}/${LOCAL_TAILSCALE_BOOTSTRAP_RETRIES} (socket: $attempt_socket, socks: $attempt_socks)"
+      PORT=0 nohup tailscaled \
+        --tun=userspace-networking \
+        --socks5-server="$attempt_socks" \
+        --state="$LOCAL_TAILSCALE_STATE" \
+        --socket="$attempt_socket" \
+        >"$attempt_log" 2>&1 &
+      bootstrap_pid=$!
+      daemon_wait=0
+      daemon_ready=0
+      while [ "$daemon_wait" -lt 20 ]; do
+        if tailscale --socket "$attempt_socket" status --json 2>/dev/null | tr -d '\n' | grep -Eq '"BackendState"[[:space:]]*:'; then
+          daemon_ready=1
+          break
+        fi
+        if is_process_zombie_or_missing "$bootstrap_pid"; then
+          break
+        fi
+        daemon_wait=$((daemon_wait + 1))
+        sleep 1
+      done
+      if [ "$daemon_ready" -eq 1 ]; then
+        LOCAL_TAILSCALE_SOCKET="$attempt_socket"
+        LOCAL_TAILSCALE_LOG="$attempt_log"
+        LOCAL_TAILSCALE_SOCKS5_ADDR="$attempt_socks"
+        bootstrap_started=1
+        break
       fi
-      sleep 1
+      echo "WARN: userspace tailscaled failed to become ready on attempt $bootstrap_try."
+      echo "Hint: check $attempt_log"
+      echo "Log tail:"
+      tail -n 40 "$attempt_log" || true
+      if ! is_process_zombie_or_missing "$bootstrap_pid"; then
+        kill "$bootstrap_pid" >/dev/null 2>&1 || true
+        wait "$bootstrap_pid" >/dev/null 2>&1 || true
+      fi
+      if [ "$bootstrap_try" -lt "$LOCAL_TAILSCALE_BOOTSTRAP_RETRIES" ] && [ "$LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS" -gt 0 ]; then
+        sleep "$LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS"
+      fi
+      bootstrap_try=$((bootstrap_try + 1))
     done
+    if [ "$bootstrap_started" -ne 1 ]; then
+      echo "ERROR: tailscaled did not become ready after ${LOCAL_TAILSCALE_BOOTSTRAP_RETRIES} attempt(s)."
+      echo "State file: $LOCAL_TAILSCALE_STATE"
+      echo "Log: $LOCAL_TAILSCALE_LOG"
+      return 1
+    fi
   fi
 
   if ! is_tailscale_running; then
@@ -369,7 +420,7 @@ print_reachability_diagnostics() {
       if is_tailscale_running; then
         echo "Running"
       else
-        tailscale_cmd status --json 2>/dev/null | tr -d '\n' | sed -n 's/.*"BackendState":"\([^"]*\)".*/\1/p' | sed -n '1p'
+        tailscale_cmd status --json 2>/dev/null | tr -d '\n' | sed -n 's/.*"BackendState"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | sed -n '1p'
       fi
     else
       echo "tailscale daemon unavailable (tailscaled not running or inaccessible)"
