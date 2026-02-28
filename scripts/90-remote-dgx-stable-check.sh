@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Sync the current checkout to DGX Spark and run stable-runtime verification remotely.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+
+DGX_HOST="${DGX_HOST:-100.77.4.93}"
+DGX_USER="${DGX_USER:-th0rgal}"
+DGX_PASS="${DGX_PASS:-}"
+DGX_TARGET_DIR="${DGX_TARGET_DIR:-\$HOME/msfs-on-dgx-spark-run-\$(date -u +%Y%m%dT%H%M%SZ)}"
+
+MSFS_APPID="${MSFS_APPID:-2537590}"
+MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-20}"
+MAX_ATTEMPTS="${MAX_ATTEMPTS:-2}"
+WAIT_SECONDS="${WAIT_SECONDS:-120}"
+ATTEMPT_PAUSE_SECONDS="${ATTEMPT_PAUSE_SECONDS:-12}"
+
+TMP_TAR="/tmp/msfs-on-dgx-spark-sync-$$.tgz"
+trap 'rm -f "$TMP_TAR"' EXIT
+
+if ! command -v ssh >/dev/null 2>&1; then
+  echo "ERROR: ssh is required."
+  exit 1
+fi
+if ! command -v scp >/dev/null 2>&1; then
+  echo "ERROR: scp is required."
+  exit 1
+fi
+
+SSH_CMD=(ssh -o StrictHostKeyChecking=no "${DGX_USER}@${DGX_HOST}")
+SCP_CMD=(scp -o StrictHostKeyChecking=no)
+
+if [ -n "$DGX_PASS" ]; then
+  if ! command -v sshpass >/dev/null 2>&1; then
+    echo "ERROR: DGX_PASS is set but sshpass is not installed."
+    exit 1
+  fi
+  SSH_CMD=(sshpass -p "$DGX_PASS" "${SSH_CMD[@]}")
+  SCP_CMD=(sshpass -p "$DGX_PASS" "${SCP_CMD[@]}")
+fi
+
+echo "Packing local checkout..."
+tar --exclude-vcs -czf "$TMP_TAR" -C "$REPO_ROOT" .
+
+echo "Uploading checkout to ${DGX_USER}@${DGX_HOST}..."
+"${SCP_CMD[@]}" "$TMP_TAR" "${DGX_USER}@${DGX_HOST}:/tmp/msfs-on-dgx-spark-sync.tgz"
+
+echo "Running remote stable-runtime verification..."
+"${SSH_CMD[@]}" "set -euo pipefail
+TARGET_DIR=${DGX_TARGET_DIR}
+mkdir -p \"\$TARGET_DIR\"
+tar xzf /tmp/msfs-on-dgx-spark-sync.tgz -C \"\$TARGET_DIR\"
+cd \"\$TARGET_DIR\"
+MSFS_APPID='${MSFS_APPID}' \
+MIN_STABLE_SECONDS='${MIN_STABLE_SECONDS}' \
+MAX_ATTEMPTS='${MAX_ATTEMPTS}' \
+WAIT_SECONDS='${WAIT_SECONDS}' \
+ATTEMPT_PAUSE_SECONDS='${ATTEMPT_PAUSE_SECONDS}' \
+./scripts/55-run-until-stable-runtime.sh
+echo
+echo \"Remote run directory: \$TARGET_DIR\"
+echo \"Latest verify log:\"
+ls -1t \"\$TARGET_DIR\"/output/verify-launch-${MSFS_APPID}-*.log 2>/dev/null | head -n 1 || true
+"

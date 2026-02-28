@@ -1,5 +1,29 @@
 # Progress Log
 
+## 2026-02-28 (11:50 UTC)
+
+Live reproducibility check on `spark-de79` using a fresh synced checkout:
+
+- Verified SSH/device status (`Linux aarch64`, driver `580.95.05`, GPU `NVIDIA GB10`).
+- Synced local repo snapshot to a clean remote run dir:
+  - `/home/th0rgal/msfs-on-dgx-spark-run-20260228T114851Z`
+- Ran:
+  - `MIN_STABLE_SECONDS=20 MAX_ATTEMPTS=2 WAIT_SECONDS=120 ./scripts/55-run-until-stable-runtime.sh`
+- Result:
+  - `verify exit code: 0`
+  - `RESULT: stable runtime achieved on attempt 1`
+- Artifacts:
+  - `/home/th0rgal/msfs-on-dgx-spark-run-20260228T114851Z/output/retry-attempt-2537590-20260228T114856Z-a1.log`
+  - `/home/th0rgal/msfs-on-dgx-spark-run-20260228T114851Z/output/verify-launch-2537590-20260228T114856Z.log`
+  - `/home/th0rgal/msfs-on-dgx-spark-run-20260228T114851Z/output/dispatch-2537590-20260228T114856Z.log`
+
+Repo hardening:
+
+- Added `scripts/90-remote-dgx-stable-check.sh` so any local checkout can:
+  1. package and upload itself to DGX,
+  2. run stable-runtime verification remotely, and
+  3. print remote evidence paths.
+
 ## 2026-02-28 (11:46 UTC)
 
 Live validation on `spark-de79` after hardening script display selection:

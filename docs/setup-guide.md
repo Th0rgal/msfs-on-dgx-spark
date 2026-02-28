@@ -225,6 +225,25 @@ For one-shot launch plus artifact capture (dispatch log, verify log, Steam state
 ./scripts/54-launch-and-capture-evidence.sh
 ```
 
+For repeated retries until a stable runtime window is reached:
+
+```bash
+MIN_STABLE_SECONDS=20 MAX_ATTEMPTS=5 ./scripts/55-run-until-stable-runtime.sh
+```
+
+From a local workstation, you can also sync your current checkout to DGX and run the same stable-runtime validation remotely:
+
+```bash
+DGX_PASS='<password>' ./scripts/90-remote-dgx-stable-check.sh
+```
+
+Useful overrides:
+
+```bash
+DGX_HOST=100.77.4.93 DGX_USER=th0rgal MSFS_APPID=2537590 MIN_STABLE_SECONDS=20 \
+MAX_ATTEMPTS=2 WAIT_SECONDS=120 ./scripts/90-remote-dgx-stable-check.sh
+```
+
 ## Phase 4: Remote Streaming (Optional)
 
 If the DGX Spark is headless or you want to play from another device, use Sunshine + Moonlight.
