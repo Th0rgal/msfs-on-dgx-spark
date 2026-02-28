@@ -123,7 +123,7 @@ NVIDIA GB10 Blackwell GPU
 ./scripts/53-preflight-runtime-repair.sh
 
 # 11. Optional: retry launch cycles until stable runtime is observed
-MIN_STABLE_SECONDS=20 MAX_ATTEMPTS=5 ./scripts/55-run-until-stable-runtime.sh
+MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=5 ./scripts/55-run-until-stable-runtime.sh
 
 # 12. Optional: from your local workstation, sync this repo to DGX and run stable check remotely
 DGX_PASS='<password>' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh
@@ -144,7 +144,7 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 | FEX + Steam installation | Validated (Steam Snap on ARM64) |
 | MSFS 2024 install | Done (`AppID 2537590`, manifest present, bytes fully downloaded) |
 | MSFS launch dispatch | Done (Steam pipe dispatch + `StartSession` + running process tree observed) |
-| First-frame stability | Validated baseline (`09-verify-msfs-launch.sh` stable runtime window passed at `>=20s` on `DISPLAY=:2`; further long-session hardening in progress) |
+| First-frame stability | Reproducible (`09-verify-msfs-launch.sh` stable runtime window passed at `>=30s` on `DISPLAY=:2`, including remote clean-run validation via `90-remote-dgx-stable-check.sh`; long-session hardening still in progress) |
 | MSFS 2020 parity path | Pending |
 | Performance tuning (DLSS, MFG) | Not started |
 

@@ -1808,3 +1808,34 @@ Current trust-boundary status:
 
 - "Can launch locally" is now operationally reproducible on DGX with a 20s stability target and retry automation.
 - Strict first-frame/long-stability (45s+) is still intermittent and remains an active runtime-compatibility tuning task.
+
+## 2026-02-28 (12:00-12:01 UTC, remote clean-run stable verification at 30s)
+
+Live DGX validation on `spark-de79` was executed from local workstation using remote sync/runner orchestration:
+
+- Ran `scripts/90-remote-dgx-stable-check.sh` with:
+  - `MIN_STABLE_SECONDS=30`
+  - `MAX_ATTEMPTS=2`
+  - explicit DGX SSH auth (`DGX_PASS=...`)
+- Remote run directory:
+  - `/home/th0rgal/msfs-on-dgx-spark-run-20260228T120040Z`
+- Attempt 1 succeeded without retries:
+  - `RESULT: stable runtime achieved on attempt 1`
+  - verifier exit code `0`
+- Verify evidence confirms strong runtime process window on GPU display:
+  - `DISPLAY=:2`
+  - `RESULT: MSFS reached stable runtime (>=30s)`
+  - strong process includes `wine64 .../MSFS2024/FlightSimulator2024.exe`
+
+Evidence paths:
+
+- Remote:
+  - `/home/th0rgal/msfs-on-dgx-spark-run-20260228T120040Z/output/verify-launch-2537590-20260228T120042Z.log`
+  - `/home/th0rgal/msfs-on-dgx-spark-run-20260228T120040Z/output/retry-attempt-2537590-20260228T120042Z-a1.log`
+- Local copied bundle:
+  - `output/remote-runs/msfs-on-dgx-spark-run-20260228T120040Z/output/`
+
+Assessment update:
+
+- "Can run locally on DGX Spark" is now reproduced in both direct and remote-clean execution paths with a 30s stability threshold.
+- Remaining work is runtime longevity/interactive-frame hardening beyond current stable-launch thresholds.
