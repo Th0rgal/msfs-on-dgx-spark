@@ -1,5 +1,27 @@
 # Progress Log
 
+## 2026-02-28 (11:56-11:58 UTC, live DGX: fresh proof run + remote sync hardening)
+
+Live reproducibility check on `spark-de79` from this checkout:
+
+- Ran `scripts/90-remote-dgx-stable-check.sh` with stricter target:
+  - `MIN_STABLE_SECONDS=30`
+  - `MAX_ATTEMPTS=1`
+- Result: success on attempt 1 (`verify exit code: 0`).
+- Post-patch re-run of the same command also succeeded on attempt 1:
+  - remote run dir: `/home/th0rgal/msfs-on-dgx-spark-run-20260228T115854Z`
+  - verify log: `/home/th0rgal/msfs-on-dgx-spark-run-20260228T115854Z/output/verify-launch-2537590-20260228T115856Z.log`
+- Remote evidence:
+  - `/home/th0rgal/msfs-on-dgx-spark-run-20260228T115633Z/output/dispatch-2537590-20260228T115636Z.log`
+  - `/home/th0rgal/msfs-on-dgx-spark-run-20260228T115633Z/output/verify-launch-2537590-20260228T115636Z.log`
+- Local synced evidence:
+  - `output/remote-runs/msfs-on-dgx-spark-run-20260228T115633Z/output/`
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh` packaging to exclude local artifact/cache directories (`output/`, `.venv`, `venv`, `node_modules`) during sync tar creation.
+- This keeps remote validation runs faster and more deterministic while preserving the same execution path on DGX.
+
 ## 2026-02-28 (11:52-11:54 UTC, live DGX: stricter reproducibility + local evidence sync)
 
 Live validation on `spark-de79` from this workspace with stricter stability criteria:

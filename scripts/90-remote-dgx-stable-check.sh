@@ -43,7 +43,16 @@ if [ -n "$DGX_PASS" ]; then
 fi
 
 echo "Packing local checkout..."
-tar --exclude-vcs -czf "$TMP_TAR" -C "$REPO_ROOT" .
+# Keep remote sync lean: exclude local artifacts/caches that are not needed to execute scripts.
+tar \
+  --exclude-vcs \
+  --exclude='./output' \
+  --exclude='./.git' \
+  --exclude='./.venv' \
+  --exclude='./venv' \
+  --exclude='./node_modules' \
+  -czf "$TMP_TAR" \
+  -C "$REPO_ROOT" .
 
 echo "Resolving remote run directory..."
 RESOLVED_TARGET_DIR="$("${SSH_CMD[@]}" "eval echo \"$DGX_TARGET_DIR\"")"
