@@ -3,50 +3,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib-steam-auth.sh"
 DISPLAY_NUM="${DISPLAY_NUM:-$("$SCRIPT_DIR/00-select-msfs-display.sh")}"
 MSFS_APPID="${MSFS_APPID:-2537590}"
 SHOT_PATH="${SHOT_PATH:-/tmp/steam-state-${MSFS_APPID}.png}"
-
-find_steam_dir() {
-  local paths=(
-    "$HOME/snap/steam/common/.local/share/Steam"
-    "$HOME/.local/share/Steam"
-    "$HOME/.steam/steam"
-  )
-  local p
-  for p in "${paths[@]}"; do
-    if [ -d "$p" ]; then
-      echo "$p"
-      return 0
-    fi
-  done
-  return 1
-}
-
-steamid_from_processes() {
-  pgrep -af steamwebhelper \
-    | sed -n 's/.*-steamid=\([0-9][0-9]*\).*/\1/p' \
-    | awk '$1 != 0 { print; exit }'
-}
-
-auth_status() {
-  local sid
-  sid="$(steamid_from_processes || true)"
-  if [ -n "$sid" ]; then
-    echo "authenticated (steamid=$sid)"
-    return
-  fi
-
-  if command -v xdotool >/dev/null 2>&1; then
-    if DISPLAY="$DISPLAY_NUM" xdotool search --name "Steam" >/dev/null 2>&1 \
-      && ! DISPLAY="$DISPLAY_NUM" xdotool search --name "Sign in to Steam" >/dev/null 2>&1; then
-      echo "authenticated (ui-detected)"
-      return
-    fi
-  fi
-
-  echo "unauthenticated"
-}
 
 STEAM_DIR="$(find_steam_dir || true)"
 if [ -z "$STEAM_DIR" ]; then
@@ -62,7 +22,7 @@ printf "  Time (UTC): %s\n" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 printf "  Host: %s\n" "$(hostname)"
 printf "  DISPLAY: %s\n" "$DISPLAY_NUM"
 printf "  Steam dir: %s\n" "$STEAM_DIR"
-printf "  Steam auth: %s\n" "$(auth_status)"
+printf "  Steam auth: %s\n" "$(steam_auth_status "$DISPLAY_NUM" "$STEAM_DIR" || true)"
 
 printf "\nProcess checks\n"
 if DISPLAY="$DISPLAY_NUM" glxinfo -B 2>/dev/null | grep -Eq 'OpenGL renderer string:.*NVIDIA|OpenGL vendor string: NVIDIA'; then

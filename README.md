@@ -137,7 +137,7 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 | FEX + Steam installation | Validated (Steam Snap on ARM64) |
 | MSFS 2024 install | Done (`AppID 2537590`, manifest present, bytes fully downloaded) |
 | MSFS launch dispatch | Done (Steam pipe dispatch + `StartSession` + running process tree observed) |
-| First-frame stability | In progress (runtime/init crash path still under investigation) |
+| First-frame stability | In progress (stable 20s runtime observed on `DISPLAY=:2`; longer first-frame/interactive stability still under investigation) |
 | MSFS 2020 parity path | Pending |
 | Performance tuning (DLSS, MFG) | Not started |
 

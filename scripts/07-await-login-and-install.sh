@@ -2,49 +2,12 @@
 # Wait for authenticated Steam session, then trigger and monitor MSFS install state.
 set -euo pipefail
 
-DISPLAY_NUM="${DISPLAY_NUM:-:1}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib-steam-auth.sh"
+DISPLAY_NUM="${DISPLAY_NUM:-$("$SCRIPT_DIR/00-select-msfs-display.sh")}"
 MSFS_APPID="${MSFS_APPID:-2537590}"
 POLL_SECONDS="${POLL_SECONDS:-15}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-1800}"  # 30 min login wait
-
-find_steam_dir() {
-  local paths=(
-    "$HOME/snap/steam/common/.local/share/Steam"
-    "$HOME/.local/share/Steam"
-    "$HOME/.steam/steam"
-  )
-  local p
-  for p in "${paths[@]}"; do
-    if [ -d "$p" ]; then
-      echo "$p"
-      return 0
-    fi
-  done
-  return 1
-}
-
-steamid_from_processes() {
-  pgrep -af steamwebhelper \
-    | sed -n 's/.*-steamid=\([0-9][0-9]*\).*/\1/p' \
-    | awk '$1 != 0 { print; exit }'
-}
-
-steam_session_authenticated() {
-  local sid
-  sid="$(steamid_from_processes || true)"
-  if [ -n "$sid" ]; then
-    return 0
-  fi
-
-  if command -v xdotool >/dev/null 2>&1; then
-    if DISPLAY="$DISPLAY_NUM" xdotool search --name "Steam" >/dev/null 2>&1 \
-      && ! DISPLAY="$DISPLAY_NUM" xdotool search --name "Sign in to Steam" >/dev/null 2>&1; then
-      return 0
-    fi
-  fi
-
-  return 1
-}
 
 print_manifest_state() {
   local manifest="$1"
@@ -76,8 +39,9 @@ echo "[1/4] Ensuring headless Steam stack is up..."
 start_ts="$(date +%s)"
 echo "[2/4] Waiting for authenticated Steam session..."
 while true; do
-  if steam_session_authenticated; then
+  if steam_session_authenticated "$DISPLAY_NUM" "$STEAM_DIR"; then
     sid="$(steamid_from_processes || true)"
+    [ -z "$sid" ] && sid="$(steamid_from_connection_log "$STEAM_DIR" || true)"
     [ -z "$sid" ] && sid="ui-detected"
     echo "Authenticated Steam session detected: steamid=$sid"
     break

@@ -1619,3 +1619,32 @@ Current state after this pass:
 
 - Launch path now defaults to GPU-backed display and avoids stale DX11 wrapper contamination.
 - Runtime behavior improved from short wrapper-only launches to measurable strong runtime windows (10-25s in this pass), but first-frame long-stability proof is still pending under current ARM+FEX+Proton stack.
+
+## 2026-02-28 (11:24-11:28 UTC, auth-detection hardening + live stable-runtime pass)
+
+Live DGX validation on `spark-de79` identified and fixed a reliability gap in launch orchestration:
+
+- `scripts/08-finalize-auth-and-run-msfs.sh` could incorrectly fall back to offline mode when `steamwebhelper` reported `-steamid=0` despite a logged-in Steam session.
+- Added shared auth helper `scripts/lib-steam-auth.sh` and wired it into:
+  - `scripts/06-verify-msfs-state.sh`
+  - `scripts/07-await-login-and-install.sh`
+  - `scripts/08-finalize-auth-and-run-msfs.sh`
+- Auth detection now uses three sources in order:
+  1. non-zero `steamwebhelper -steamid`
+  2. latest `logs/connection_log.txt` state (`[Logged On] [U:1:<id>]`)
+  3. UI fallback (`xdotool` Steam window/sign-in prompt check)
+
+Live result after patch deployment:
+
+- Finalize flow on `DISPLAY=:2` reports authenticated session directly (`steamid=391443739`) without offline fallback.
+- Launch verification reached stable runtime with default pipeline and installed MSFS 2024:
+  - `RESULT: MSFS reached stable runtime (>=20s)`
+  - strong runtime process evidence included `FlightSimulator2024.exe`.
+- State verifier now reports:
+  - `Steam auth: authenticated (connection-log steamid=391443739)`
+  - `GPU display active on :2 (NVIDIA GL)`
+
+Assessment update:
+
+- Local DGX launch path is now reproducible with authenticated detection and measurable stable runtime.
+- Remaining work is extending stability window and confirming first-frame/interactive handoff consistency.
