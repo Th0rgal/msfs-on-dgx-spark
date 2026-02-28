@@ -22,6 +22,7 @@ DGX_HOST="${DGX_HOST:-}"
 DGX_USER="${DGX_USER:-th0rgal}"
 DGX_PASS="${DGX_PASS:-}"
 DGX_PORT="${DGX_PORT:-22}"
+DGX_PORT_CANDIDATES="${DGX_PORT_CANDIDATES:-$DGX_PORT,22,2222}"
 DGX_TARGET_DIR="${DGX_TARGET_DIR:-\$HOME/msfs-on-dgx-spark-run-\$(date -u +%Y%m%dT%H%M%SZ)}"
 DGX_HOST_CANDIDATES="${DGX_HOST_CANDIDATES:-spark-de79,100.77.4.93}"
 DGX_DISCOVER_TAILSCALE_IPS="${DGX_DISCOVER_TAILSCALE_IPS:-1}"
@@ -82,48 +83,64 @@ if ! command -v scp >/dev/null 2>&1; then
   exit 1
 fi
 
-SSH_OPTS=(
-  -o StrictHostKeyChecking=no
-  -o ConnectTimeout="${SSH_CONNECT_TIMEOUT_SECONDS}"
-  -o ConnectionAttempts="${SSH_CONNECTION_ATTEMPTS}"
-  -o ServerAliveInterval="${SSH_SERVER_ALIVE_INTERVAL_SECONDS}"
-  -o ServerAliveCountMax="${SSH_SERVER_ALIVE_COUNT_MAX}"
-  -p "${DGX_PORT}"
-)
-SCP_OPTS=(
-  -o StrictHostKeyChecking=no
-  -o ConnectTimeout="${SSH_CONNECT_TIMEOUT_SECONDS}"
-  -o ConnectionAttempts="${SSH_CONNECTION_ATTEMPTS}"
-  -o ServerAliveInterval="${SSH_SERVER_ALIVE_INTERVAL_SECONDS}"
-  -o ServerAliveCountMax="${SSH_SERVER_ALIVE_COUNT_MAX}"
-  -P "${DGX_PORT}"
-)
 if [ -n "$DGX_HOST" ]; then
   DGX_HOST_CANDIDATES="$DGX_HOST"
 fi
 
-SSH_BASE_CMD=(ssh "${SSH_OPTS[@]}")
-SCP_BASE_CMD=(scp "${SCP_OPTS[@]}")
+BASE_SSH_COMMON_OPTS=(
+  -o StrictHostKeyChecking=no
+  -o ConnectTimeout="${SSH_CONNECT_TIMEOUT_SECONDS}"
+  -o ConnectionAttempts="${SSH_CONNECTION_ATTEMPTS}"
+  -o ServerAliveInterval="${SSH_SERVER_ALIVE_INTERVAL_SECONDS}"
+  -o ServerAliveCountMax="${SSH_SERVER_ALIVE_COUNT_MAX}"
+)
+build_ssh_base_cmd() {
+  local port="$1"
+  local cmd=(ssh "${BASE_SSH_COMMON_OPTS[@]}" -p "$port")
+  if [ -n "$DGX_PASS" ]; then
+    cmd=(sshpass -p "$DGX_PASS" "${cmd[@]}")
+  fi
+  printf '%s\n' "${cmd[@]}"
+}
+build_scp_base_cmd() {
+  local port="$1"
+  local cmd=(scp "${BASE_SSH_COMMON_OPTS[@]}" -P "$port")
+  if [ -n "$DGX_PASS" ]; then
+    cmd=(sshpass -p "$DGX_PASS" "${cmd[@]}")
+  fi
+  printf '%s\n' "${cmd[@]}"
+}
 
 if [ -n "$DGX_PASS" ]; then
   if ! command -v sshpass >/dev/null 2>&1; then
     echo "ERROR: DGX_PASS is set but sshpass is not installed."
     exit 1
   fi
-  SSH_BASE_CMD=(sshpass -p "$DGX_PASS" "${SSH_BASE_CMD[@]}")
-  SCP_BASE_CMD=(sshpass -p "$DGX_PASS" "${SCP_BASE_CMD[@]}")
 fi
+
+is_tailscale_daemon_ready() {
+  command -v tailscale >/dev/null 2>&1 && tailscale status >/dev/null 2>&1
+}
 
 print_reachability_diagnostics() {
   local host_list="$1"
+  local port_list="$2"
   echo
   echo "===== DGX reachability diagnostics ====="
   date -u +"UTC now: %Y-%m-%dT%H:%M:%SZ" || true
   if command -v tailscale >/dev/null 2>&1; then
     echo "-- tailscale status --"
-    tailscale status 2>/dev/null | sed -n '1,40p' || true
+    if is_tailscale_daemon_ready; then
+      tailscale status 2>/dev/null | sed -n '1,40p' || true
+    else
+      echo "tailscale daemon unavailable (tailscaled not running or inaccessible)"
+    fi
     echo "-- tailscale ping (best-effort) --"
-    tailscale ping -c 2 spark-de79 2>/dev/null || true
+    if is_tailscale_daemon_ready; then
+      tailscale ping -c 2 spark-de79 2>/dev/null || true
+    else
+      echo "tailscale ping skipped (daemon unavailable)"
+    fi
   else
     echo "tailscale: not installed on local host"
   fi
@@ -143,7 +160,12 @@ print_reachability_diagnostics() {
       ping -c 1 -W 2 "$_h" >/dev/null 2>&1 && echo "icmp: reachable" || echo "icmp: no-reply"
     fi
     if command -v nc >/dev/null 2>&1; then
-      nc -z -w 2 "$_h" "$DGX_PORT" >/dev/null 2>&1 && echo "tcp/${DGX_PORT}: open" || echo "tcp/${DGX_PORT}: closed-or-timeout"
+      IFS=',' read -r -a _diag_ports <<< "$port_list"
+      for _p in "${_diag_ports[@]}"; do
+        _p="$(echo "$_p" | xargs)"
+        [ -z "$_p" ] && continue
+        nc -z -w 2 "$_h" "$_p" >/dev/null 2>&1 && echo "tcp/${_p}: open" || echo "tcp/${_p}: closed-or-timeout"
+      done
     fi
   done
   echo "===== end diagnostics ====="
@@ -172,42 +194,58 @@ append_host_candidate() {
 
 if [ "$DGX_DISCOVER_TAILSCALE_IPS" = "1" ] && command -v tailscale >/dev/null 2>&1; then
   discovered_hosts="$DGX_HOST_CANDIDATES"
-  IFS=',' read -r -a _candidate_hosts <<< "$DGX_HOST_CANDIDATES"
-  for candidate in "${_candidate_hosts[@]}"; do
-    candidate="$(echo "$candidate" | xargs)"
-    [ -z "$candidate" ] && continue
-    if resolved_ip="$(tailscale ip -4 "$candidate" 2>/dev/null | head -n 1)"; then
-      resolved_ip="$(echo "$resolved_ip" | xargs)"
-      if [ -n "$resolved_ip" ]; then
-        discovered_hosts="$(append_host_candidate "$resolved_ip" "$discovered_hosts")"
+  if is_tailscale_daemon_ready; then
+    IFS=',' read -r -a _candidate_hosts <<< "$DGX_HOST_CANDIDATES"
+    for candidate in "${_candidate_hosts[@]}"; do
+      candidate="$(echo "$candidate" | xargs)"
+      [ -z "$candidate" ] && continue
+      if resolved_ip="$(tailscale ip -4 "$candidate" 2>/dev/null | head -n 1)"; then
+        resolved_ip="$(echo "$resolved_ip" | xargs)"
+        if [ -n "$resolved_ip" ]; then
+          discovered_hosts="$(append_host_candidate "$resolved_ip" "$discovered_hosts")"
+        fi
       fi
-    fi
-  done
+    done
+  else
+    echo "WARN: skipping Tailscale IP discovery because tailscaled is unavailable."
+  fi
   DGX_HOST_CANDIDATES="$discovered_hosts"
 fi
 
 selected_host=""
+selected_port=""
 IFS=',' read -r -a host_candidates <<< "$DGX_HOST_CANDIDATES"
+IFS=',' read -r -a port_candidates <<< "$DGX_PORT_CANDIDATES"
 for host_candidate in "${host_candidates[@]}"; do
   host_candidate="$(echo "$host_candidate" | xargs)"
   [ -z "$host_candidate" ] && continue
-  echo "Checking DGX SSH reachability (${DGX_USER}@${host_candidate})..."
-  if "${SSH_BASE_CMD[@]}" "${DGX_USER}@${host_candidate}" "echo 'DGX SSH reachable' >/dev/null"; then
-    selected_host="$host_candidate"
-    break
-  fi
+  for port_candidate in "${port_candidates[@]}"; do
+    port_candidate="$(echo "$port_candidate" | xargs)"
+    [ -z "$port_candidate" ] && continue
+    mapfile -t SSH_BASE_CMD < <(build_ssh_base_cmd "$port_candidate")
+    echo "Checking DGX SSH reachability (${DGX_USER}@${host_candidate}, port ${port_candidate})..."
+    if "${SSH_BASE_CMD[@]}" "${DGX_USER}@${host_candidate}" "echo 'DGX SSH reachable' >/dev/null"; then
+      selected_host="$host_candidate"
+      selected_port="$port_candidate"
+      break 2
+    fi
+  done
 done
 
 if [ -z "$selected_host" ]; then
   echo "ERROR: unable to reach DGX over SSH for any host candidate: $DGX_HOST_CANDIDATES"
-  echo "Hint: verify Tailscale connectivity or set DGX_HOST to a reachable endpoint."
-  print_reachability_diagnostics "$DGX_HOST_CANDIDATES"
+  echo "Ports tested: $DGX_PORT_CANDIDATES"
+  echo "Hint: verify Tailscale connectivity, set DGX_PORT_CANDIDATES, or set DGX_HOST to a reachable endpoint."
+  print_reachability_diagnostics "$DGX_HOST_CANDIDATES" "$DGX_PORT_CANDIDATES"
   exit 1
 fi
 DGX_HOST="$selected_host"
+DGX_PORT="$selected_port"
+mapfile -t SSH_BASE_CMD < <(build_ssh_base_cmd "$DGX_PORT")
+mapfile -t SCP_BASE_CMD < <(build_scp_base_cmd "$DGX_PORT")
 SSH_CMD=("${SSH_BASE_CMD[@]}" "${DGX_USER}@${DGX_HOST}")
 SCP_CMD=("${SCP_BASE_CMD[@]}")
-echo "Using DGX host: $DGX_HOST"
+echo "Using DGX host: $DGX_HOST (port $DGX_PORT)"
 
 echo "Packing local checkout..."
 # Keep remote sync lean: exclude local artifacts/caches that are not needed to execute scripts.

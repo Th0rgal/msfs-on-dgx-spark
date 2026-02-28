@@ -1,5 +1,29 @@
 # Progress Log
 
+## 2026-02-28 (14:58-15:01 UTC, local hardening: multi-port DGX SSH probing + tailscaled clarity)
+
+Local validation from this checkout:
+
+- Ran `DGX_PASS=... DGX_PORT_CANDIDATES=22,2222 SSH_CONNECT_TIMEOUT_SECONDS=4 ./scripts/90-remote-dgx-stable-check.sh`.
+- Confirmed deterministic failure with explicit diagnostics:
+  - all tested host/port pairs timed out,
+  - local `tailscale` CLI exists but daemon is unavailable (`tailscaled.sock` missing),
+  - per-host ICMP + per-port TCP probe matrix emitted in one run.
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - added `DGX_PORT_CANDIDATES` (default `$DGX_PORT,22,2222`) and host+port reachability loop,
+  - auto-selects the first reachable host/port pair and binds both `ssh` and `scp` to that port,
+  - improved failure messaging to include tested ports and concrete remediation hint,
+  - tightened Tailscale behavior with explicit daemon readiness checks,
+  - skips Tailscale IP discovery with a clear warning when `tailscaled` is unavailable.
+
+Assessment update:
+
+- Current blocker remains network path availability from this runner to DGX.
+- Remote-run diagnostics now disambiguate three cases quickly: wrong host, wrong port, and missing local Tailscale daemon.
+
 ## 2026-02-28 (14:52-14:55 UTC, local hardening: DGX network preflight diagnostics)
 
 Local/remote validation from this checkout:
