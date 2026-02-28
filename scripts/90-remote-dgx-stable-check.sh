@@ -22,6 +22,10 @@ DGX_HOST="${DGX_HOST:-100.77.4.93}"
 DGX_USER="${DGX_USER:-th0rgal}"
 DGX_PASS="${DGX_PASS:-}"
 DGX_TARGET_DIR="${DGX_TARGET_DIR:-\$HOME/msfs-on-dgx-spark-run-\$(date -u +%Y%m%dT%H%M%SZ)}"
+SSH_CONNECT_TIMEOUT_SECONDS="${SSH_CONNECT_TIMEOUT_SECONDS:-15}"
+SSH_CONNECTION_ATTEMPTS="${SSH_CONNECTION_ATTEMPTS:-1}"
+SSH_SERVER_ALIVE_INTERVAL_SECONDS="${SSH_SERVER_ALIVE_INTERVAL_SECONDS:-10}"
+SSH_SERVER_ALIVE_COUNT_MAX="${SSH_SERVER_ALIVE_COUNT_MAX:-2}"
 
 MSFS_APPID="${MSFS_APPID:-2537590}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-20}"
@@ -75,8 +79,15 @@ if ! command -v scp >/dev/null 2>&1; then
   exit 1
 fi
 
-SSH_CMD=(ssh -o StrictHostKeyChecking=no "${DGX_USER}@${DGX_HOST}")
-SCP_CMD=(scp -o StrictHostKeyChecking=no)
+SSH_OPTS=(
+  -o StrictHostKeyChecking=no
+  -o ConnectTimeout="${SSH_CONNECT_TIMEOUT_SECONDS}"
+  -o ConnectionAttempts="${SSH_CONNECTION_ATTEMPTS}"
+  -o ServerAliveInterval="${SSH_SERVER_ALIVE_INTERVAL_SECONDS}"
+  -o ServerAliveCountMax="${SSH_SERVER_ALIVE_COUNT_MAX}"
+)
+SSH_CMD=(ssh "${SSH_OPTS[@]}" "${DGX_USER}@${DGX_HOST}")
+SCP_CMD=(scp "${SSH_OPTS[@]}")
 
 if [ -n "$DGX_PASS" ]; then
   if ! command -v sshpass >/dev/null 2>&1; then
@@ -85,6 +96,13 @@ if [ -n "$DGX_PASS" ]; then
   fi
   SSH_CMD=(sshpass -p "$DGX_PASS" "${SSH_CMD[@]}")
   SCP_CMD=(sshpass -p "$DGX_PASS" "${SCP_CMD[@]}")
+fi
+
+echo "Checking DGX SSH reachability (${DGX_USER}@${DGX_HOST})..."
+if ! "${SSH_CMD[@]}" "echo 'DGX SSH reachable' >/dev/null"; then
+  echo "ERROR: unable to reach DGX over SSH at ${DGX_USER}@${DGX_HOST}."
+  echo "Hint: verify Tailscale connectivity and override DGX_HOST if needed."
+  exit 1
 fi
 
 echo "Packing local checkout..."
