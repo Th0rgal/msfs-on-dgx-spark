@@ -57,6 +57,7 @@ steam_ui_authenticated() {
 steam_auth_status() {
   local display_num="${1:-}"
   local steam_dir="${2:-}"
+  local allow_ui_fallback="${ALLOW_UI_AUTH_FALLBACK:-0}"
   local sid
 
   sid="$(steamid_from_processes || true)"
@@ -74,8 +75,12 @@ steam_auth_status() {
   fi
 
   if steam_ui_authenticated "$display_num"; then
-    echo "authenticated (ui-detected)"
-    return 0
+    if [ "$allow_ui_fallback" = "1" ]; then
+      echo "authenticated (ui-fallback)"
+      return 0
+    fi
+    echo "unauthenticated (ui-only evidence; set ALLOW_UI_AUTH_FALLBACK=1 to override)"
+    return 1
   fi
 
   echo "unauthenticated"

@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-02-28 (12:52-12:57 UTC, live DGX: remote auth-recovery path added)
+
+Live checks on `spark-de79` from this checkout:
+
+- `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 STRICT_MIN_STABLE_SECONDS=60 STRICT_MAX_ATTEMPTS=2 STRICT_RECOVER_BETWEEN_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - baseline exited early with `RESULT: Steam session unauthenticated; launch skipped.`
+  - remote evidence synced locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T125249Z/output/auth-state-2537590-20260228T125251Z.log`
+
+Repo hardening in this pass:
+
+- Added `scripts/58-ensure-steam-auth.sh`:
+  - ensures headless Steam stack is up,
+  - checks existing auth state,
+  - optionally types `STEAM_GUARD_CODE` via `xdotool`,
+  - waits for authenticated session with bounded timeout.
+- Extended `scripts/90-remote-dgx-stable-check.sh`:
+  - `AUTO_REAUTH_ON_AUTH_FAILURE=1` runs remote auth recovery before stability verification
+  - `STEAM_GUARD_CODE` and `REAUTH_LOGIN_WAIT_SECONDS` are passed through for unattended retries.
+  - evidence fetch now handles pre-artifact exits cleanly (no failing `scp` when remote `output/` is absent).
+- Tightened `scripts/lib-steam-auth.sh` trust boundary:
+  - auth now requires strong Steam session evidence (`steamid` from process/log),
+  - UI-only signal is explicitly treated as unauthenticated by default,
+  - optional override remains available via `ALLOW_UI_AUTH_FALLBACK=1`.
+- Updated README quick-start/examples and script index for the new auth gate.
+
+Assessment update:
+
+- Runtime verification path remains healthy; active blocker is Steam auth state.
+- New remote auth gate closes the operational gap between "detected logged out" and "can resume unattended once code is available."
+- Verified behavior with `REAUTH_LOGIN_WAIT_SECONDS=10`: run now fails deterministically at auth gate (`exit 2`) and exits cleanly.
+
 ## 2026-02-28 (12:38-12:51 UTC, live DGX: auth-drift root cause + fail-fast gating)
 
 Live checks on `spark-de79` from this checkout:

@@ -20,6 +20,9 @@ STRICT_MAX_ATTEMPTS="${STRICT_MAX_ATTEMPTS:-3}"
 RECOVER_BETWEEN_ATTEMPTS="${RECOVER_BETWEEN_ATTEMPTS:-0}"
 STRICT_RECOVER_BETWEEN_ATTEMPTS="${STRICT_RECOVER_BETWEEN_ATTEMPTS:-$RECOVER_BETWEEN_ATTEMPTS}"
 RECOVER_ON_EXIT_CODES="${RECOVER_ON_EXIT_CODES:-2,3,4}"
+AUTO_REAUTH_ON_AUTH_FAILURE="${AUTO_REAUTH_ON_AUTH_FAILURE:-0}"
+STEAM_GUARD_CODE="${STEAM_GUARD_CODE:-}"
+REAUTH_LOGIN_WAIT_SECONDS="${REAUTH_LOGIN_WAIT_SECONDS:-300}"
 FETCH_EVIDENCE="${FETCH_EVIDENCE:-1}"
 LOCAL_EVIDENCE_DIR="${LOCAL_EVIDENCE_DIR:-$REPO_ROOT/output/remote-runs}"
 
@@ -83,6 +86,10 @@ TARGET_DIR='${RESOLVED_TARGET_DIR}'
 mkdir -p \"\$TARGET_DIR\"
 tar xzf /tmp/msfs-on-dgx-spark-sync.tgz -C \"\$TARGET_DIR\"
 cd \"\$TARGET_DIR\"
+if [ \"${AUTO_REAUTH_ON_AUTH_FAILURE}\" = \"1\" ]; then
+  echo \"Running optional Steam auth recovery gate before verification...\"
+  LOGIN_WAIT_SECONDS='${REAUTH_LOGIN_WAIT_SECONDS}' STEAM_GUARD_CODE='${STEAM_GUARD_CODE}' ./scripts/58-ensure-steam-auth.sh
+fi
 MSFS_APPID='${MSFS_APPID}' \
 MIN_STABLE_SECONDS='${MIN_STABLE_SECONDS}' \
 MAX_ATTEMPTS='${MAX_ATTEMPTS}' \
@@ -110,10 +117,14 @@ fi
 
 if [ "$FETCH_EVIDENCE" = "1" ]; then
   echo "Fetching remote evidence to local checkout..."
-  local_run_dir="$LOCAL_EVIDENCE_DIR/$(basename "$RESOLVED_TARGET_DIR")"
-  mkdir -p "$local_run_dir"
-  "${SCP_CMD[@]}" -r "${DGX_USER}@${DGX_HOST}:${RESOLVED_TARGET_DIR}/output" "$local_run_dir/"
-  echo "Local evidence copied to: $local_run_dir/output"
+  if "${SSH_CMD[@]}" "test -d '${RESOLVED_TARGET_DIR}/output'"; then
+    local_run_dir="$LOCAL_EVIDENCE_DIR/$(basename "$RESOLVED_TARGET_DIR")"
+    mkdir -p "$local_run_dir"
+    "${SCP_CMD[@]}" -r "${DGX_USER}@${DGX_HOST}:${RESOLVED_TARGET_DIR}/output" "$local_run_dir/"
+    echo "Local evidence copied to: $local_run_dir/output"
+  else
+    echo "No remote output directory present (run exited before artifacts were produced)."
+  fi
 fi
 
 exit "$remote_rc"
