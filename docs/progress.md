@@ -1497,3 +1497,29 @@ Assessment update:
 
 - The next most likely fix has now been encoded as a reproducible cycle.
 - End-to-end validation remains blocked in this workspace and must run on `spark-de79` (or an equivalent host that has active Steam Snap state and logs).
+
+## 2026-02-28 (10:49-10:55 UTC, live DGX retest + dispatch log-path hardening)
+
+Live validation on `spark-de79` against the current runtime state:
+
+- Re-ran latest package/bootstrap trace flow (`scripts/53-trace-msfs-package-probes-and-retest.sh` in remote working copy).
+- Bootstrap confirms MSFS 2024 package content is present under canonical tree (`markers=260`) and symlink bridge/UserCfg path rewrites are applied.
+- Dispatch is currently blocked upstream of game launch due to Steam runtime/webhelper instability in this session:
+  - repeated `bwrap: execvp /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb: No such file or directory`
+  - no new `StartSession` accepted after this loop begins.
+
+Repo hardening applied here:
+
+- Updated `scripts/19-dispatch-via-steam-pipe.sh` to avoid false negatives on newer Steam builds:
+  - auto-selects freshest active console log (`console-linux.txt` vs `console_log.txt`),
+  - supports optional positional launch URI override,
+  - keeps compat-log-based acceptance checks even if console log path rotated.
+
+Why this matters:
+
+- Prior script behavior could report `RESULT: no launch session accepted` even when Steam had moved to `console-linux.txt`, masking real runtime state.
+- Current retest output now reflects actual launch acceptance state instead of stale-log artifacts.
+
+Current highest-priority blocker:
+
+- pressure-vessel webhelper startup is stuck on missing `pv-adverb` execution path in runtime context, preventing reliable dispatch consumption and making launch attempts nondeterministic.
