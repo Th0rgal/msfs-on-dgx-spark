@@ -1391,3 +1391,45 @@ Assessment update:
   1. CachyOS ARM layout mismatch (partially fixed with symlinks), and
   2. Steam client runtime/assertion failure (`steamclient_main.c`, `!status`) during/after deeper initialization.
 - End-to-end boot to first frame is still not achieved.
+
+## 2026-02-28 (02:43-02:55 UTC, launcher-service/vulkan-layer controls + clean-prefix revalidation)
+
+New hypotheses tested:
+
+1. Force Steam runtime path selection and Vulkan-layer behavior via LaunchOptions/env:
+   - `STEAM_COMPAT_LAUNCHER_SERVICE=proton`
+   - `PRESSURE_VESSEL_IMPORT_VULKAN_LAYERS=0`
+   - `PRESSURE_VESSEL_REMOVE_GAME_OVERLAY=1`
+2. Clear runtime contamination by restoring real Valve `Proton - Experimental` and re-running with a clean prefix.
+3. Hard-force pressure-vessel env by wrapping sniper `_v2-entry-point` (instead of relying on LaunchOptions propagation).
+
+What was added:
+
+- `scripts/47-test-launcher-service-proton-vk-layers-off.sh`
+- `scripts/48-test-valve-exp-cleanprefix-display2.sh`
+- `scripts/49-test-sniper-entrypoint-force-vk-layer-off.sh`
+
+Key results:
+
+- `STEAM_COMPAT_LAUNCHER_SERVICE=proton` in launch options did **not** change effective launcher chain.
+  - Compat logs still show `SteamLinuxRuntime_sniper/_v2-entry-point` + pressure-vessel command prefixes for tool `1493710`.
+- Forcing `PRESSURE_VESSEL_IMPORT_VULKAN_LAYERS=0` (both launch options and `_v2-entry-point` wrapper) did **not** eliminate repeated pressure-vessel Vulkan layer import errors.
+  - `pressure-vessel-wrap ... Internal error: ... is not in /usr/lib/pressure-vessel/overrides/share/vulkan/...` persisted.
+- Restoring real Valve Experimental changed tool path back from CachyOS and one run reached longer process lifetime, but still failed pre-frame.
+  - Running session remained in init state (`Where="CrashReport_Z::Init"`, `FrameCount=0`, `LastStates="<no global flow>@"`, latest observed around `2026-02-28T02:48:53Z`).
+- Clean-prefix revalidation did not produce end-to-end boot; short-run exits and install-script evaluator churn remained.
+- New risk discovered: runtime tool churn can contaminate prefixes across Proton variants (seen as `Prefix has an invalid version?!` before clean-prefix reset).
+
+Artifacts:
+
+- `output/launchsvc-proton-vklayersoff-cycle-20260228T024344Z.log`
+- `output/launchsvc-proton-vklayersoff-20260228T024344Z.png`
+- `output/valve-exp-cleanprefix-display2-cycle-20260228T025059Z.log`
+- `output/valve-exp-cleanprefix-display2-20260228T025059Z.png`
+- `output/sniper-entrypoint-vklayeroff-cycle-20260228T025433Z.log`
+- `output/sniper-entrypoint-vklayeroff-20260228T025433Z.png`
+
+Assessment update:
+
+- These untried control-plane fixes did not unblock startup.
+- Remaining blocker is still runtime/platform compatibility in this ARM+FEX+Steam Runtime stack before first frame, not Steam dispatch/auth.
