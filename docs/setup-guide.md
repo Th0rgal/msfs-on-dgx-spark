@@ -243,6 +243,24 @@ When remote auth recovery is enabled and the login UI is not visibly rendered in
 DGX_PASS='<password>' AUTO_REAUTH_ON_AUTH_FAILURE=1 STEAM_USERNAME='<steam_user>' STEAM_PASSWORD='<steam_pass>' AUTH_USE_STEAM_LOGIN_CLI=1 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
+For unattended runs, you can keep Steam credentials only on DGX and let remote checks load them:
+
+```bash
+# run on DGX once
+mkdir -p ~/.config/msfs-on-dgx-spark
+cat > ~/.config/msfs-on-dgx-spark/steam-auth.env <<'EOF'
+AUTO_REAUTH_ON_AUTH_FAILURE=1
+STEAM_USERNAME='your_user'
+STEAM_PASSWORD='your_pass'
+# optional:
+# STEAM_GUARD_CODE='12345'
+EOF
+chmod 600 ~/.config/msfs-on-dgx-spark/steam-auth.env
+
+# then from local workstation
+DGX_PASS='<password>' ./scripts/90-remote-dgx-stable-check.sh
+```
+
 Window restore is also enabled by default during re-auth (`AUTH_RESTORE_WINDOWS=1`) to unminimize/focus hidden Steam windows before timing out.
 Re-auth now also normalizes Steam window geometry by default (`AUTH_NORMALIZE_WINDOWS=1`) so tiny/off-screen windows are resized/moved into a visible area for manual login.
 During launch verification, auth checks now bootstrap Steam/UI first (`AUTH_BOOTSTRAP_STEAM_STACK=1`) and can auto-run runtime recovery when `steamwebhelper` is missing (`AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER=1`).
@@ -269,6 +287,8 @@ DGX_PASS='<password>' AUTO_REAUTH_ON_AUTH_FAILURE=1 \
 STEAM_USERNAME='<steam_user>' STEAM_PASSWORD='<steam_pass>' STEAM_GUARD_CODE='<code>' \
 REAUTH_LOGIN_WAIT_SECONDS=180 ./scripts/90-remote-dgx-stable-check.sh
 ```
+
+`90-remote-dgx-stable-check.sh` loads `REMOTE_AUTH_ENV_FILE` (default `$HOME/.config/msfs-on-dgx-spark/steam-auth.env`) when `LOAD_REMOTE_AUTH_ENV=1` (default). For safety, the file must be mode `600` unless `REQUIRE_REMOTE_AUTH_ENV_PERMS=0` is explicitly set.
 
 When `STRICT_MIN_STABLE_SECONDS` is set, remote checks run in two stages:
 - baseline gate (`MIN_STABLE_SECONDS`/`MAX_ATTEMPTS`) proves local run-path health

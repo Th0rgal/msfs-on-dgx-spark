@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-02-28 (13:45-14:50 UTC, live DGX: auth-gate recheck + remote credential-file hardening)
+
+Live checks on `spark-de79` from this checkout:
+
+- `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=2 WAIT_SECONDS=120 STRICT_MIN_STABLE_SECONDS=45 STRICT_MAX_ATTEMPTS=2 STRICT_WAIT_SECONDS=180 STRICT_RECOVER_BETWEEN_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - baseline gate exits with `exit 7` (`Steam session unauthenticated`).
+  - synced evidence confirms true logged-out state (not detector drift):
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T134557Z/output/steam-debug-20260228T134624Z.log`
+    - latest `connection_log` tail remains `Logged Off [U:1:0]`.
+- fallback re-run with fatal auth disabled:
+  - `DGX_PASS=... ALLOW_UI_AUTH_FALLBACK=1 FATAL_EXIT_CODES='' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=2 ... ./scripts/90-remote-dgx-stable-check.sh`
+  - both attempts still fail at auth gate (`steamid=0`), final summary `exit 1`.
+  - evidence:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T134634Z/output/steam-debug-20260228T134709Z.log`
+- validation of new remote auth-env safeguards:
+  - bad-permission env file check (`REMOTE_AUTH_ENV_FILE=/home/th0rgal/.config/msfs-on-dgx-spark/test-auth-perms.env`, mode `644`) exits deterministically with `exit 9`.
+  - mode `600` env file is sourced successfully (`Loaded remote auth env: ...`) and auth recovery gate executes before verification.
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - added secure remote auth env loading (`LOAD_REMOTE_AUTH_ENV=1`, `REMOTE_AUTH_ENV_FILE=$HOME/.config/msfs-on-dgx-spark/steam-auth.env`),
+  - enforces permission check by default (`REQUIRE_REMOTE_AUTH_ENV_PERMS=1`, expects mode `600`),
+  - fixed auth-recovery precedence so remote credentials are not clobbered by empty local `STEAM_USERNAME`/`STEAM_PASSWORD` values.
+- Updated docs for unattended auth:
+  - `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` now document remote credential-file flow and security expectation (`chmod 600`).
+
+Assessment update:
+
+- Launch/runtime reliability remains good when a valid authenticated session exists, but the active DGX session is currently logged out.
+- New credential-file path closes a practical ops gap for unattended runs: remote re-auth can now be enabled without placing Steam credentials on local command lines or shell history.
+
 ## 2026-02-28 (13:42-13:45 UTC, live DGX: post-normalization launch-path recheck with UI fallback)
 
 Live check on `spark-de79` from this checkout:

@@ -139,6 +139,19 @@ DGX_PASS='<password>' AUTO_REAUTH_ON_AUTH_FAILURE=1 STEAM_USERNAME='<steam_user>
 
 # 16. Optional: force credential-based CLI login when headless UI windows are not visible
 DGX_PASS='<password>' AUTO_REAUTH_ON_AUTH_FAILURE=1 STEAM_USERNAME='<steam_user>' STEAM_PASSWORD='<steam_pass>' AUTH_USE_STEAM_LOGIN_CLI=1 ./scripts/90-remote-dgx-stable-check.sh
+
+# 17. Optional: keep Steam credentials only on DGX (chmod 600) and let remote checks load them
+# on DGX:
+#   mkdir -p ~/.config/msfs-on-dgx-spark
+#   cat > ~/.config/msfs-on-dgx-spark/steam-auth.env <<'EOF'
+#   AUTO_REAUTH_ON_AUTH_FAILURE=1
+#   STEAM_USERNAME='your_user'
+#   STEAM_PASSWORD='your_pass'
+#   # optional:
+#   # STEAM_GUARD_CODE='12345'
+#   EOF
+#   chmod 600 ~/.config/msfs-on-dgx-spark/steam-auth.env
+DGX_PASS='<password>' ./scripts/90-remote-dgx-stable-check.sh
 ```
 
 `09-verify-msfs-launch.sh` now requires a stable runtime window (default `30s`) to avoid false positives from short-lived launch wrappers. Tune with `MIN_STABLE_SECONDS=<N>`.
@@ -157,6 +170,7 @@ When auth drift is expected, `AUTO_REAUTH_ON_AUTH_FAILURE=1` runs `58-ensure-ste
 During restore, auth recovery now also normalizes Steam window geometry by default (`AUTH_NORMALIZE_WINDOWS=1`, `AUTH_WINDOW_WIDTH=1600`, `AUTH_WINDOW_HEIGHT=900`, `AUTH_WINDOW_X=50`, `AUTH_WINDOW_Y=50`) so tiny/off-screen windows become visible for VNC/manual login.
 Auth checks now require strong Steam session evidence by default (`steamid` via process/log); UI-only detection is treated as unauthenticated unless `ALLOW_UI_AUTH_FALLBACK=1` is explicitly set.
 `90-remote-dgx-stable-check.sh` forwards `ALLOW_UI_AUTH_FALLBACK` and `FATAL_EXIT_CODES` to the remote runners, and also accepts trailing `KEY=VALUE` overrides for convenience (for example `./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1`).
+`90-remote-dgx-stable-check.sh` can load an optional remote auth env file (`REMOTE_AUTH_ENV_FILE`, default `$HOME/.config/msfs-on-dgx-spark/steam-auth.env`) and will enforce `0600` permissions by default (`REQUIRE_REMOTE_AUTH_ENV_PERMS=1`) before sourcing it.
 When `AUTO_REAUTH_ON_AUTH_FAILURE=1` is enabled and auth recovery fails, `90-remote-dgx-stable-check.sh` now captures `steam-debug-*.log/.png` before exit (`AUTH_DEBUG_ON_REAUTH_FAILURE=1` by default), ensuring remote auth failures still sync actionable evidence locally.
 `FATAL_EXIT_CODES=''` is treated as an intentional empty list (fatal auth exits disabled), not auto-reset to defaults.
 `54-launch-and-capture-evidence.sh` now retries dispatch inside a single attempt (`DISPATCH_MAX_ATTEMPTS`, default `2`) and can auto-run `57-recover-steam-runtime.sh` between redispatches (`DISPATCH_RECOVER_ON_NO_ACCEPT=1`) before launch verification begins; these dispatch knobs are forwarded by `90-remote-dgx-stable-check.sh`.

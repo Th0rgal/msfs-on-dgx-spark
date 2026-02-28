@@ -88,6 +88,17 @@ DGX_PASS='<password>' AUTO_REAUTH_ON_AUTH_FAILURE=1 STEAM_USERNAME='<steam_user>
 # Headless fallback: force CLI credential login when no visible login dialog appears
 DGX_PASS='<password>' AUTO_REAUTH_ON_AUTH_FAILURE=1 STEAM_USERNAME='<steam_user>' STEAM_PASSWORD='<steam_pass>' AUTH_USE_STEAM_LOGIN_CLI=1 ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1
 
+# Keep credentials only on DGX in a 600-permission env file and auto-load it during remote runs
+# (run once on DGX)
+mkdir -p ~/.config/msfs-on-dgx-spark
+cat > ~/.config/msfs-on-dgx-spark/steam-auth.env <<'EOF'
+AUTO_REAUTH_ON_AUTH_FAILURE=1
+STEAM_USERNAME='your_user'
+STEAM_PASSWORD='your_pass'
+EOF
+chmod 600 ~/.config/msfs-on-dgx-spark/steam-auth.env
+DGX_PASS='<password>' ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1
+
 # Temporarily allow UI-only auth signal during interactive recovery windows
 DGX_PASS='<password>' ALLOW_UI_AUTH_FALLBACK=1 FATAL_EXIT_CODES='' ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1
 ```
@@ -95,6 +106,7 @@ DGX_PASS='<password>' ALLOW_UI_AUTH_FALLBACK=1 FATAL_EXIT_CODES='' ./scripts/90-
 If auth recovery times out and debug logs show no visible Steam/login windows, `58-ensure-steam-auth.sh` now reports that condition explicitly; use `AUTH_USE_STEAM_LOGIN_CLI=1` (default) with credentials to avoid depending on visible UI prompts.
 It also attempts Steam window restore/focus by default (`AUTH_RESTORE_WINDOWS=1`) so headless-minimized dialogs can be surfaced automatically.
 Window geometry normalization is also enabled during restore (`AUTH_NORMALIZE_WINDOWS=1`), resizing/moving tiny or off-screen Steam windows to a visible region by default.
+`90-remote-dgx-stable-check.sh` now supports remote credential sourcing via `REMOTE_AUTH_ENV_FILE` (default `$HOME/.config/msfs-on-dgx-spark/steam-auth.env`) with permission check (`REQUIRE_REMOTE_AUTH_ENV_PERMS=1` expects mode `600`).
 If unauthenticated failures occur with no active `steamwebhelper`, keep `AUTH_BOOTSTRAP_STEAM_STACK=1` and `AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER=1` (defaults) so verification first restarts the Steam/UI stack and repairs runtime roots before deciding auth is missing.
 
 ### Steam crashes on launch
