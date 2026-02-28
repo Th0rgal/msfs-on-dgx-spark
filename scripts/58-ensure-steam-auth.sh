@@ -15,6 +15,8 @@ STEAM_USERNAME="${STEAM_USERNAME:-}"
 STEAM_PASSWORD="${STEAM_PASSWORD:-}"
 AUTH_AUTO_FILL="${AUTH_AUTO_FILL:-1}"
 AUTH_SUBMIT_LOGIN="${AUTH_SUBMIT_LOGIN:-1}"
+AUTH_USE_STEAM_LOGIN_CLI="${AUTH_USE_STEAM_LOGIN_CLI:-1}"
+AUTH_FORCE_OPEN_MAIN="${AUTH_FORCE_OPEN_MAIN:-1}"
 
 STEAM_DIR="$(find_steam_dir || true)"
 if [ -z "$STEAM_DIR" ]; then
@@ -34,6 +36,28 @@ fi
 steam_login_dialog_visible() {
   command -v xdotool >/dev/null 2>&1 || return 1
   DISPLAY="$DISPLAY_NUM" xdotool search --onlyvisible --name "Sign in to Steam" >/dev/null 2>&1
+}
+
+steam_any_window_present() {
+  command -v xwininfo >/dev/null 2>&1 || return 1
+  DISPLAY="$DISPLAY_NUM" xwininfo -root -tree 2>/dev/null | grep -Eiq "steam|steamwebhelper|sign in to steam|steam guard"
+}
+
+open_steam_main_ui() {
+  [ "$AUTH_FORCE_OPEN_MAIN" = "1" ] || return 1
+  command -v snap >/dev/null 2>&1 || return 1
+  DISPLAY="$DISPLAY_NUM" snap run steam steam://open/main >/tmp/msfs-auth-open-main.log 2>&1 || true
+  return 0
+}
+
+launch_cli_login() {
+  [ "$AUTH_USE_STEAM_LOGIN_CLI" = "1" ] || return 1
+  [ -n "$STEAM_USERNAME" ] || return 1
+  [ -n "$STEAM_PASSWORD" ] || return 1
+  command -v snap >/dev/null 2>&1 || return 1
+
+  DISPLAY="$DISPLAY_NUM" snap run steam -login "$STEAM_USERNAME" "$STEAM_PASSWORD" >/tmp/msfs-auth-steam-login.log 2>&1 || true
+  return 0
 }
 
 fill_login_form() {
@@ -82,6 +106,18 @@ if [ "$AUTH_AUTO_FILL" = "1" ] && steam_login_dialog_visible; then
   fi
 fi
 
+if [ "$AUTH_FORCE_OPEN_MAIN" = "1" ]; then
+  open_steam_main_ui || true
+fi
+
+cli_login_attempted=0
+if [ "$AUTH_USE_STEAM_LOGIN_CLI" = "1" ] && [ -n "$STEAM_USERNAME" ] && [ -n "$STEAM_PASSWORD" ]; then
+  if launch_cli_login; then
+    cli_login_attempted=1
+    echo "Submitted Steam credential login via CLI on ${DISPLAY_NUM}."
+  fi
+fi
+
 if [ -n "$GUARD_CODE" ]; then
   echo "Attempting Steam Guard code entry on ${DISPLAY_NUM}..."
   if type_guard_code; then
@@ -106,12 +142,23 @@ while true; do
   if [ "$elapsed" -ge "$LOGIN_WAIT_SECONDS" ]; then
     echo "ERROR: timed out waiting for Steam authentication."
     steam_auth_status "$DISPLAY_NUM" "$STEAM_DIR" || true
+    if steam_any_window_present; then
+      echo "Observed Steam X11 windows, but no visible login/auth dialog was detected."
+      echo "Hint: window manager/UI may be headless-minimized; run ./scripts/11-debug-steam-window-state.sh for evidence."
+    fi
     echo "Hint: complete login/Steam Guard on VNC, or pass STEAM_GUARD_CODE and rerun."
     exit 2
   fi
 
   if [ "$AUTH_AUTO_FILL" = "1" ] && steam_login_dialog_visible; then
     fill_login_form || true
+  fi
+  if [ "$AUTH_FORCE_OPEN_MAIN" = "1" ]; then
+    open_steam_main_ui || true
+  fi
+  if [ "$cli_login_attempted" -eq 0 ] && [ "$AUTH_USE_STEAM_LOGIN_CLI" = "1" ] && [ -n "$STEAM_USERNAME" ] && [ -n "$STEAM_PASSWORD" ]; then
+    launch_cli_login || true
+    cli_login_attempted=1
   fi
   if [ -n "$GUARD_CODE" ]; then
     type_guard_code || true

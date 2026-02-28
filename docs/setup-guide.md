@@ -237,6 +237,12 @@ From a local workstation, you can also sync your current checkout to DGX and run
 DGX_PASS='<password>' ./scripts/90-remote-dgx-stable-check.sh
 ```
 
+When remote auth recovery is enabled and the login UI is not visibly rendered in headless mode, credential-based CLI login can be forced:
+
+```bash
+DGX_PASS='<password>' AUTO_REAUTH_ON_AUTH_FAILURE=1 STEAM_USERNAME='<steam_user>' STEAM_PASSWORD='<steam_pass>' AUTH_USE_STEAM_LOGIN_CLI=1 ./scripts/90-remote-dgx-stable-check.sh
+```
+
 Useful overrides:
 
 ```bash

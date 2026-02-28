@@ -1,5 +1,33 @@
 # Progress Log
 
+## 2026-02-28 (13:14-13:16 UTC, live DGX: headless auth fallback hardening for invisible Steam UI)
+
+Live checks on `spark-de79` from this checkout:
+
+- `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - baseline verification still fails fast at auth gate (`exit 7`, unauthenticated), with evidence synced locally.
+- `DGX_PASS=... AUTO_REAUTH_ON_AUTH_FAILURE=1 REAUTH_LOGIN_WAIT_SECONDS=20 MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - auth recovery now exits deterministically with `exit 2` and explicit headless diagnosis:
+    - `Observed Steam X11 windows, but no visible login/auth dialog was detected.`
+  - auth-debug evidence synced locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T131619Z/output/steam-debug-20260228T131650Z.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T131619Z/output/steam-debug-20260228T131650Z.png`
+
+Repo hardening in this pass:
+
+- Updated `scripts/58-ensure-steam-auth.sh`:
+  - added `AUTH_USE_STEAM_LOGIN_CLI=1` (default) to attempt `steam -login <user> <pass>` when credentials are provided,
+  - added `AUTH_FORCE_OPEN_MAIN=1` (default) to nudge Steam UI exposure in headless sessions,
+  - emits explicit timeout diagnostics when Steam windows exist but no visible login/guard dialog is available.
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - now forwards `AUTH_USE_STEAM_LOGIN_CLI` to remote auth recovery.
+- Updated docs (`README.md`, `docs/setup-guide.md`, `docs/troubleshooting.md`) with the CLI-login fallback flow for headless auth recovery.
+
+Assessment update:
+
+- Runtime verification path remains healthy; immediate blocker is still session authentication state.
+- Trust boundary is clearer for unattended runs: auth timeouts now distinguish "logged out" from "headless UI not visibly rendered," and provide a credential-based non-UI recovery path.
+
 ## 2026-02-28 (13:11-13:13 UTC, live DGX: unattended credential-based auth recovery path)
 
 Live checks on `spark-de79` from this checkout:
