@@ -1264,3 +1264,38 @@ Artifacts:
 Assessment update:
 - Hiding CPUID hypervisor bit did not clear DX12 device creation failure.
 - Remaining blocker is still runtime/platform compatibility at DXGI/D3D12 init under ARM+FEX+Proton.
+
+## 2026-02-28 (00:32-00:44 UTC, NVIDIA X display path with virtual monitor)
+
+New hypothesis tested:
+- Prior runs were predominantly on Xvfb (`:1`/`:3`) with llvmpipe; MSFS might require a real GPU-backed X display + monitor target for DXGI device init.
+
+What was tried:
+- Verified display topology and rendering paths:
+  - `:0` and a custom `:2` Xorg use NVIDIA GL (`OpenGL renderer: NVIDIA Tegra NVIDIA GB10`), while `:1`/`:3` are llvmpipe.
+  - `:0` had `Monitors: 0` (no active output).
+- Started dedicated NVIDIA Xorg on `:2` and created a virtual monitor object:
+  - `DISPLAY=:2 xrandr --setmonitor HEADLESS 1920/520x1080/320+0+0 none`
+- Ran a clean launch cycle on `DISPLAY=:2` after hard-killing stale `2537590` processes and forcing DX11 launch args via Proton wrapper.
+
+Result:
+- Launch dispatch/session creation remains reliable.
+- Fresh running-session crash marker still reproduces at init:
+  - `Where="CrashReport_Z::Init"`
+  - `FrameCount=0`
+  - `CmdLine=["-dx11","-FastLaunch"]`
+  - `TimeUTC=2026-02-28T00:43:32Z`
+- MSFS process tree can stay alive for minutes, but it remains in the same pre-frame init failure state.
+
+Conclusion from this cycle:
+- Moving from llvmpipe/Xvfb to NVIDIA X server with a virtual monitor did not clear the boot failure.
+- Blocker remains pre-frame runtime/init compatibility on ARM+FEX+Proton.
+
+Artifacts:
+- `output/display0-cycle-20260228T003232Z.log`
+- `output/display2-headlessmon-cycle-20260228T003905Z.log`
+- `output/display2-cleanrun-20260228T004259Z.log`
+- `output/steam-2537590.log`
+
+Repo updates:
+- Added `scripts/38-test-display2-headless-monitor-cycle.sh`.
