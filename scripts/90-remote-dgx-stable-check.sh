@@ -57,6 +57,9 @@ AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER="${AUTH_RECOVER_RUNTIME_ON_MISSING_WEB
 LOAD_REMOTE_AUTH_ENV="${LOAD_REMOTE_AUTH_ENV:-1}"
 REMOTE_AUTH_ENV_FILE="${REMOTE_AUTH_ENV_FILE:-\$HOME/.config/msfs-on-dgx-spark/steam-auth.env}"
 REQUIRE_REMOTE_AUTH_ENV_PERMS="${REQUIRE_REMOTE_AUTH_ENV_PERMS:-1}"
+PUSH_REMOTE_AUTH_ENV="${PUSH_REMOTE_AUTH_ENV:-0}"
+LOCAL_AUTH_ENV_FILE="${LOCAL_AUTH_ENV_FILE:-$HOME/.config/msfs-on-dgx-spark/steam-auth.env}"
+REQUIRE_LOCAL_AUTH_ENV_PERMS="${REQUIRE_LOCAL_AUTH_ENV_PERMS:-1}"
 FETCH_EVIDENCE="${FETCH_EVIDENCE:-1}"
 LOCAL_EVIDENCE_DIR="${LOCAL_EVIDENCE_DIR:-$REPO_ROOT/output/remote-runs}"
 
@@ -103,6 +106,32 @@ if [ -z "$RESOLVED_TARGET_DIR" ]; then
   exit 1
 fi
 echo "Remote run directory: $RESOLVED_TARGET_DIR"
+
+RESOLVED_REMOTE_AUTH_ENV=""
+if [ "$PUSH_REMOTE_AUTH_ENV" = "1" ]; then
+  if [ ! -f "$LOCAL_AUTH_ENV_FILE" ]; then
+    echo "ERROR: PUSH_REMOTE_AUTH_ENV=1 but LOCAL_AUTH_ENV_FILE does not exist: $LOCAL_AUTH_ENV_FILE"
+    exit 1
+  fi
+  if [ "$REQUIRE_LOCAL_AUTH_ENV_PERMS" = "1" ]; then
+    local_perms="$(stat -c '%a' "$LOCAL_AUTH_ENV_FILE" 2>/dev/null || true)"
+    if [ "$local_perms" != "600" ]; then
+      echo "ERROR: local auth env must be mode 600: $LOCAL_AUTH_ENV_FILE (current: ${local_perms:-unknown})"
+      exit 1
+    fi
+  fi
+  RESOLVED_REMOTE_AUTH_ENV="$("${SSH_CMD[@]}" "eval echo \"$REMOTE_AUTH_ENV_FILE\"")"
+  if [ -z "$RESOLVED_REMOTE_AUTH_ENV" ]; then
+    echo "ERROR: failed to resolve remote auth env path from REMOTE_AUTH_ENV_FILE=$REMOTE_AUTH_ENV_FILE"
+    exit 1
+  fi
+  echo "Provisioning remote auth env..."
+  remote_auth_parent="$(dirname "$RESOLVED_REMOTE_AUTH_ENV")"
+  "${SSH_CMD[@]}" "mkdir -p '$remote_auth_parent'"
+  "${SCP_CMD[@]}" "$LOCAL_AUTH_ENV_FILE" "${DGX_USER}@${DGX_HOST}:${RESOLVED_REMOTE_AUTH_ENV}"
+  "${SSH_CMD[@]}" "chmod 600 '$RESOLVED_REMOTE_AUTH_ENV'"
+  echo "Remote auth env updated: $RESOLVED_REMOTE_AUTH_ENV"
+fi
 
 echo "Uploading checkout to ${DGX_USER}@${DGX_HOST}..."
 "${SCP_CMD[@]}" "$TMP_TAR" "${DGX_USER}@${DGX_HOST}:/tmp/msfs-on-dgx-spark-sync.tgz"

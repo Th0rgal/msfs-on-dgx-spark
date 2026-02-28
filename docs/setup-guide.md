@@ -290,6 +290,14 @@ REAUTH_LOGIN_WAIT_SECONDS=180 ./scripts/90-remote-dgx-stable-check.sh
 
 `90-remote-dgx-stable-check.sh` loads `REMOTE_AUTH_ENV_FILE` (default `$HOME/.config/msfs-on-dgx-spark/steam-auth.env`) when `LOAD_REMOTE_AUTH_ENV=1` (default). For safety, the file must be mode `600` unless `REQUIRE_REMOTE_AUTH_ENV_PERMS=0` is explicitly set.
 
+To provision/update that remote auth env from your local workstation before each run, set:
+
+```bash
+DGX_PASS='<password>' PUSH_REMOTE_AUTH_ENV=1 \
+LOCAL_AUTH_ENV_FILE="$HOME/.config/msfs-on-dgx-spark/steam-auth.env" \
+./scripts/90-remote-dgx-stable-check.sh
+```
+
 When `STRICT_MIN_STABLE_SECONDS` is set, remote checks run in two stages:
 - baseline gate (`MIN_STABLE_SECONDS`/`MAX_ATTEMPTS`) proves local run-path health
 - strict gate (`STRICT_MIN_STABLE_SECONDS`/`STRICT_MAX_ATTEMPTS`) measures higher stability confidence
