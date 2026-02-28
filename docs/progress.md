@@ -1648,3 +1648,34 @@ Assessment update:
 
 - Local DGX launch path is now reproducible with authenticated detection and measurable stable runtime.
 - Remaining work is extending stability window and confirming first-frame/interactive handoff consistency.
+
+## 2026-02-28 (11:29-11:35 UTC, install-state correction + crash-boundary evidence pass)
+
+Live DGX recheck on `spark-de79` corrected stale assumptions and captured a new launch evidence bundle:
+
+- Install state is confirmed healthy for MSFS 2024 (`AppID 2537590`):
+  - `appmanifest_2537590.acf` is present under Snap Steam root.
+  - `BytesDownloaded == BytesToDownload` (`7261863936`), `StateFlags=4` (fully installed).
+- Launch dispatch path remains reproducible:
+  - `scripts/19-dispatch-via-steam-pipe.sh` increments `StartSession` for `2537590`.
+  - `content_log` repeatedly shows `App Running` transitions for `2537590`.
+- Runtime still exits early under stricter stability criteria:
+  - `scripts/09-verify-msfs-launch.sh` with `MIN_STABLE_SECONDS=45` reports transient runtime.
+  - Strong process lifetime observed: ~35s (`wine64 ... FlightSimulator2024.exe`) before exit.
+- Latest crash signature remains consistent:
+  - `AsoboReport-Crash` reports `SEH 0xC0000005`.
+  - Last state remains `MainState:BOOT SubState:BOOT_INIT`.
+
+Repo hardening added in this pass:
+
+- New script: `scripts/54-launch-and-capture-evidence.sh`
+  - runs preflight repair,
+  - dispatches launch via Steam pipe,
+  - runs stable-runtime verification,
+  - snapshots `content_log` / `compat_log` excerpts,
+  - copies latest crash artifacts (`crashdata`, Bifrost log, AsoboReport) into `output/`.
+
+Assessment update:
+
+- The old "manifest missing / install not queued" blocker is closed.
+- The current trust boundary is now explicit: local launch is reproducible, but runtime is not yet stable past BOOT_INIT under strict (45s) criteria.

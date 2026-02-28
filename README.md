@@ -137,7 +137,7 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 | FEX + Steam installation | Validated (Steam Snap on ARM64) |
 | MSFS 2024 install | Done (`AppID 2537590`, manifest present, bytes fully downloaded) |
 | MSFS launch dispatch | Done (Steam pipe dispatch + `StartSession` + running process tree observed) |
-| First-frame stability | In progress (stable 20s runtime observed on `DISPLAY=:2`; longer first-frame/interactive stability still under investigation) |
+| First-frame stability | In progress (repeated `App Running` sessions; current strong runtime reaches ~35s before BOOT_INIT crash on `DISPLAY=:2`) |
 | MSFS 2020 parity path | Pending |
 | Performance tuning (DLSS, MFG) | Not started |
 
@@ -157,6 +157,7 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 │   ├── 08-finalize-auth-and-run-msfs.sh # One-shot auth/install/launch orchestrator
 │   ├── 52-install-pvadverb-fex-wrapper.sh # Repair pressure-vessel host pv-adverb path on ARM
 │   ├── 53-preflight-runtime-repair.sh # Repairs pv-adverb, Vulkan overrides, and MSFS package paths
+│   ├── 54-launch-and-capture-evidence.sh # One-shot launch + verification + crash artifact collection
 │   ├── 14-install-ge-proton.sh # Install latest GE-Proton into compatibilitytools.d
 └── docs/
     ├── setup-guide.md         # Detailed setup walkthrough

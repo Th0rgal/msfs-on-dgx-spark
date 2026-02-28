@@ -219,6 +219,12 @@ By default this verifier requires a stable runtime window of 30 seconds (to avoi
 MIN_STABLE_SECONDS=20 ./scripts/09-verify-msfs-launch.sh
 ```
 
+For one-shot launch plus artifact capture (dispatch log, verify log, Steam state excerpts, and latest crash files):
+
+```bash
+./scripts/54-launch-and-capture-evidence.sh
+```
+
 ## Phase 4: Remote Streaming (Optional)
 
 If the DGX Spark is headless or you want to play from another device, use Sunshine + Moonlight.
