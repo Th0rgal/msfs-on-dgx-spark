@@ -1,5 +1,23 @@
 # Progress Log
 
+## 2026-02-28 (13:42-13:45 UTC, live DGX: post-normalization launch-path recheck with UI fallback)
+
+Live check on `spark-de79` from this checkout:
+
+- `DGX_PASS=... ALLOW_UI_AUTH_FALLBACK=1 FATAL_EXIT_CODES='' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=60 ./scripts/90-remote-dgx-stable-check.sh`
+  - advanced through auth gate (UI fallback) and reached dispatch/verify path.
+  - dispatch was retried with runtime rebuild (`DISPATCH_MAX_ATTEMPTS=2`, `DISPATCH_RECOVER_ON_NO_ACCEPT=1`), but `StartSession` still did not confirm launch acceptance (`rc=4`).
+  - verifier remained `exit 2` (`RESULT: no MSFS launch process detected after 60s`).
+  - evidence synced locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T134231Z/output/dispatch-2537590-20260228T134233Z-d1.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T134231Z/output/dispatch-2537590-20260228T134233Z-d2.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T134231Z/output/verify-launch-2537590-20260228T134233Z.log`
+
+Assessment update:
+
+- Window-visibility recovery is now confirmed working in production.
+- Remaining reliability blocker after auth is dispatch acceptance in this specific session state.
+
 ## 2026-02-28 (13:40-13:42 UTC, live DGX: auth window geometry normalization for headless recovery)
 
 Live checks on `spark-de79` from this checkout:
