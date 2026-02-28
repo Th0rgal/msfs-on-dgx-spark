@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-02-28 (16:33-16:36 UTC, userspace tailscale persistence + bootstrap diagnostics hardening)
+
+Validation from this checkout:
+
+- `bash -n scripts/90-remote-dgx-stable-check.sh` (pass).
+- Direct DGX probe from this runner is still unreachable:
+  - `sshpass -p '...' ssh -o ConnectTimeout=8 th0rgal@100.77.4.93 'hostname'`
+  - result: `ssh: connect to host 100.77.4.93 port 22: Connection timed out`.
+- Bootstrap smoke run:
+  - `DGX_PASS=... BOOTSTRAP_LOCAL_TAILSCALE=1 LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS=5 LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS=5 SSH_CONNECT_TIMEOUT_SECONDS=3 DGX_PROBE_ATTEMPTS=1 MAX_ATTEMPTS=1 FETCH_EVIDENCE=0 ./scripts/90-remote-dgx-stable-check.sh`
+  - now emits deterministic state/log paths and inline log tail on failure:
+    - `Using local userspace tailscale state: /root/.local/state/msfs-on-dgx-spark/tailscaled.state`
+    - `Hint: check /root/.local/state/msfs-on-dgx-spark/tailscaled.log`
+    - `Log tail: ...`
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - userspace tailscale state/log defaults are now persistent under `${XDG_STATE_HOME:-$HOME/.local/state}/msfs-on-dgx-spark/` instead of `/tmp`,
+  - added `LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS` for interactive login URL retrieval tuning,
+  - added explicit userspace state-path logging during bootstrap,
+  - captures and prints `tailscale up` / `tailscale login` output on failure,
+  - emits `State file:` and `Log:` paths when bootstrap fails,
+  - prints a `tailscaled` log tail on readiness timeout for faster root-cause analysis.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` now document persistent userspace state defaults and login-timeout tuning.
+
+Assessment update:
+
+- This run improves repeatability and observability for Tailscale-routed remote DGX checks in non-systemd/container runners.
+- Live DGX validation remains blocked in this environment by network path availability to `100.77.4.93`.
+
 ## 2026-02-28 (15:26-15:31 UTC, userspace tailscale bootstrap path for non-systemd runners)
 
 Validation from this checkout:

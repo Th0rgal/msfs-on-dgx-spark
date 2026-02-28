@@ -38,12 +38,14 @@ DGX_SSH_PROXY_COMMAND="${DGX_SSH_PROXY_COMMAND:-}"
 DGX_SSH_EXTRA_OPTS_CSV="${DGX_SSH_EXTRA_OPTS_CSV:-}"
 DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE="${DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE:-1}"
 BOOTSTRAP_LOCAL_TAILSCALE="${BOOTSTRAP_LOCAL_TAILSCALE:-0}"
+LOCAL_TAILSCALE_DIR="${LOCAL_TAILSCALE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/msfs-on-dgx-spark}"
 LOCAL_TAILSCALE_SOCKET="${LOCAL_TAILSCALE_SOCKET:-}"
 LOCAL_TAILSCALE_STATE="${LOCAL_TAILSCALE_STATE:-}"
 LOCAL_TAILSCALE_LOG="${LOCAL_TAILSCALE_LOG:-}"
 LOCAL_TAILSCALE_SOCKS5_ADDR="${LOCAL_TAILSCALE_SOCKS5_ADDR:-127.0.0.1:1055}"
 LOCAL_TAILSCALE_AUTHKEY="${LOCAL_TAILSCALE_AUTHKEY:-}"
 LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS="${LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS:-30}"
+LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS="${LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS:-30}"
 LOCAL_TAILSCALE_ACCEPT_ROUTES="${LOCAL_TAILSCALE_ACCEPT_ROUTES:-0}"
 
 MSFS_APPID="${MSFS_APPID:-2537590}"
@@ -104,10 +106,10 @@ if [ "$BOOTSTRAP_LOCAL_TAILSCALE" = "1" ]; then
     LOCAL_TAILSCALE_SOCKET="/tmp/msfs-on-dgx-spark-tailscaled.sock"
   fi
   if [ -z "$LOCAL_TAILSCALE_STATE" ]; then
-    LOCAL_TAILSCALE_STATE="/tmp/msfs-on-dgx-spark-tailscaled.state"
+    LOCAL_TAILSCALE_STATE="$LOCAL_TAILSCALE_DIR/tailscaled.state"
   fi
   if [ -z "$LOCAL_TAILSCALE_LOG" ]; then
-    LOCAL_TAILSCALE_LOG="/tmp/msfs-on-dgx-spark-tailscaled.log"
+    LOCAL_TAILSCALE_LOG="$LOCAL_TAILSCALE_DIR/tailscaled.log"
   fi
   if ! command -v tailscale >/dev/null 2>&1; then
     echo "ERROR: BOOTSTRAP_LOCAL_TAILSCALE=1 requires tailscale."
@@ -132,12 +134,27 @@ tailscale_cmd() {
 }
 
 is_tailscale_daemon_ready() {
-  command -v tailscale >/dev/null 2>&1 && tailscale_cmd status >/dev/null 2>&1
+  local status_json
+  if ! command -v tailscale >/dev/null 2>&1; then
+    return 1
+  fi
+  status_json="$(tailscale_cmd status --json 2>/dev/null || true)"
+  echo "$status_json" | tr -d '\n' | grep -q '"BackendState":"'
 }
 
 is_tailscale_running() {
   command -v tailscale >/dev/null 2>&1 \
     && tailscale_cmd status --json 2>/dev/null | tr -d '\n' | grep -q '"BackendState":"Running"'
+}
+
+is_process_zombie_or_missing() {
+  local pid="$1"
+  local proc_state
+  proc_state="$(ps -o stat= -p "$pid" 2>/dev/null | head -n 1 | tr -d '[:space:]')"
+  if [ -z "$proc_state" ]; then
+    return 0
+  fi
+  [[ "$proc_state" == Z* ]]
 }
 
 bootstrap_local_tailscale_userspace() {
@@ -147,6 +164,7 @@ bootstrap_local_tailscale_userspace() {
 
   if ! is_tailscale_daemon_ready; then
     echo "Bootstrapping local userspace tailscaled (socket: $LOCAL_TAILSCALE_SOCKET)..."
+    echo "Using local userspace tailscale state: $LOCAL_TAILSCALE_STATE"
     mkdir -p "$(dirname "$LOCAL_TAILSCALE_SOCKET")" "$(dirname "$LOCAL_TAILSCALE_STATE")" "$(dirname "$LOCAL_TAILSCALE_LOG")"
     nohup tailscaled \
       --tun=userspace-networking \
@@ -154,12 +172,22 @@ bootstrap_local_tailscale_userspace() {
       --state="$LOCAL_TAILSCALE_STATE" \
       --socket="$LOCAL_TAILSCALE_SOCKET" \
       >"$LOCAL_TAILSCALE_LOG" 2>&1 &
+    bootstrap_pid=$!
     daemon_wait=0
     until is_tailscale_daemon_ready; do
+      if is_process_zombie_or_missing "$bootstrap_pid"; then
+        echo "ERROR: userspace tailscaled exited before becoming ready (pid: $bootstrap_pid)."
+        echo "Hint: check $LOCAL_TAILSCALE_LOG"
+        echo "Log tail:"
+        tail -n 40 "$LOCAL_TAILSCALE_LOG" || true
+        return 1
+      fi
       daemon_wait=$((daemon_wait + 1))
       if [ "$daemon_wait" -ge 20 ]; then
         echo "ERROR: tailscaled did not become ready (socket: $LOCAL_TAILSCALE_SOCKET)."
         echo "Hint: check $LOCAL_TAILSCALE_LOG"
+        echo "Log tail:"
+        tail -n 40 "$LOCAL_TAILSCALE_LOG" || true
         return 1
       fi
       sleep 1
@@ -168,6 +196,7 @@ bootstrap_local_tailscale_userspace() {
 
   if ! is_tailscale_running; then
     echo "Bringing local tailscale online..."
+    up_log_file="$(mktemp)"
     up_cmd=(tailscale_cmd up --timeout "${LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS}s")
     if [ "$LOCAL_TAILSCALE_ACCEPT_ROUTES" = "1" ]; then
       up_cmd+=(--accept-routes)
@@ -175,7 +204,21 @@ bootstrap_local_tailscale_userspace() {
     if [ -n "$LOCAL_TAILSCALE_AUTHKEY" ]; then
       up_cmd+=(--auth-key "$LOCAL_TAILSCALE_AUTHKEY")
     fi
-    "${up_cmd[@]}" || true
+    if ! "${up_cmd[@]}" >"$up_log_file" 2>&1; then
+      echo "WARN: tailscale up did not complete successfully."
+      sed -n '1,30p' "$up_log_file" || true
+    fi
+    rm -f "$up_log_file"
+  fi
+
+  if ! is_tailscale_running && [ -z "$LOCAL_TAILSCALE_AUTHKEY" ]; then
+    echo "Attempting interactive tailscale login URL retrieval..."
+    login_log_file="$(mktemp)"
+    if ! tailscale_cmd login --timeout "${LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS}s" >"$login_log_file" 2>&1; then
+      echo "WARN: tailscale login URL retrieval did not complete."
+    fi
+    sed -n '1,30p' "$login_log_file" || true
+    rm -f "$login_log_file"
   fi
 
   if ! is_tailscale_running; then
@@ -183,6 +226,7 @@ bootstrap_local_tailscale_userspace() {
     echo "Hint: set LOCAL_TAILSCALE_AUTHKEY or run:"
     echo "  tailscale --socket '$LOCAL_TAILSCALE_SOCKET' login"
     echo "  tailscale --socket '$LOCAL_TAILSCALE_SOCKET' up"
+    echo "State file: $LOCAL_TAILSCALE_STATE"
     echo "Log: $LOCAL_TAILSCALE_LOG"
     return 1
   fi

@@ -313,6 +313,8 @@ tailscale --socket /tmp/msfs-on-dgx-spark-tailscaled.sock up
 ```
 
 Then re-run the remote check command with `BOOTSTRAP_LOCAL_TAILSCALE=1`.
+By default, userspace state is persisted at `${XDG_STATE_HOME:-$HOME/.local/state}/msfs-on-dgx-spark/tailscaled.state` so login can be reused on later runs. Override with `LOCAL_TAILSCALE_STATE=...` when needed.
+If login URL retrieval times out before you can complete browser auth, raise `LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS` (for example `LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS=120`).
 
 Optional staged gate (baseline + strict):
 
