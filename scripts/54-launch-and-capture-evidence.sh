@@ -50,6 +50,10 @@ if [ -d "$PFX" ]; then
   crashdata="$PFX/drive_c/users/steamuser/AppData/Roaming/Microsoft Flight Simulator 2024/crashdata.txt"
   if [ -f "$crashdata" ]; then
     cp -f "$crashdata" "$OUT_DIR/crashdata-${MSFS_APPID}-${STAMP}.txt"
+    if command -v iconv >/dev/null 2>&1; then
+      iconv -f UTF-16LE -t UTF-8 "$crashdata" \
+        >"$OUT_DIR/crashdata-${MSFS_APPID}-${STAMP}.utf8.txt" 2>/dev/null || true
+    fi
   fi
 
   latest_bifrost="$(ls -1t "$PFX"/drive_c/users/steamuser/AppData/Local/XboxGameStudios/Bifrost/Bifrost-*.log 2>/dev/null | head -n 1 || true)"
@@ -57,7 +61,7 @@ if [ -d "$PFX" ]; then
     cp -f "$latest_bifrost" "$OUT_DIR/$(basename "${latest_bifrost%.log}")-${MSFS_APPID}-${STAMP}.log"
   fi
 
-  latest_asobo="$(ls -1t "$PFX"/drive_c/users/steamuser/AppData/Roaming/Microsoft\\ Flight\\ Simulator\\ 2024/AsoboReport-Crash.txt 2>/dev/null | head -n 1 || true)"
+  latest_asobo="$(ls -1t "$PFX"/drive_c/users/steamuser/AppData/Roaming/Microsoft\ Flight\ Simulator\ 2024/AsoboReport-Crash.txt 2>/dev/null | head -n 1 || true)"
   if [ -n "${latest_asobo:-}" ] && [ -f "$latest_asobo" ]; then
     cp -f "$latest_asobo" "$OUT_DIR/AsoboReport-Crash-${MSFS_APPID}-${STAMP}.txt"
   fi

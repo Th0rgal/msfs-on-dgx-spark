@@ -121,6 +121,9 @@ NVIDIA GB10 Blackwell GPU
 
 # 10. Optional: run DGX runtime preflight repairs directly
 ./scripts/53-preflight-runtime-repair.sh
+
+# 11. Optional: retry launch cycles until stable runtime is observed
+MIN_STABLE_SECONDS=20 MAX_ATTEMPTS=5 ./scripts/55-run-until-stable-runtime.sh
 ```
 
 `09-verify-msfs-launch.sh` now requires a stable runtime window (default `30s`) to avoid false positives from short-lived launch wrappers. Tune with `MIN_STABLE_SECONDS=<N>`.
@@ -158,6 +161,7 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 │   ├── 52-install-pvadverb-fex-wrapper.sh # Repair pressure-vessel host pv-adverb path on ARM
 │   ├── 53-preflight-runtime-repair.sh # Repairs pv-adverb, Vulkan overrides, and MSFS package paths
 │   ├── 54-launch-and-capture-evidence.sh # One-shot launch + verification + crash artifact collection
+│   ├── 55-run-until-stable-runtime.sh # Repeat launch+verify cycles until stable runtime succeeds
 │   ├── 14-install-ge-proton.sh # Install latest GE-Proton into compatibilitytools.d
 └── docs/
     ├── setup-guide.md         # Detailed setup walkthrough

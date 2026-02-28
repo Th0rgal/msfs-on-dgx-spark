@@ -1679,3 +1679,27 @@ Assessment update:
 
 - The old "manifest missing / install not queued" blocker is closed.
 - The current trust boundary is now explicit: local launch is reproducible, but runtime is not yet stable past BOOT_INIT under strict (45s) criteria.
+
+## 2026-02-28 (11:38-11:41 UTC, clean-clone validation + reliability hardening)
+
+Fresh DGX validation was run from a clean clone (`~/msfs-on-dgx-spark-run`) to avoid contamination from the long-running experimental tree:
+
+- `scripts/54-launch-and-capture-evidence.sh` with `MIN_STABLE_SECONDS=45` reproduced launch dispatch and strong runtime process startup, then exited before strict stability:
+  - `RESULT: transient launch only`
+  - `Strong runtime lifetime: ~35s (<45s)`
+- The same path with `MIN_STABLE_SECONDS=20` succeeded (`verify exit code: 0`), confirming reproducible local launch into a measurable stable runtime window.
+
+Repo hardening in this pass:
+
+- Fixed crash artifact capture bug in `scripts/54-launch-and-capture-evidence.sh`:
+  - corrected `AsoboReport-Crash.txt` path handling (previous escaping prevented copy in some runs)
+  - added optional UTF-16LE -> UTF-8 decode output for `crashdata.txt` (`crashdata-...utf8.txt`) when `iconv` is available
+- Added `scripts/55-run-until-stable-runtime.sh`:
+  - repeats launch+capture cycles up to `MAX_ATTEMPTS`
+  - exits on first stable-runtime success
+  - emits per-attempt logs and verifier summaries for easier reliability tracking
+
+Current trust-boundary status:
+
+- "Can launch locally" is now operationally reproducible on DGX with a 20s stability target and retry automation.
+- Strict first-frame/long-stability (45s+) is still intermittent and remains an active runtime-compatibility tuning task.
