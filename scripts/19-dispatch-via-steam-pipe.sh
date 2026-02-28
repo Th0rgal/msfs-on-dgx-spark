@@ -2,10 +2,21 @@
 # Dispatch MSFS launch through Steam IPC pipe (more reliable than URI/applaunch in headless Snap sessions).
 set -euo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPT_DIR/lib-display.sh"
 MSFS_APPID="${MSFS_APPID:-2537590}"
 WAIT_SECONDS="${WAIT_SECONDS:-15}"
 LAUNCH_URI="${1:-${LAUNCH_URI:-steam://rungameid/${MSFS_APPID}}}"
 PIPE_WRITE_TIMEOUT_SECONDS="${PIPE_WRITE_TIMEOUT_SECONDS:-3}"
+PIPE_WRITE_RETRIES="${PIPE_WRITE_RETRIES:-2}"
+PIPE_WRITE_RETRY_DELAY_SECONDS="${PIPE_WRITE_RETRY_DELAY_SECONDS:-5}"
+PIPE_WRITE_RECOVER_ON_TIMEOUT="${PIPE_WRITE_RECOVER_ON_TIMEOUT:-1}"
+URI_FALLBACK_ON_PIPE_FAILURE="${URI_FALLBACK_ON_PIPE_FAILURE:-1}"
+URI_FALLBACK_TIMEOUT_SECONDS="${URI_FALLBACK_TIMEOUT_SECONDS:-15}"
+RECOVER_SCRIPT="${RECOVER_SCRIPT:-$SCRIPT_DIR/57-recover-steam-runtime.sh}"
+RECOVER_OUT_DIR="${RECOVER_OUT_DIR:-$REPO_ROOT/output}"
+DISPLAY_NUM="${DISPLAY_NUM:-$(resolve_display_num "$SCRIPT_DIR")}"
 
 STEAM_PIPE="${STEAM_PIPE:-$HOME/snap/steam/common/.steam/steam.pipe}"
 STEAM_DIR="${STEAM_DIR:-$HOME/snap/steam/common/.local/share/Steam}"
@@ -61,14 +72,48 @@ if [ -n "$CONSOLE_LOG" ]; then
 fi
 echo "  Compat log:  $COMPAT_LOG"
 echo "  Pipe write timeout: ${PIPE_WRITE_TIMEOUT_SECONDS}s"
+echo "  Pipe write retries: ${PIPE_WRITE_RETRIES}"
+echo "  Pipe timeout recovery: ${PIPE_WRITE_RECOVER_ON_TIMEOUT}"
+echo "  URI fallback on pipe failure: ${URI_FALLBACK_ON_PIPE_FAILURE}"
+echo "  DISPLAY: $DISPLAY_NUM"
 echo "  GameAction before: $before_ga"
 echo "  StartSession before: $before_start"
 
-if ! timeout "${PIPE_WRITE_TIMEOUT_SECONDS}s" sh -c 'printf "%s\n" "$1" > "$2"' sh "$LAUNCH_URI" "$STEAM_PIPE"; then
-  echo "RESULT: failed to write launch URI to steam pipe within timeout."
-  echo "Hint: this usually means Steam has no active pipe consumer in the current session."
-  pgrep -af "steam|steamwebhelper|steamwebhelper_sniper_wrap|pressure-vessel|pv-bwrap" | sed -n "1,80p" || true
-  exit 5
+if ! [[ "$PIPE_WRITE_RETRIES" =~ ^[0-9]+$ ]] || [ "$PIPE_WRITE_RETRIES" -lt 1 ]; then
+  echo "ERROR: PIPE_WRITE_RETRIES must be a positive integer (got: $PIPE_WRITE_RETRIES)"
+  exit 6
+fi
+
+pipe_write_ok=0
+attempt=1
+while [ "$attempt" -le "$PIPE_WRITE_RETRIES" ]; do
+  if timeout "${PIPE_WRITE_TIMEOUT_SECONDS}s" sh -c 'printf "%s\n" "$1" > "$2"' sh "$LAUNCH_URI" "$STEAM_PIPE"; then
+    pipe_write_ok=1
+    echo "  Pipe write: success on attempt ${attempt}/${PIPE_WRITE_RETRIES}"
+    break
+  fi
+
+  echo "  Pipe write: timeout on attempt ${attempt}/${PIPE_WRITE_RETRIES}"
+  if [ "$attempt" -lt "$PIPE_WRITE_RETRIES" ]; then
+    if [ "$PIPE_WRITE_RECOVER_ON_TIMEOUT" = "1" ] && [ -x "$RECOVER_SCRIPT" ]; then
+      echo "  Running runtime recovery before retry..."
+      OUT_DIR="$RECOVER_OUT_DIR" "$RECOVER_SCRIPT" >/dev/null 2>&1 || true
+    fi
+    sleep "$PIPE_WRITE_RETRY_DELAY_SECONDS"
+  fi
+  attempt=$((attempt + 1))
+done
+
+if [ "$pipe_write_ok" -ne 1 ]; then
+  if [ "$URI_FALLBACK_ON_PIPE_FAILURE" = "1" ]; then
+    echo "  Pipe write exhausted; falling back to Steam URI dispatch on DISPLAY=$DISPLAY_NUM"
+    timeout "${URI_FALLBACK_TIMEOUT_SECONDS}s" env DISPLAY="$DISPLAY_NUM" steam "$LAUNCH_URI" >/dev/null 2>&1 || true
+  else
+    echo "RESULT: failed to write launch URI to steam pipe within timeout."
+    echo "Hint: this usually means Steam has no active pipe consumer in the current session."
+    pgrep -af "steam|steamwebhelper|steamwebhelper_sniper_wrap|pressure-vessel|pv-bwrap" | sed -n "1,80p" || true
+    exit 5
+  fi
 fi
 
 sleep "$WAIT_SECONDS"

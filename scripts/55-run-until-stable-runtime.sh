@@ -10,6 +10,7 @@ ATTEMPT_PAUSE_SECONDS="${ATTEMPT_PAUSE_SECONDS:-12}"
 WAIT_SECONDS="${WAIT_SECONDS:-240}"
 RECOVER_BETWEEN_ATTEMPTS="${RECOVER_BETWEEN_ATTEMPTS:-0}"
 RECOVER_ON_EXIT_CODES="${RECOVER_ON_EXIT_CODES:-2,3,4}"
+FATAL_EXIT_CODES="${FATAL_EXIT_CODES:-7}"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 OUT_DIR="${OUT_DIR:-$REPO_ROOT/output}"
 
@@ -25,10 +26,16 @@ echo "  AppID: $MSFS_APPID"
 echo "  Target stable window: ${MIN_STABLE_SECONDS}s"
 echo "  Max attempts: $MAX_ATTEMPTS"
 echo "  Retry recovery: ${RECOVER_BETWEEN_ATTEMPTS} (on exit codes: ${RECOVER_ON_EXIT_CODES})"
+echo "  Fatal exit codes: ${FATAL_EXIT_CODES}"
 
 should_recover() {
   local rc="$1"
   [[ ",${RECOVER_ON_EXIT_CODES}," == *",${rc},"* ]]
+}
+
+is_fatal() {
+  local rc="$1"
+  [[ ",${FATAL_EXIT_CODES}," == *",${rc},"* ]]
 }
 
 a=1
@@ -57,6 +64,15 @@ while [ "$a" -le "$MAX_ATTEMPTS" ]; do
     lifetime_line="$(grep -E 'Strong runtime lifetime|Wrapper-only lifetime|RESULT:' "$last_verify" | tail -n 3 | tr '\n' ' ' || true)"
     echo "  latest verifier summary: ${lifetime_line:-n/a}"
     echo "  verify log: $last_verify"
+  fi
+
+  if is_fatal "$rc"; then
+    echo "RESULT: non-retryable failure encountered (exit code $rc)"
+    auth_log="$(ls -1t "$OUT_DIR"/auth-state-${MSFS_APPID}-*.log 2>/dev/null | head -n 1 || true)"
+    if [ -n "$auth_log" ] && [ -f "$auth_log" ]; then
+      echo "  auth log: $auth_log"
+    fi
+    exit "$rc"
   fi
 
   if [ "$a" -lt "$MAX_ATTEMPTS" ]; then

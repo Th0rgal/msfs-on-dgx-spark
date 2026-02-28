@@ -1,5 +1,48 @@
 # Progress Log
 
+## 2026-02-28 (12:38-12:51 UTC, live DGX: auth-drift root cause + fail-fast gating)
+
+Live checks on `spark-de79` from this checkout:
+
+- `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 STRICT_MIN_STABLE_SECONDS=60 STRICT_MAX_ATTEMPTS=3 STRICT_RECOVER_BETWEEN_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - baseline failed with `RESULT: no MSFS launch process detected after 120s`
+  - dispatch logs show repeat `failed to write launch URI to steam pipe within timeout`
+- `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=2 RECOVER_BETWEEN_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - both attempts failed with no launch accepted
+  - inter-attempt runtime recovery executed correctly
+- Direct DGX `connection_log.txt` inspection identified root cause:
+  - Steam session logged off at `2026-02-28 12:21:21 UTC`
+  - state remained logged off (`ConnectionDisconnected() not auto reconnecting due to user initiated logoff`)
+
+Repo hardening in this pass:
+
+- Updated `scripts/19-dispatch-via-steam-pipe.sh`:
+  - added bounded pipe-write retries (`PIPE_WRITE_RETRIES`, default `2`)
+  - added optional inline timeout recovery (`PIPE_WRITE_RECOVER_ON_TIMEOUT=1`)
+  - added optional URI fallback dispatch (`URI_FALLBACK_ON_PIPE_FAILURE=1`) while still requiring `GameAction`/`StartSession` evidence
+- Updated `scripts/54-launch-and-capture-evidence.sh`:
+  - added explicit Steam auth gate using `lib-steam-auth.sh`
+  - writes `output/auth-state-*.log`
+  - returns exit code `7` when unauthenticated
+- Updated `scripts/55-run-until-stable-runtime.sh`:
+  - added `FATAL_EXIT_CODES` (default `7`)
+  - exits immediately on non-retryable auth failure instead of consuming retries
+
+Validation:
+
+- Re-ran remote proof check after patch:
+  - `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=2 RECOVER_BETWEEN_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - now fails fast in attempt 1 with explicit auth diagnosis:
+    - `RESULT: Steam session unauthenticated; launch skipped.`
+    - `RESULT: non-retryable failure encountered (exit code 7)`
+  - remote evidence synced locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T125123Z/output/auth-state-2537590-20260228T125124Z.log`
+
+Assessment update:
+
+- Local-run proof remains established historically (multiple prior 30s stable-window passes).
+- Current blocker is no longer ambiguous runtime behavior; it is explicit Steam auth drift and requires re-login/Steam Guard on DGX before launch verification can resume.
+
 ## 2026-02-28 (12:14-12:18 UTC, live DGX: strict-60 boundary confirmation + retry-recovery hardening)
 
 Live staged check on `spark-de79` from this checkout:

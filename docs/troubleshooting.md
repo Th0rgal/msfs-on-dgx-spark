@@ -53,6 +53,26 @@ apt list --upgradable 2>/dev/null | grep nvidia
 
 ## Steam Issues
 
+### Retry runner exits with code 7 (unauthenticated session)
+
+**Symptom**: `scripts/55-run-until-stable-runtime.sh` or `scripts/90-remote-dgx-stable-check.sh` exits quickly with:
+- `RESULT: Steam session unauthenticated; launch skipped.`
+- `RESULT: non-retryable failure encountered (exit code 7)`
+
+**Cause**: Steam logged out (for example after runtime recovery/restart), so launch dispatch cannot be accepted.
+
+**Fix**:
+```bash
+# Verify Steam auth/session state
+./scripts/06-verify-msfs-state.sh
+
+# Re-authenticate and relaunch the headless session (enter Steam Guard if prompted)
+./scripts/05-resume-headless-msfs.sh launch
+
+# Re-run proof check
+MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=2 ./scripts/55-run-until-stable-runtime.sh
+```
+
 ### Steam crashes on launch
 
 **Symptom**: Steam exits immediately or shows a blank window.

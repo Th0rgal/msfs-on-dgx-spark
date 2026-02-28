@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MSFS_APPID="${MSFS_APPID:-2537590}"
 source "$SCRIPT_DIR/lib-display.sh"
+source "$SCRIPT_DIR/lib-steam-auth.sh"
 DISPLAY_NUM="$(resolve_display_num "$SCRIPT_DIR")"
 WAIT_SECONDS="${WAIT_SECONDS:-240}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-45}"
@@ -15,6 +16,22 @@ STEAM_DIR="${STEAM_DIR:-$HOME/snap/steam/common/.local/share/Steam}"
 PFX="$STEAM_DIR/steamapps/compatdata/${MSFS_APPID}/pfx"
 
 mkdir -p "$OUT_DIR"
+
+auth_log="$OUT_DIR/auth-state-${MSFS_APPID}-${STAMP}.log"
+if ! steam_session_authenticated "$DISPLAY_NUM" "$STEAM_DIR"; then
+  {
+    echo "RESULT: Steam session unauthenticated; launch skipped."
+    echo "  DISPLAY: $DISPLAY_NUM"
+    echo "  Steam dir: $STEAM_DIR"
+    echo "  Auth status: $(steam_auth_status "$DISPLAY_NUM" "$STEAM_DIR" || true)"
+    echo "Hint: complete Steam login/Steam Guard in the active UI session, then retry."
+  } | tee "$auth_log"
+  exit 7
+fi
+{
+  echo "RESULT: Steam session authenticated."
+  echo "  Auth status: $(steam_auth_status "$DISPLAY_NUM" "$STEAM_DIR" || true)"
+} >"$auth_log"
 
 echo "[1/5] Preflight runtime repair"
 MSFS_APPID="$MSFS_APPID" "$SCRIPT_DIR/53-preflight-runtime-repair.sh" \
