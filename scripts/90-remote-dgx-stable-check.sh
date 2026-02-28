@@ -18,10 +18,11 @@ for arg in "$@"; do
   fi
 done
 
-DGX_HOST="${DGX_HOST:-100.77.4.93}"
+DGX_HOST="${DGX_HOST:-}"
 DGX_USER="${DGX_USER:-th0rgal}"
 DGX_PASS="${DGX_PASS:-}"
 DGX_TARGET_DIR="${DGX_TARGET_DIR:-\$HOME/msfs-on-dgx-spark-run-\$(date -u +%Y%m%dT%H%M%SZ)}"
+DGX_HOST_CANDIDATES="${DGX_HOST_CANDIDATES:-spark-de79,100.77.4.93}"
 SSH_CONNECT_TIMEOUT_SECONDS="${SSH_CONNECT_TIMEOUT_SECONDS:-15}"
 SSH_CONNECTION_ATTEMPTS="${SSH_CONNECTION_ATTEMPTS:-1}"
 SSH_SERVER_ALIVE_INTERVAL_SECONDS="${SSH_SERVER_ALIVE_INTERVAL_SECONDS:-10}"
@@ -86,24 +87,43 @@ SSH_OPTS=(
   -o ServerAliveInterval="${SSH_SERVER_ALIVE_INTERVAL_SECONDS}"
   -o ServerAliveCountMax="${SSH_SERVER_ALIVE_COUNT_MAX}"
 )
-SSH_CMD=(ssh "${SSH_OPTS[@]}" "${DGX_USER}@${DGX_HOST}")
-SCP_CMD=(scp "${SSH_OPTS[@]}")
+if [ -n "$DGX_HOST" ]; then
+  DGX_HOST_CANDIDATES="$DGX_HOST"
+fi
+
+SSH_BASE_CMD=(ssh "${SSH_OPTS[@]}")
+SCP_BASE_CMD=(scp "${SSH_OPTS[@]}")
 
 if [ -n "$DGX_PASS" ]; then
   if ! command -v sshpass >/dev/null 2>&1; then
     echo "ERROR: DGX_PASS is set but sshpass is not installed."
     exit 1
   fi
-  SSH_CMD=(sshpass -p "$DGX_PASS" "${SSH_CMD[@]}")
-  SCP_CMD=(sshpass -p "$DGX_PASS" "${SCP_CMD[@]}")
+  SSH_BASE_CMD=(sshpass -p "$DGX_PASS" "${SSH_BASE_CMD[@]}")
+  SCP_BASE_CMD=(sshpass -p "$DGX_PASS" "${SCP_BASE_CMD[@]}")
 fi
 
-echo "Checking DGX SSH reachability (${DGX_USER}@${DGX_HOST})..."
-if ! "${SSH_CMD[@]}" "echo 'DGX SSH reachable' >/dev/null"; then
-  echo "ERROR: unable to reach DGX over SSH at ${DGX_USER}@${DGX_HOST}."
-  echo "Hint: verify Tailscale connectivity and override DGX_HOST if needed."
+selected_host=""
+IFS=',' read -r -a host_candidates <<< "$DGX_HOST_CANDIDATES"
+for host_candidate in "${host_candidates[@]}"; do
+  host_candidate="$(echo "$host_candidate" | xargs)"
+  [ -z "$host_candidate" ] && continue
+  echo "Checking DGX SSH reachability (${DGX_USER}@${host_candidate})..."
+  if "${SSH_BASE_CMD[@]}" "${DGX_USER}@${host_candidate}" "echo 'DGX SSH reachable' >/dev/null"; then
+    selected_host="$host_candidate"
+    break
+  fi
+done
+
+if [ -z "$selected_host" ]; then
+  echo "ERROR: unable to reach DGX over SSH for any host candidate: $DGX_HOST_CANDIDATES"
+  echo "Hint: verify Tailscale connectivity or set DGX_HOST to a reachable endpoint."
   exit 1
 fi
+DGX_HOST="$selected_host"
+SSH_CMD=("${SSH_BASE_CMD[@]}" "${DGX_USER}@${DGX_HOST}")
+SCP_CMD=("${SCP_BASE_CMD[@]}")
+echo "Using DGX host: $DGX_HOST"
 
 echo "Packing local checkout..."
 # Keep remote sync lean: exclude local artifacts/caches that are not needed to execute scripts.
