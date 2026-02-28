@@ -1433,3 +1433,35 @@ Assessment update:
 
 - These untried control-plane fixes did not unblock startup.
 - Remaining blocker is still runtime/platform compatibility in this ARM+FEX+Steam Runtime stack before first frame, not Steam dispatch/auth.
+
+## 2026-02-28 (03:03 UTC, strict Vulkan-loader layer-disable cycle script)
+
+New untried hypothesis prepared:
+
+- Previous layer-disable attempts used `VK_LOADER_LAYERS_DISABLE='*'`, which may be ignored by the Vulkan loader.
+- A stricter loader-level disable path may suppress pressure-vessel Vulkan layer import faults and allow D3D12 device creation to progress.
+
+What was added:
+
+- `scripts/50-test-valve-exp-vkloader-strict-layer-disable.sh`
+  - clean-prefix Valve Experimental cycle on `DISPLAY=:2`
+  - launch options include:
+    - `VK_LOADER_LAYERS_DISABLE=~implicit~`
+    - `DISABLE_VK_LAYER_VALVE_steam_overlay_1=1`
+    - `DISABLE_VK_LAYER_MESA_device_select=1`
+    - `VK_LAYER_PATH=` and `VK_ADD_LAYER_PATH=`
+    - `PRESSURE_VESSEL_IMPORT_VULKAN_LAYERS=0`
+    - `PRESSURE_VESSEL_REMOVE_GAME_OVERLAY=1`
+
+Execution status in this workspace:
+
+- Could not run the cycle here because no Steam state/runtime tree exists at:
+  - `/root/snap/steam/common/.local/share/Steam`
+- Script exits early with:
+  - `ERROR: Steam dir not found: /root/snap/steam/common/.local/share/Steam`
+- A broader search in `/home`, `/root`, and `/workspaces` found no `.local/share/Steam` directory on this machine.
+
+Assessment update:
+
+- The strict layer-disable experiment is now scripted and ready, but runtime validation is blocked in this environment.
+- It must be executed on `spark-de79` (or equivalent host with Steam state present) to determine if DX12 init behavior changes.
