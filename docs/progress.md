@@ -1,5 +1,24 @@
 # Progress Log
 
+## 2026-02-28 (23:34-23:40 UTC, CI guardrails bootstrap)
+
+Validation from this checkout:
+
+- Added first GitHub Actions workflow for repo integrity checks:
+  - `.github/workflows/ci.yml` runs on pull requests and pushes to `main`.
+  - workflow executes `./scripts/99-ci-validate.sh`.
+- Added deterministic CI validator script:
+  - bash syntax validation (`bash -n`) across all `scripts/*.sh`,
+  - executable-bit enforcement for operational scripts (`scripts/[0-9][0-9]-*.sh`).
+- Updated contributing guidance in `README.md` to run the same validator locally before opening PRs.
+- Local verification:
+  - `./scripts/99-ci-validate.sh` passes in this workspace.
+
+Assessment update:
+
+- Repo now has baseline automated regression detection for script-level breakage.
+- This closes a major process gap (no CI), reducing risk of syntax/executable regressions on future launch/auth/runtime fixes.
+
 ## 2026-02-28 (22:17-22:29 UTC, live post-restart DGX validation + retry auth-drift hardening)
 
 Validation from this checkout:
