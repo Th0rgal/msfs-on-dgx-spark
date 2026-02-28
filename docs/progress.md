@@ -1,5 +1,34 @@
 # Progress Log
 
+## 2026-02-28 (16:05-16:10 UTC, offline-DGX detection + clearer remote probe failures)
+
+Validation from this checkout:
+
+- Local launch preflight confirms this runner is not a Steam-runtime-ready DGX game session:
+  - `./scripts/53-preflight-runtime-repair.sh`
+  - result: `WARN: Steam dir not found: /root/snap/steam/common/.local/share/Steam`.
+- Syntax validation:
+  - `bash -n scripts/90-remote-dgx-stable-check.sh` (pass).
+- Remote-check smoke with authenticated userspace tailscale state (`/var/lib/tailscale/tailscaled.state`) now reports offline DGX endpoint metadata immediately:
+  - `DGX_PASS=... LOCAL_TAILSCALE_SOCKET=... DGX_SSH_PROXY_COMMAND='nc -x ... -X 5 %h %p' FETCH_EVIDENCE=0 MAX_ATTEMPTS=1 MIN_STABLE_SECONDS=30 WAIT_SECONDS=30 ./scripts/90-remote-dgx-stable-check.sh`
+  - key output includes skipped-candidate diagnostics:
+    - `Skipped offline Tailscale candidates ...`
+    - `spark-de79:22 -> offline in tailscale map (last seen: 2026-02-28T14:50:50.1Z, ...)`.
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - added `DGX_SKIP_OFFLINE_TAILSCALE_CANDIDATES` (default `1`),
+  - added Tailscale peer-state lookup using `tailscale status --json` + `jq`,
+  - skips known-offline Tailscale DGX candidates before SSH probing and prints `last seen` details in failure output.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` now document offline-candidate skipping and its override.
+
+Assessment update:
+
+- Current blocking condition is infrastructure-side: `spark-de79` is offline in tailnet view (last seen at `2026-02-28T14:50:50.1Z`), so remote MSFS launch verification cannot complete from this runner yet.
+- Remote diagnostics now fail faster with specific, actionable endpoint-state evidence instead of repeated blind SSH timeouts.
+
 ## 2026-02-28 (16:55-17:02 UTC, non-blocking userspace tailscale login gate)
 
 Validation from this checkout:

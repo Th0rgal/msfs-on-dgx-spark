@@ -37,6 +37,7 @@ DGX_SSH_PROXY_JUMP="${DGX_SSH_PROXY_JUMP:-}"
 DGX_SSH_PROXY_COMMAND="${DGX_SSH_PROXY_COMMAND:-}"
 DGX_SSH_EXTRA_OPTS_CSV="${DGX_SSH_EXTRA_OPTS_CSV:-}"
 DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE="${DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE:-1}"
+DGX_SKIP_OFFLINE_TAILSCALE_CANDIDATES="${DGX_SKIP_OFFLINE_TAILSCALE_CANDIDATES:-1}"
 BOOTSTRAP_LOCAL_TAILSCALE="${BOOTSTRAP_LOCAL_TAILSCALE:-0}"
 LOCAL_TAILSCALE_DIR="${LOCAL_TAILSCALE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/msfs-on-dgx-spark}"
 LOCAL_TAILSCALE_SOCKET="${LOCAL_TAILSCALE_SOCKET:-}"
@@ -396,6 +397,9 @@ if [ -n "$DGX_PASS" ]; then
   fi
 fi
 
+TAILSCALE_STATUS_JSON_CACHE=""
+TAILSCALE_PEER_REASON=""
+
 is_tailscale_ip() {
   local ip="$1"
   [[ "$ip" =~ ^100\.([6-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3}$ ]]
@@ -417,6 +421,76 @@ is_likely_tailscale_host() {
     if [ -n "$resolved_ip" ] && is_tailscale_ip "$resolved_ip"; then
       return 0
     fi
+  fi
+  return 1
+}
+
+load_tailscale_status_json_cache() {
+  if [ -n "$TAILSCALE_STATUS_JSON_CACHE" ]; then
+    return 0
+  fi
+  if ! is_tailscale_daemon_ready; then
+    return 1
+  fi
+  if ! command -v jq >/dev/null 2>&1; then
+    return 1
+  fi
+  TAILSCALE_STATUS_JSON_CACHE="$(tailscale_cmd status --json 2>/dev/null || true)"
+  [ -n "$TAILSCALE_STATUS_JSON_CACHE" ]
+}
+
+tailscale_peer_summary_for_host() {
+  local host="$1"
+  if ! load_tailscale_status_json_cache; then
+    return 1
+  fi
+  printf '%s\n' "$TAILSCALE_STATUS_JSON_CACHE" | jq -r --arg host "$host" '
+    def norm_dns: (.DNSName // "" | sub("\\.$"; ""));
+    def short_dns: (norm_dns | split(".")[0]);
+    [
+      .Peer[]?
+      | select(
+          (.TailscaleIPs // [] | index($host))
+          or (norm_dns == $host)
+          or (short_dns == $host)
+          or ((.HostName // "") == $host)
+        )
+      | [
+          (if (.Online // false) then "online" else "offline" end),
+          (.LastSeen // ""),
+          (.HostName // ""),
+          norm_dns,
+          ((.TailscaleIPs // []) | join(","))
+        ]
+      | @tsv
+    ][0] // empty
+  '
+}
+
+is_online_tailscale_candidate() {
+  local host="$1"
+  TAILSCALE_PEER_REASON=""
+  if ! is_likely_tailscale_host "$host"; then
+    return 0
+  fi
+  local summary
+  summary="$(tailscale_peer_summary_for_host "$host" || true)"
+  if [ -z "$summary" ]; then
+    return 0
+  fi
+  local online_state last_seen peer_host peer_dns peer_ips
+  online_state="$(printf '%s' "$summary" | awk -F'\t' '{print $1}')"
+  last_seen="$(printf '%s' "$summary" | awk -F'\t' '{print $2}')"
+  peer_host="$(printf '%s' "$summary" | awk -F'\t' '{print $3}')"
+  peer_dns="$(printf '%s' "$summary" | awk -F'\t' '{print $4}')"
+  peer_ips="$(printf '%s' "$summary" | awk -F'\t' '{print $5}')"
+  if [ "$online_state" = "online" ]; then
+    return 0
+  fi
+  if [ -n "$last_seen" ]; then
+    TAILSCALE_PEER_REASON="offline in tailscale map (last seen: $last_seen, host: ${peer_host:-n/a}, dns: ${peer_dns:-n/a}, ips: ${peer_ips:-n/a})"
+  else
+    TAILSCALE_PEER_REASON="offline in tailscale map (host: ${peer_host:-n/a}, dns: ${peer_dns:-n/a}, ips: ${peer_ips:-n/a})"
   fi
   return 1
 }
@@ -654,6 +728,7 @@ fi
 selected_host=""
 selected_port=""
 failed_candidates=()
+skipped_offline_candidates=()
 if [ -n "$DGX_ENDPOINT_CANDIDATES" ]; then
   IFS=',' read -r -a endpoint_candidates <<< "$DGX_ENDPOINT_CANDIDATES"
   for endpoint_candidate in "${endpoint_candidates[@]}"; do
@@ -662,6 +737,12 @@ if [ -n "$DGX_ENDPOINT_CANDIDATES" ]; then
     if split_result="$(split_endpoint_candidate "$endpoint_candidate" "$DGX_PORT")"; then
       endpoint_host="${split_result%%,*}"
       endpoint_port="${split_result##*,}"
+      if [ "$DGX_SKIP_OFFLINE_TAILSCALE_CANDIDATES" = "1" ]; then
+        if ! is_online_tailscale_candidate "$endpoint_host"; then
+          skipped_offline_candidates+=("${endpoint_host}:${endpoint_port} -> ${TAILSCALE_PEER_REASON}")
+          continue
+        fi
+      fi
       if probe_error="$(probe_ssh_candidate "$endpoint_host" "$endpoint_port")"; then
         selected_host="$endpoint_host"
         selected_port="$endpoint_port"
@@ -679,6 +760,16 @@ else
   for host_candidate in "${host_candidates[@]}"; do
     host_candidate="$(echo "$host_candidate" | xargs)"
     [ -z "$host_candidate" ] && continue
+    if [ "$DGX_SKIP_OFFLINE_TAILSCALE_CANDIDATES" = "1" ]; then
+      if ! is_online_tailscale_candidate "$host_candidate"; then
+        for port_candidate in "${port_candidates[@]}"; do
+          port_candidate="$(echo "$port_candidate" | xargs)"
+          [ -z "$port_candidate" ] && continue
+          skipped_offline_candidates+=("${host_candidate}:${port_candidate} -> ${TAILSCALE_PEER_REASON}")
+        done
+        continue
+      fi
+    fi
     for port_candidate in "${port_candidates[@]}"; do
       port_candidate="$(echo "$port_candidate" | xargs)"
       [ -z "$port_candidate" ] && continue
@@ -701,6 +792,12 @@ if [ -z "$selected_host" ]; then
     echo "Per-candidate SSH probe errors:"
     for failed in "${failed_candidates[@]}"; do
       echo "  - $failed"
+    done
+  fi
+  if [ "${#skipped_offline_candidates[@]}" -gt 0 ]; then
+    echo "Skipped offline Tailscale candidates (set DGX_SKIP_OFFLINE_TAILSCALE_CANDIDATES=0 to force probing):"
+    for skipped in "${skipped_offline_candidates[@]}"; do
+      echo "  - $skipped"
     done
   fi
   print_reachability_diagnostics "$DGX_HOST_CANDIDATES" "$DGX_PORT_CANDIDATES"
