@@ -10,6 +10,9 @@ DISPLAY_NUM="$(resolve_display_num "$SCRIPT_DIR")"
 WAIT_SECONDS="${WAIT_SECONDS:-240}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-45}"
 AUTH_DEBUG_ON_FAILURE="${AUTH_DEBUG_ON_FAILURE:-1}"
+DISPATCH_MAX_ATTEMPTS="${DISPATCH_MAX_ATTEMPTS:-2}"
+DISPATCH_RETRY_DELAY_SECONDS="${DISPATCH_RETRY_DELAY_SECONDS:-8}"
+DISPATCH_RECOVER_ON_NO_ACCEPT="${DISPATCH_RECOVER_ON_NO_ACCEPT:-1}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 OUT_DIR="${OUT_DIR:-$REPO_ROOT/output}"
@@ -53,9 +56,42 @@ MSFS_APPID="$MSFS_APPID" "$SCRIPT_DIR/53-preflight-runtime-repair.sh" \
   >"$OUT_DIR/preflight-${MSFS_APPID}-${STAMP}.log" 2>&1 || true
 
 echo "[2/5] Launch dispatch via Steam pipe"
-MSFS_APPID="$MSFS_APPID" DISPLAY_NUM="$DISPLAY_NUM" WAIT_SECONDS=20 \
-  "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" \
-  >"$OUT_DIR/dispatch-${MSFS_APPID}-${STAMP}.log" 2>&1 || true
+if ! [[ "$DISPATCH_MAX_ATTEMPTS" =~ ^[0-9]+$ ]] || [ "$DISPATCH_MAX_ATTEMPTS" -lt 1 ]; then
+  echo "ERROR: DISPATCH_MAX_ATTEMPTS must be a positive integer (got: $DISPATCH_MAX_ATTEMPTS)"
+  exit 1
+fi
+
+dispatch_rc=4
+d=1
+while [ "$d" -le "$DISPATCH_MAX_ATTEMPTS" ]; do
+  dispatch_log="$OUT_DIR/dispatch-${MSFS_APPID}-${STAMP}-d${d}.log"
+  set +e
+  MSFS_APPID="$MSFS_APPID" DISPLAY_NUM="$DISPLAY_NUM" WAIT_SECONDS=20 \
+    "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" \
+    >"$dispatch_log" 2>&1
+  dispatch_rc=$?
+  set -e
+
+  if [ "$dispatch_rc" -eq 0 ]; then
+    break
+  fi
+
+  if [ "$d" -lt "$DISPATCH_MAX_ATTEMPTS" ]; then
+    echo "  dispatch attempt $d/$DISPATCH_MAX_ATTEMPTS failed (rc=$dispatch_rc): $dispatch_log"
+    if [ "$DISPATCH_RECOVER_ON_NO_ACCEPT" = "1" ] && [ "$dispatch_rc" -eq 4 ]; then
+      echo "  running Steam runtime recovery before redispatch"
+      OUT_DIR="$OUT_DIR" DISPLAY_NUM="$DISPLAY_NUM" "$SCRIPT_DIR/57-recover-steam-runtime.sh" \
+        >"$OUT_DIR/dispatch-recover-${MSFS_APPID}-${STAMP}-d${d}.log" 2>&1 || true
+    fi
+    sleep "$DISPATCH_RETRY_DELAY_SECONDS"
+  fi
+
+  d=$((d + 1))
+done
+
+if [ "$dispatch_rc" -ne 0 ]; then
+  echo "  WARN: launch dispatch did not confirm acceptance after $DISPATCH_MAX_ATTEMPTS attempt(s) (last rc=$dispatch_rc)"
+fi
 
 echo "[3/5] Runtime stability verification"
 set +e
@@ -102,7 +138,7 @@ fi
 
 echo
 echo "Evidence written under: $OUT_DIR"
-echo "  dispatch-${MSFS_APPID}-${STAMP}.log"
+echo "  dispatch-${MSFS_APPID}-${STAMP}-d*.log"
 echo "  verify-launch-${MSFS_APPID}-${STAMP}.log"
 echo "  content-state-${MSFS_APPID}-${STAMP}.log"
 echo "  compat-state-${MSFS_APPID}-${STAMP}.log"

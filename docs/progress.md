@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-02-28 (13:24-13:31 UTC, live DGX: dispatch acceptance hardening + runtime rebuild redispatch)
+
+Live checks on `spark-de79` from this checkout:
+
+- `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=120 ./scripts/90-remote-dgx-stable-check.sh`
+  - strict auth gate still fails (`exit 7`, unauthenticated).
+  - evidence synced locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T132440Z/output/auth-state-2537590-20260228T132442Z.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T132440Z/output/steam-debug-20260228T132442Z.log`
+- `DGX_PASS=... ALLOW_UI_AUTH_FALLBACK=1 FATAL_EXIT_CODES='' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=120 ./scripts/90-remote-dgx-stable-check.sh`
+  - bypassed strict auth gate but launch was not accepted (`StartSession` unchanged, verifier `exit 2`).
+  - evidence synced locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T132452Z/output/dispatch-2537590-20260228T132454Z.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T132452Z/output/verify-launch-2537590-20260228T132454Z.log`
+- Re-ran with new dispatch retry/recovery patch:
+  - `DGX_PASS=... ALLOW_UI_AUTH_FALLBACK=1 FATAL_EXIT_CODES='' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=120 ./scripts/90-remote-dgx-stable-check.sh`
+  - dispatch attempt 1 failed (`rc=4`), runtime recovery executed, redispatch attempt 2 still unaccepted (`rc=4`), verifier still `exit 2`.
+  - evidence synced locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T132803Z/output/dispatch-2537590-20260228T132805Z-d1.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T132803Z/output/dispatch-recover-2537590-20260228T132805Z-d1.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T132803Z/output/dispatch-2537590-20260228T132805Z-d2.log`
+
+Repo hardening in this pass:
+
+- Updated `scripts/54-launch-and-capture-evidence.sh`:
+  - added intra-attempt dispatch retries (`DISPATCH_MAX_ATTEMPTS`, default `2`),
+  - added dispatch retry delay control (`DISPATCH_RETRY_DELAY_SECONDS`, default `8`),
+  - added optional runtime rebuild between redispatches when dispatch is unaccepted (`DISPATCH_RECOVER_ON_NO_ACCEPT=1` + `57-recover-steam-runtime.sh`),
+  - dispatch artifacts now include per-dispatch attempt suffix (`-d1`, `-d2`, ...).
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - forwards `DISPATCH_MAX_ATTEMPTS`, `DISPATCH_RETRY_DELAY_SECONDS`, and `DISPATCH_RECOVER_ON_NO_ACCEPT` to remote verification runners.
+- Updated `README.md` with dispatch-retry and redispatch-recovery knobs.
+
+Assessment update:
+
+- Dispatch reliability is better instrumented and now self-heals one common runtime-stall mode within a single attempt.
+- Current blocker remains Steam session state/launch acceptance on the active DGX session; even after runtime rebuild and redispatch, `StartSession` is not advancing.
+
 ## 2026-02-28 (13:17-13:22 UTC, live DGX: headless Steam window restore during auth recovery)
 
 Live checks on `spark-de79` from this checkout:
