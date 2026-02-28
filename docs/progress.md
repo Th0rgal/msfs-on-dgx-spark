@@ -1,5 +1,28 @@
 # Progress Log
 
+## 2026-02-28 (16:18-16:24 UTC, live connectivity recheck from this runner)
+
+Validation from this checkout:
+
+- Direct SSH to DGX still times out from this environment:
+  - `sshpass -p '...' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=8 th0rgal@100.77.4.93 'hostname; uname -a'`
+  - result: `ssh: connect to host 100.77.4.93 port 22: Connection timed out`.
+- Remote orchestrator confirms no active local tailscaled daemon path and fails closed before remote execution:
+  - `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 STRICT_MIN_STABLE_SECONDS=45 STRICT_MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - key output:
+    - `ERROR: local tailscale is not Running and all DGX candidates are Tailscale endpoints.`
+    - host diagnostics for `spark-de79`/`100.77.4.93`: `tcp/22` and `tcp/2222` closed-or-timeout.
+- Userspace tailscale bootstrap path remains functional but currently unauthenticated in this runner:
+  - `DGX_PASS=... BOOTSTRAP_LOCAL_TAILSCALE=1 MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - key output:
+    - `Local tailscale needs login: https://login.tailscale.com/...`
+    - `ERROR: local tailscale is not in Running state after bootstrap.`
+
+Assessment update:
+
+- The MSFS launch automation stack remains intact, but live DGX re-validation from this runner is still blocked by missing local Tailscale authentication state (or a non-Tailscale SSH route).
+- Once local Tailnet auth is completed (or a reachable proxy/jump path is provided), `scripts/90-remote-dgx-stable-check.sh` is ready to rerun end-to-end without further code changes.
+
 ## 2026-02-28 (16:15-16:20 UTC, userspace interactive-login bootstrap continuation fix)
 
 Validation from this checkout:
