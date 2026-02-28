@@ -2,7 +2,8 @@
 # Verify whether MSFS launch reaches a stable running state (not just transient wrappers).
 set -euo pipefail
 
-DISPLAY_NUM="${DISPLAY_NUM:-:1}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+DISPLAY_NUM="${DISPLAY_NUM:-$("$SCRIPT_DIR/00-select-msfs-display.sh")}"
 MSFS_APPID="${MSFS_APPID:-2537590}"
 WAIT_SECONDS="${WAIT_SECONDS:-180}"
 POLL_SECONDS="${POLL_SECONDS:-5}"

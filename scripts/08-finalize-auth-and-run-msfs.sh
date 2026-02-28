@@ -2,7 +2,8 @@
 # Complete Steam auth (optional code entry), queue/install MSFS, and launch when ready.
 set -euo pipefail
 
-DISPLAY_NUM="${DISPLAY_NUM:-:1}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+DISPLAY_NUM="${DISPLAY_NUM:-$("$SCRIPT_DIR/00-select-msfs-display.sh")}"
 MSFS_APPID="${MSFS_APPID:-2537590}"
 LOGIN_WAIT_SECONDS="${LOGIN_WAIT_SECONDS:-3600}"
 INSTALL_WAIT_SECONDS="${INSTALL_WAIT_SECONDS:-0}"  # 0 = do not wait for full download
@@ -87,7 +88,7 @@ fi
 MANIFEST="$STEAM_DIR/steamapps/appmanifest_${MSFS_APPID}.acf"
 
 echo "[1/8] Ensuring headless stack is running..."
-"$(dirname "$0")/05-resume-headless-msfs.sh" install >/tmp/msfs-resume.log 2>&1 || true
+"$SCRIPT_DIR/05-resume-headless-msfs.sh" install >/tmp/msfs-resume.log 2>&1 || true
 
 if [ -n "$GUARD_CODE" ]; then
   echo "[2/8] Attempting Steam Guard code entry via xdotool on ${DISPLAY_NUM}..."
@@ -129,10 +130,10 @@ while true; do
 done
 
 echo "[4/8] Ensuring Steam Play compatibility mappings..."
-"$(dirname "$0")/10-enable-steam-play.sh" >/tmp/msfs-enable-steamplay.log 2>&1 || true
+"$SCRIPT_DIR/10-enable-steam-play.sh" >/tmp/msfs-enable-steamplay.log 2>&1 || true
 
 echo "[5/8] Running runtime preflight repairs..."
-"$(dirname "$0")/53-preflight-runtime-repair.sh" >/tmp/msfs-preflight-repair.log 2>&1 || true
+"$SCRIPT_DIR/53-preflight-runtime-repair.sh" >/tmp/msfs-preflight-repair.log 2>&1 || true
 
 echo "[6/8] Triggering install and checking manifest..."
 if manifest_is_fully_installed "$MANIFEST"; then
@@ -180,8 +181,8 @@ if [ "$INSTALL_WAIT_SECONDS" -gt 0 ]; then
 fi
 
 echo "[7/8] Launching MSFS via ~/launch-msfs.sh ..."
-if [ -x "$(dirname "$0")/19-dispatch-via-steam-pipe.sh" ]; then
-  WAIT_SECONDS=20 "$(dirname "$0")/19-dispatch-via-steam-pipe.sh" >/tmp/msfs-launch.log 2>&1 || true
+if [ -x "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" ]; then
+  WAIT_SECONDS=20 "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" >/tmp/msfs-launch.log 2>&1 || true
 elif [ -x "$HOME/launch-msfs.sh" ]; then
   GAME_ARG="2020"
   if [ "$MSFS_APPID" = "2537590" ]; then
@@ -199,13 +200,34 @@ if command -v import >/dev/null 2>&1; then
 fi
 
 echo "[8/8] Verifying launch process state..."
-if WAIT_SECONDS="$LAUNCH_VERIFY_WAIT_SECONDS" MIN_STABLE_SECONDS="$LAUNCH_MIN_STABLE_SECONDS" "$(dirname "$0")/09-verify-msfs-launch.sh"; then
+set +e
+WAIT_SECONDS="$LAUNCH_VERIFY_WAIT_SECONDS" MIN_STABLE_SECONDS="$LAUNCH_MIN_STABLE_SECONDS" "$SCRIPT_DIR/09-verify-msfs-launch.sh"
+verify_rc=$?
+set -e
+
+if [ "$verify_rc" -eq 0 ]; then
   echo "Launch verification succeeded."
 else
-  echo "WARN: Launch verification failed to confirm stable MSFS runtime."
-  echo "Hint: this usually means a transient init crash if launch wrappers appeared."
-  if [ "$allow_offline" -eq 1 ]; then
-    echo "Note: this run used offline launch mode because auth was not detected."
+  # rc=2 means no launch process observed; retry dispatch once before declaring failure.
+  if [ "$verify_rc" -eq 2 ] && [ -x "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" ]; then
+    echo "No launch process detected; retrying dispatch once..."
+    WAIT_SECONDS=30 "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" >/tmp/msfs-launch-retry.log 2>&1 || true
+    sleep 6
+
+    set +e
+    WAIT_SECONDS="$LAUNCH_VERIFY_WAIT_SECONDS" MIN_STABLE_SECONDS="$LAUNCH_MIN_STABLE_SECONDS" "$SCRIPT_DIR/09-verify-msfs-launch.sh"
+    verify_rc=$?
+    set -e
+  fi
+
+  if [ "$verify_rc" -eq 0 ]; then
+    echo "Launch verification succeeded after retry."
+  else
+    echo "WARN: Launch verification failed to confirm stable MSFS runtime."
+    echo "Hint: this usually means a transient init crash if launch wrappers appeared."
+    if [ "$allow_offline" -eq 1 ]; then
+      echo "Note: this run used offline launch mode because auth was not detected."
+    fi
   fi
 fi
 

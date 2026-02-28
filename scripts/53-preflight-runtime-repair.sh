@@ -13,6 +13,7 @@ INSTALL_PV_ADVERB_WRAPPER="${INSTALL_PV_ADVERB_WRAPPER:-1}"
 FIX_VULKAN_OVERRIDES="${FIX_VULKAN_OVERRIDES:-1}"
 FIX_MSFS2024_PACKAGE_PATHS="${FIX_MSFS2024_PACKAGE_PATHS:-1}"
 HARDEN_LAUNCH_OPTIONS="${HARDEN_LAUNCH_OPTIONS:-1}"
+RESTORE_PROTON_ENTRYPOINTS="${RESTORE_PROTON_ENTRYPOINTS:-1}"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PV_HOST_WRAPPER="/usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb"
@@ -200,9 +201,36 @@ set_safe_launch_options() {
   MSFS_APPID="$MSFS_APPID" STEAM_DIR="$STEAM_DIR" LAUNCH_OPTIONS="$safe_opts" "$launch_setter" || true
 }
 
+restore_proton_entrypoints() {
+  local exp_dir="$STEAM_DIR/steamapps/common/Proton - Experimental"
+  local ge_dir="$STEAM_DIR/compatibilitytools.d/GE-Proton10-32"
+  local dirs=("$exp_dir" "$ge_dir")
+  local d proton real
+
+  if [ "$RESTORE_PROTON_ENTRYPOINTS" != "1" ]; then
+    echo "[proton-entrypoint] skipped (RESTORE_PROTON_ENTRYPOINTS=0)"
+    return 0
+  fi
+
+  for d in "${dirs[@]}"; do
+    proton="$d/proton"
+    real="$d/proton.real"
+    [ -f "$proton" ] || continue
+    [ -f "$real" ] || continue
+
+    # Recover from earlier experiments that wrapped Proton and injected MSFS flags.
+    if grep -Eq 'FlightSimulator2024|d3d12,d3d12core=n|PROTON_USE_WINED3D|-dx11' "$proton"; then
+      echo "[proton-entrypoint] restoring pristine proton from proton.real in: $d"
+      cp -f "$real" "$proton"
+      chmod +x "$proton"
+    fi
+  done
+}
+
 repair_pv_adverb_wrapper
 populate_vulkan_overrides
 repair_msfs2024_packages
+restore_proton_entrypoints
 set_safe_launch_options
 
 echo "Preflight repair complete."

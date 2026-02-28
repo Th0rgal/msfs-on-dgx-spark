@@ -2,10 +2,11 @@
 # Resume headless Steam session and trigger MSFS install/launch on DGX Spark.
 set -euo pipefail
 
-"$(dirname "$0")/17-fix-xdg-user-dirs.sh" >/dev/null 2>&1 || true
-"$(dirname "$0")/18-fix-steam-uri-handler.sh" >/dev/null 2>&1 || true
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+"$SCRIPT_DIR/17-fix-xdg-user-dirs.sh" >/dev/null 2>&1 || true
+"$SCRIPT_DIR/18-fix-steam-uri-handler.sh" >/dev/null 2>&1 || true
 
-DISPLAY_NUM="${DISPLAY_NUM:-:1}"
+DISPLAY_NUM="${DISPLAY_NUM:-$("$SCRIPT_DIR/00-select-msfs-display.sh")}"
 RESOLUTION="${RESOLUTION:-1920x1080x24}"
 MSFS_APPID="${MSFS_APPID:-2537590}"
 ACTION="${1:-install}"   # install|launch
@@ -34,12 +35,12 @@ fi
 
 MANIFEST="$STEAM_DIR/steamapps/appmanifest_${MSFS_APPID}.acf"
 
-if ! pgrep -f "Xvfb ${DISPLAY_NUM}" >/dev/null; then
+if ! DISPLAY="$DISPLAY_NUM" xset q >/dev/null 2>&1; then
     Xvfb "$DISPLAY_NUM" -screen 0 "$RESOLUTION" >/tmp/xvfb-msfs.log 2>&1 &
     sleep 1
 fi
 
-if ! pgrep -x openbox >/dev/null; then
+if ! DISPLAY="$DISPLAY_NUM" xprop -root _NET_SUPPORTING_WM_CHECK >/dev/null 2>&1; then
     DISPLAY="$DISPLAY_NUM" openbox >/tmp/openbox-msfs.log 2>&1 &
     sleep 1
 fi

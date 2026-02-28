@@ -1595,3 +1595,27 @@ Live validation result after patch (`LAUNCH_MIN_STABLE_SECONDS=20`):
 Assessment update:
 
 - The launch-control path is reproducible; the blocker is now explicitly measured as a pre-stability runtime exit, not a false positive "running" state.
+
+## 2026-02-28 (11:17-11:23 UTC, GPU-display defaulting + dx11 decontamination pass)
+
+Live DGX validation on `spark-de79` with a fresh isolated checkout:
+
+- Confirmed display topology at runtime:
+  - `:2` is NVIDIA-backed (`OpenGL renderer: NVIDIA Tegra NVIDIA GB10/PCIe`)
+  - `:1`/`:3` are llvmpipe/Xvfb.
+- Added `scripts/00-select-msfs-display.sh` and wired default display selection into:
+  - `scripts/05-resume-headless-msfs.sh`
+  - `scripts/06-verify-msfs-state.sh`
+  - `scripts/08-finalize-auth-and-run-msfs.sh`
+  - `scripts/09-verify-msfs-launch.sh`
+- Hardened preflight (`scripts/53-preflight-runtime-repair.sh`) to restore pristine Proton entrypoints when earlier wrapper experiments injected forced flags (`-dx11`, `PROTON_USE_WINED3D`, etc.).
+- Re-ran finalize flow live:
+  - Effective launch no longer includes forced `-dx11` for AppID `2537590`.
+  - Verification captured strong runtime processes for MSFS 2024.
+  - One run reached stable runtime at `MIN_STABLE_SECONDS=10` (success).
+  - A stricter run with `MIN_STABLE_SECONDS=30` reached ~25s strong runtime lifetime before exit.
+
+Current state after this pass:
+
+- Launch path now defaults to GPU-backed display and avoids stale DX11 wrapper contamination.
+- Runtime behavior improved from short wrapper-only launches to measurable strong runtime windows (10-25s in this pass), but first-frame long-stability proof is still pending under current ARM+FEX+Proton stack.

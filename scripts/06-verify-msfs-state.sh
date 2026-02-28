@@ -2,7 +2,8 @@
 # Verify DGX Spark MSFS readiness/install state and capture a current Steam screen.
 set -euo pipefail
 
-DISPLAY_NUM="${DISPLAY_NUM:-:1}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+DISPLAY_NUM="${DISPLAY_NUM:-$("$SCRIPT_DIR/00-select-msfs-display.sh")}"
 MSFS_APPID="${MSFS_APPID:-2537590}"
 SHOT_PATH="${SHOT_PATH:-/tmp/steam-state-${MSFS_APPID}.png}"
 
@@ -64,7 +65,17 @@ printf "  Steam dir: %s\n" "$STEAM_DIR"
 printf "  Steam auth: %s\n" "$(auth_status)"
 
 printf "\nProcess checks\n"
-for pat in "Xvfb $DISPLAY_NUM" "openbox" "steamwebhelper"; do
+if DISPLAY="$DISPLAY_NUM" glxinfo -B 2>/dev/null | grep -Eq 'OpenGL renderer string:.*NVIDIA|OpenGL vendor string: NVIDIA'; then
+  printf "  [OK] GPU display active on %s (NVIDIA GL)\n" "$DISPLAY_NUM"
+else
+  if pgrep -af "Xvfb $DISPLAY_NUM" >/dev/null; then
+    printf "  [OK] Xvfb %s\n" "$DISPLAY_NUM"
+  else
+    printf "  [MISSING] Xvfb %s\n" "$DISPLAY_NUM"
+  fi
+fi
+
+for pat in "openbox" "steamwebhelper"; do
   if pgrep -af "$pat" >/dev/null; then
     printf "  [OK] %s\n" "$pat"
   else
