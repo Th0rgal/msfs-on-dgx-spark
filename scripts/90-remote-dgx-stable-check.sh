@@ -15,6 +15,8 @@ MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-20}"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-2}"
 WAIT_SECONDS="${WAIT_SECONDS:-120}"
 ATTEMPT_PAUSE_SECONDS="${ATTEMPT_PAUSE_SECONDS:-12}"
+FETCH_EVIDENCE="${FETCH_EVIDENCE:-1}"
+LOCAL_EVIDENCE_DIR="${LOCAL_EVIDENCE_DIR:-$REPO_ROOT/output/remote-runs}"
 
 TMP_TAR="/tmp/msfs-on-dgx-spark-sync-$$.tgz"
 trap 'rm -f "$TMP_TAR"' EXIT
@@ -43,12 +45,20 @@ fi
 echo "Packing local checkout..."
 tar --exclude-vcs -czf "$TMP_TAR" -C "$REPO_ROOT" .
 
+echo "Resolving remote run directory..."
+RESOLVED_TARGET_DIR="$("${SSH_CMD[@]}" "eval echo \"$DGX_TARGET_DIR\"")"
+if [ -z "$RESOLVED_TARGET_DIR" ]; then
+  echo "ERROR: failed to resolve remote target dir from DGX_TARGET_DIR=$DGX_TARGET_DIR"
+  exit 1
+fi
+echo "Remote run directory: $RESOLVED_TARGET_DIR"
+
 echo "Uploading checkout to ${DGX_USER}@${DGX_HOST}..."
 "${SCP_CMD[@]}" "$TMP_TAR" "${DGX_USER}@${DGX_HOST}:/tmp/msfs-on-dgx-spark-sync.tgz"
 
 echo "Running remote stable-runtime verification..."
 "${SSH_CMD[@]}" "set -euo pipefail
-TARGET_DIR=${DGX_TARGET_DIR}
+TARGET_DIR='${RESOLVED_TARGET_DIR}'
 mkdir -p \"\$TARGET_DIR\"
 tar xzf /tmp/msfs-on-dgx-spark-sync.tgz -C \"\$TARGET_DIR\"
 cd \"\$TARGET_DIR\"
@@ -63,3 +73,11 @@ echo \"Remote run directory: \$TARGET_DIR\"
 echo \"Latest verify log:\"
 ls -1t \"\$TARGET_DIR\"/output/verify-launch-${MSFS_APPID}-*.log 2>/dev/null | head -n 1 || true
 "
+
+if [ "$FETCH_EVIDENCE" = "1" ]; then
+  echo "Fetching remote evidence to local checkout..."
+  local_run_dir="$LOCAL_EVIDENCE_DIR/$(basename "$RESOLVED_TARGET_DIR")"
+  mkdir -p "$local_run_dir"
+  "${SCP_CMD[@]}" -r "${DGX_USER}@${DGX_HOST}:${RESOLVED_TARGET_DIR}/output" "$local_run_dir/"
+  echo "Local evidence copied to: $local_run_dir/output"
+fi

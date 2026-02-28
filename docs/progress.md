@@ -1,5 +1,29 @@
 # Progress Log
 
+## 2026-02-28 (11:52-11:54 UTC, live DGX: stricter reproducibility + local evidence sync)
+
+Live validation on `spark-de79` from this workspace with stricter stability criteria:
+
+- Verified device health (`aarch64`, `NVIDIA GB10`, driver `580.95.05`).
+- Ran remote reproducibility check twice at `MIN_STABLE_SECONDS=30`:
+  - first run: `MAX_ATTEMPTS=3` -> success on attempt 1
+  - second run (post-script patch): `MAX_ATTEMPTS=1` -> success on attempt 1
+- Remote evidence from the patched run:
+  - `/home/th0rgal/msfs-on-dgx-spark-run-20260228T115343Z/output/dispatch-2537590-20260228T115355Z.log`
+  - `/home/th0rgal/msfs-on-dgx-spark-run-20260228T115343Z/output/verify-launch-2537590-20260228T115355Z.log`
+
+Repo hardening:
+
+- Improved `scripts/90-remote-dgx-stable-check.sh`:
+  - resolves and prints the concrete remote run directory before execution,
+  - adds `FETCH_EVIDENCE=1` (default) to copy remote `output/` bundle into local:
+    - `output/remote-runs/<run-dir>/output`
+  - keeps passwordless behavior unchanged and still supports `DGX_PASS` + `sshpass`.
+
+Assessment update:
+
+- "MSFS can run locally on DGX Spark" remains reproducible and now has a tighter default operational proof point (30s stable-runtime target validated in this pass) plus automatic local evidence retrieval.
+
 ## 2026-02-28 (11:50 UTC)
 
 Live reproducibility check on `spark-de79` using a fresh synced checkout:

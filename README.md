@@ -126,11 +126,12 @@ NVIDIA GB10 Blackwell GPU
 MIN_STABLE_SECONDS=20 MAX_ATTEMPTS=5 ./scripts/55-run-until-stable-runtime.sh
 
 # 12. Optional: from your local workstation, sync this repo to DGX and run stable check remotely
-DGX_PASS='<password>' ./scripts/90-remote-dgx-stable-check.sh
+DGX_PASS='<password>' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
 `09-verify-msfs-launch.sh` now requires a stable runtime window (default `30s`) to avoid false positives from short-lived launch wrappers. Tune with `MIN_STABLE_SECONDS=<N>`.
 Launch/verify scripts now auto-select an NVIDIA-backed X display when available (typically `:2` on DGX). Override explicitly with `DISPLAY_NUM=:N` when needed.
+`90-remote-dgx-stable-check.sh` now resolves a deterministic remote run directory and, by default, copies the remote `output/` evidence bundle back to local `output/remote-runs/<run-dir>/output` (`FETCH_EVIDENCE=0` disables copying).
 
 See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [docs/progress.md](docs/progress.md) for live validation notes.
 
