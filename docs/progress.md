@@ -1358,3 +1358,36 @@ Finding:
 
 Assessment update:
 - "Full CPUID brand/vendor spoofing" is not currently achievable in this environment using exposed FEX runtime config alone.
+
+## 2026-02-28 (02:15-02:35 UTC, CachyOS retest and layout patch)
+
+What was tried:
+- Added `scripts/43-test-cachyos-cleanprefix-display2.sh` and `scripts/44-test-cachyos-cleanprefix-nowrapper.sh` for clean-prefix CachyOS cycles on `DISPLAY=:2`.
+- Added `scripts/45-fix-cachyos-layout-and-test.sh` to patch ARM package layout mismatches in `proton-cachyos-10.0-20260207-slr-arm64`:
+  - `files/share/default_pfx -> default_pfx_arm64`
+  - `files/bin -> bin-arm64`
+  - `files/lib64 -> lib`
+- Added `scripts/46-direct-cachyos-run-cycle.sh` for direct Proton invocation outside Steam dispatch for deeper logging.
+
+Key findings:
+- Before layout patch, CachyOS failed almost immediately with:
+  - `Proton: Default prefix is missing, something is very wrong.`
+- After layout patch, the prefix initializes successfully and this error disappears in later runs.
+- Despite that fix, Steam-dispatched launches still exit in ~3-4 seconds and `AppData/Roaming/Microsoft Flight Simulator 2024` is not populated.
+- Direct manual `proton waitforexitandrun FlightSimulator2024.exe` reaches deeper runtime stages and stays alive longer, but screenshot shows a Wine assertion dialog:
+  - `Assertion failed!`
+  - `File: steamclient_main.c`
+  - `Expression: "!status"`
+
+Artifacts:
+- `output/cachyos-cleanprefix-display2-cycle-20260228T021633Z.log`
+- `output/cachyos-cleanprefix-nowrapper-cycle-20260228T022212Z.log`
+- `output/cachyos-layoutfix-cycle-20260228T022557Z.log`
+- `output/direct-cachyos-run-20260228T023049Z.log`
+- `output/direct-cachyos-run-20260228T023049Z.png`
+
+Assessment update:
+- There are at least two independent blockers in this ARM+FEX+CachyOS path:
+  1. CachyOS ARM layout mismatch (partially fixed with symlinks), and
+  2. Steam client runtime/assertion failure (`steamclient_main.c`, `!status`) during/after deeper initialization.
+- End-to-end boot to first frame is still not achieved.
