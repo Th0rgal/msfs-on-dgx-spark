@@ -40,16 +40,31 @@ window_dump() {
   echo "timestamp_utc=${TS}"
   echo "display=${DISPLAY_NUM}"
   echo
+  echo "[display_monitors]"
+  if command -v xrandr >/dev/null 2>&1; then
+    DISPLAY="$DISPLAY_NUM" xrandr --listmonitors 2>/dev/null || echo "(xrandr failed)"
+  else
+    echo "(xrandr not installed)"
+  fi
+  echo
   echo "[steamid_from_steamwebhelper]"
   pgrep -af steamwebhelper \
     | sed -n "s/.*-steamid=\([0-9][0-9]*\).*/\1/p" \
-    | awk "{print}"
+    | awk "{print}" || true
   echo
   echo "[visible_steam_windows]"
   window_dump
   echo
   echo "[steam_processes]"
   pgrep -af "steam |steamwebhelper|fex_launcher" || true
+  echo
+  echo "[connection_log_tail]"
+  steam_dir="$HOME/snap/steam/common/.local/share/Steam"
+  if [ -f "$steam_dir/logs/connection_log.txt" ]; then
+    tail -n 40 "$steam_dir/logs/connection_log.txt" || true
+  else
+    echo "(missing: $steam_dir/logs/connection_log.txt)"
+  fi
 } > "$report"
 
 if command -v import >/dev/null 2>&1; then

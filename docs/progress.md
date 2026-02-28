@@ -1,5 +1,35 @@
 # Progress Log
 
+## 2026-02-28 (13:36-13:40 UTC, live DGX: auth-gate bootstrap + deterministic diagnostics hardening)
+
+Live check on `spark-de79` from this checkout:
+
+- `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=90 ./scripts/90-remote-dgx-stable-check.sh`
+  - still exits at auth gate (`exit 7`) because Steam remains logged out (`steamid=0`).
+  - new bootstrap/debug artifacts are now emitted and synced locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T133627Z/output/auth-bootstrap-2537590-20260228T133629Z.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T133627Z/output/steam-debug-20260228T133639Z.log`
+
+Repo hardening in this pass:
+
+- Updated `scripts/54-launch-and-capture-evidence.sh`:
+  - bootstraps Steam/UI stack before auth gate (`AUTH_BOOTSTRAP_STEAM_STACK=1` by default),
+  - adds bootstrap wait control (`AUTH_BOOTSTRAP_WAIT_SECONDS`, default `8`),
+  - optionally runs runtime recovery when no `steamwebhelper` is present (`AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER=1`).
+- Updated `scripts/11-debug-steam-window-state.sh`:
+  - no longer truncates output when `steamwebhelper` is absent,
+  - captures monitor state (`xrandr --listmonitors`),
+  - appends `connection_log.txt` tail for auth/session context.
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - forwards the new auth-bootstrap knobs to remote runners.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, `docs/troubleshooting.md` now document auth bootstrap/recovery defaults.
+
+Assessment update:
+
+- Current blocker remains account/session authentication (`steamid=0`), not launch orchestration.
+- Evidence quality is significantly improved: every auth-gate failure now includes pre-auth bootstrap context plus complete monitor/process/session diagnostics for deterministic triage.
+
 ## 2026-02-28 (13:24-13:31 UTC, live DGX: dispatch acceptance hardening + runtime rebuild redispatch)
 
 Live checks on `spark-de79` from this checkout:

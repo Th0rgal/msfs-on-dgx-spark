@@ -10,6 +10,9 @@ DISPLAY_NUM="$(resolve_display_num "$SCRIPT_DIR")"
 WAIT_SECONDS="${WAIT_SECONDS:-240}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-45}"
 AUTH_DEBUG_ON_FAILURE="${AUTH_DEBUG_ON_FAILURE:-1}"
+AUTH_BOOTSTRAP_STEAM_STACK="${AUTH_BOOTSTRAP_STEAM_STACK:-1}"
+AUTH_BOOTSTRAP_WAIT_SECONDS="${AUTH_BOOTSTRAP_WAIT_SECONDS:-8}"
+AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER="${AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER:-1}"
 DISPATCH_MAX_ATTEMPTS="${DISPATCH_MAX_ATTEMPTS:-2}"
 DISPATCH_RETRY_DELAY_SECONDS="${DISPATCH_RETRY_DELAY_SECONDS:-8}"
 DISPATCH_RECOVER_ON_NO_ACCEPT="${DISPATCH_RECOVER_ON_NO_ACCEPT:-1}"
@@ -20,6 +23,32 @@ STEAM_DIR="${STEAM_DIR:-$HOME/snap/steam/common/.local/share/Steam}"
 PFX="$STEAM_DIR/steamapps/compatdata/${MSFS_APPID}/pfx"
 
 mkdir -p "$OUT_DIR"
+
+if [ "$AUTH_BOOTSTRAP_STEAM_STACK" = "1" ]; then
+  bootstrap_log="$OUT_DIR/auth-bootstrap-${MSFS_APPID}-${STAMP}.log"
+  set +e
+  MSFS_APPID="$MSFS_APPID" DISPLAY_NUM="$DISPLAY_NUM" "$SCRIPT_DIR/05-resume-headless-msfs.sh" install \
+    >"$bootstrap_log" 2>&1
+  bootstrap_rc=$?
+  set -e
+  if [ "$bootstrap_rc" -ne 0 ]; then
+    echo "WARN: auth bootstrap via 05-resume-headless-msfs.sh failed (rc=$bootstrap_rc): $bootstrap_log"
+  fi
+  sleep "$AUTH_BOOTSTRAP_WAIT_SECONDS"
+
+  if [ "$AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER" = "1" ] && ! pgrep -af steamwebhelper >/dev/null 2>&1; then
+    recover_log="$OUT_DIR/auth-bootstrap-recover-${MSFS_APPID}-${STAMP}.log"
+    set +e
+    OUT_DIR="$OUT_DIR" DISPLAY_NUM="$DISPLAY_NUM" "$SCRIPT_DIR/57-recover-steam-runtime.sh" \
+      >"$recover_log" 2>&1
+    recover_rc=$?
+    set -e
+    if [ "$recover_rc" -ne 0 ]; then
+      echo "WARN: auth bootstrap runtime recovery failed (rc=$recover_rc): $recover_log"
+    fi
+    sleep "$AUTH_BOOTSTRAP_WAIT_SECONDS"
+  fi
+fi
 
 auth_log="$OUT_DIR/auth-state-${MSFS_APPID}-${STAMP}.log"
 if ! steam_session_authenticated "$DISPLAY_NUM" "$STEAM_DIR"; then
