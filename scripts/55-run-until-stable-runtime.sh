@@ -11,6 +11,12 @@ WAIT_SECONDS="${WAIT_SECONDS:-240}"
 RECOVER_BETWEEN_ATTEMPTS="${RECOVER_BETWEEN_ATTEMPTS:-0}"
 RECOVER_ON_EXIT_CODES="${RECOVER_ON_EXIT_CODES:-2,3,4}"
 FATAL_EXIT_CODES="${FATAL_EXIT_CODES-7}"
+AUTO_REAUTH_ON_AUTH_FAILURE="${AUTO_REAUTH_ON_AUTH_FAILURE:-0}"
+REAUTH_LOGIN_WAIT_SECONDS="${REAUTH_LOGIN_WAIT_SECONDS:-300}"
+AUTH_AUTO_FILL="${AUTH_AUTO_FILL:-1}"
+AUTH_SUBMIT_LOGIN="${AUTH_SUBMIT_LOGIN:-1}"
+AUTH_USE_STEAM_LOGIN_CLI="${AUTH_USE_STEAM_LOGIN_CLI:-1}"
+ALLOW_UI_AUTH_FALLBACK="${ALLOW_UI_AUTH_FALLBACK:-0}"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 OUT_DIR="${OUT_DIR:-$REPO_ROOT/output}"
 
@@ -27,6 +33,7 @@ echo "  Target stable window: ${MIN_STABLE_SECONDS}s"
 echo "  Max attempts: $MAX_ATTEMPTS"
 echo "  Retry recovery: ${RECOVER_BETWEEN_ATTEMPTS} (on exit codes: ${RECOVER_ON_EXIT_CODES})"
 echo "  Fatal exit codes: ${FATAL_EXIT_CODES}"
+echo "  Auto re-auth on auth failure: ${AUTO_REAUTH_ON_AUTH_FAILURE}"
 
 should_recover() {
   local rc="$1"
@@ -67,6 +74,27 @@ while [ "$a" -le "$MAX_ATTEMPTS" ]; do
   fi
 
   if is_fatal "$rc"; then
+    if [ "$rc" -eq 7 ] && [ "$AUTO_REAUTH_ON_AUTH_FAILURE" = "1" ] && [ "$a" -lt "$MAX_ATTEMPTS" ]; then
+      reauth_log="$OUT_DIR/re-auth-between-attempts-${MSFS_APPID}-${stamp}-a${a}.log"
+      echo "  auth failure detected; attempting Steam re-auth before retry"
+      set +e
+      LOGIN_WAIT_SECONDS="$REAUTH_LOGIN_WAIT_SECONDS" \
+      AUTH_AUTO_FILL="$AUTH_AUTO_FILL" \
+      AUTH_SUBMIT_LOGIN="$AUTH_SUBMIT_LOGIN" \
+      AUTH_USE_STEAM_LOGIN_CLI="$AUTH_USE_STEAM_LOGIN_CLI" \
+      ALLOW_UI_AUTH_FALLBACK="$ALLOW_UI_AUTH_FALLBACK" \
+      "$SCRIPT_DIR/58-ensure-steam-auth.sh" 2>&1 | tee "$reauth_log"
+      reauth_rc=${PIPESTATUS[0]}
+      set -e
+      echo "  re-auth exit code: $reauth_rc"
+      echo "  re-auth log: $reauth_log"
+      if [ "$reauth_rc" -eq 0 ]; then
+        echo "  waiting ${ATTEMPT_PAUSE_SECONDS}s before retry"
+        sleep "$ATTEMPT_PAUSE_SECONDS"
+        a=$((a + 1))
+        continue
+      fi
+    fi
     echo "RESULT: non-retryable failure encountered (exit code $rc)"
     auth_log="$(ls -1t "$OUT_DIR"/auth-state-${MSFS_APPID}-*.log 2>/dev/null | head -n 1 || true)"
     if [ -n "$auth_log" ] && [ -f "$auth_log" ]; then

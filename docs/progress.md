@@ -1,5 +1,70 @@
 # Progress Log
 
+## 2026-02-28 (22:17-22:29 UTC, live post-restart DGX validation + retry auth-drift hardening)
+
+Validation from this checkout:
+
+- DGX host access is restored and stable from this runner:
+  - `sshpass -p '...' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/tmp/msfs_known_hosts -o ConnectTimeout=8 th0rgal@100.77.4.93 'hostname; whoami; uname -a'`
+  - result: `spark-de79`, user `th0rgal`, kernel `6.14.0-1015-nvidia`.
+- `90-remote-dgx-stable-check.sh` now runs remotely even without local `tailscaled` when direct TCP reachability exists:
+  - warning observed: `local tailscale is not Running, but direct TCP reachability exists (spark-de79:22); continuing with SSH probing.`
+- Live DGX runs executed with evidence fetched locally:
+  - run `msfs-on-dgx-spark-run-20260228T221715Z` reached real `FlightSimulator2024.exe` processes and failed transiently (`~21s` lifetime under `30s` gate).
+  - run `msfs-on-dgx-spark-run-20260228T221959Z` showed transient launch (`~10s`) and auth drift on retry (`exit 7`).
+  - run `msfs-on-dgx-spark-run-20260228T222451Z` validated new in-loop re-auth behavior:
+    - attempt 2 hit auth failure (`exit 7`),
+    - runner invoked `58-ensure-steam-auth.sh`,
+    - re-auth succeeded (`steamid=391443739`),
+    - attempt 3 resumed automatically (still transient at `~10s`).
+- Crash evidence now confirms boot-stage process execution with crash signature:
+  - `AsoboReport-Crash-...txt` includes `Code=0xC0000005`,
+  - state at crash: `MainState:BOOT SubState:BOOT_INIT`.
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - fail-fast-on-tailscale-unavailable now performs direct TCP candidate preflight and bypasses false fail-fast when any endpoint is reachable.
+  - forwarded auth-related env (`AUTO_REAUTH_ON_AUTH_FAILURE`, `REAUTH_LOGIN_WAIT_SECONDS`, `AUTH_AUTO_FILL`, `AUTH_SUBMIT_LOGIN`, `AUTH_USE_STEAM_LOGIN_CLI`) into remote retry runner.
+- Updated `scripts/55-run-until-stable-runtime.sh`:
+  - added retry-time auto re-auth path for fatal `exit 7` when `AUTO_REAUTH_ON_AUTH_FAILURE=1`,
+  - on successful re-auth, retries continue instead of terminating.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, `docs/troubleshooting.md` for direct-reachability fail-fast bypass and retry-time auth revalidation behavior.
+
+Assessment update:
+
+- Network path and remote orchestration are functioning again after Spark restart.
+- Remaining blocker to full sustained-runtime proof is app-level transient crash behavior (current observed strong runtime: ~10–21s, crash code `0xC0000005` in BOOT_INIT), not transport/auth pipeline integrity.
+
+## 2026-02-28 (22:14-22:16 UTC, direct-reachability fail-fast bypass + live post-restart DGX run)
+
+Validation from this checkout:
+
+- Spark connectivity recovered after restart:
+  - `sshpass -p '...' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/tmp/msfs_known_hosts -o ConnectTimeout=8 th0rgal@100.77.4.93 'hostname; whoami; uname -a'`
+  - result: `spark-de79`, user `th0rgal`, kernel `6.14.0-1015-nvidia` (aarch64).
+- Remote staged stability run now proceeds end-to-end from this runner without local `tailscaled`:
+  - `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 STRICT_MIN_STABLE_SECONDS=45 STRICT_MAX_ATTEMPTS=1 STRICT_WAIT_SECONDS=180 ./scripts/90-remote-dgx-stable-check.sh`
+  - key output:
+    - `WARN: local tailscale is not Running, but direct TCP reachability exists (spark-de79:22); continuing with SSH probing.`
+    - remote run directory resolved/uploaded, remote scripts executed, and evidence fetched locally.
+- Current launch blocker moved from network to Steam auth state on DGX:
+  - `RESULT: Steam session unauthenticated; launch skipped.`
+  - remote exit code: `7` (fatal auth-gated stop by design).
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - `DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=1` now checks direct TCP reachability first and bypasses fail-fast when any candidate is directly reachable.
+  - if `nc` is unavailable, script warns and continues probing instead of incorrectly hard-failing.
+- Updated docs (`README.md`, `docs/setup-guide.md`, `docs/troubleshooting.md`) to document the direct-reachability bypass behavior.
+
+Assessment update:
+
+- DGX host reachability is restored and remote execution pipeline is functioning.
+- End-to-end MSFS runtime verification is now blocked specifically by unauthenticated Steam session on the DGX UI session, not by transport/connectivity.
+
 ## 2026-02-28 (17:21-17:26 UTC, auth-gated bootstrap signaling hardening)
 
 Validation from this checkout:

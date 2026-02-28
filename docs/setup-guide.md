@@ -295,7 +295,7 @@ DGX_SSH_EXTRA_OPTS_CSV='IdentityFile=/path/to/key,UserKnownHostsFile=/dev/null' 
 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
-If all configured DGX targets are Tailscale-only and local `tailscaled` is unavailable, remote checks now fail fast by default (`DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=1`). Set `DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=0` to force full timeout-based SSH probing.
+If all configured DGX targets are Tailscale-only and local `tailscaled` is unavailable, remote checks fail fast by default (`DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=1`) unless direct TCP reachability is detected; when a candidate port is directly reachable, the script continues with SSH probing automatically. Set `DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=0` to force full timeout-based SSH probing in all cases.
 When local Tailscale state is available, known-offline Tailscale candidates are skipped by default (`DGX_SKIP_OFFLINE_TAILSCALE_CANDIDATES=1`), and failure output includes peer `last seen` diagnostics. Set `DGX_SKIP_OFFLINE_TAILSCALE_CANDIDATES=0` to force probing offline peers anyway.
 
 In non-systemd runners, you can bootstrap a local userspace Tailscale daemon and route SSH/SCP through its SOCKS endpoint automatically:

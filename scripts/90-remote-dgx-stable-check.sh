@@ -566,6 +566,52 @@ all_endpoints_require_tailscale() {
   [ "$saw_endpoint" -eq 1 ]
 }
 
+DIRECT_REACHABLE_CANDIDATE=""
+any_direct_candidate_tcp_reachable() {
+  local host_csv="$1"
+  local port_csv="$2"
+  local endpoint_csv="$3"
+  local default_port="$4"
+  DIRECT_REACHABLE_CANDIDATE=""
+  if ! command -v nc >/dev/null 2>&1; then
+    return 2
+  fi
+  if [ -n "$endpoint_csv" ]; then
+    IFS=',' read -r -a _endpoint_candidates <<< "$endpoint_csv"
+    for _endpoint_candidate in "${_endpoint_candidates[@]}"; do
+      _endpoint_candidate="$(echo "$_endpoint_candidate" | xargs)"
+      [ -z "$_endpoint_candidate" ] && continue
+      if split_result="$(split_endpoint_candidate "$_endpoint_candidate" "$default_port")"; then
+        endpoint_host="${split_result%%,*}"
+        endpoint_port="${split_result##*,}"
+        endpoint_host="$(echo "$endpoint_host" | xargs)"
+        endpoint_port="$(echo "$endpoint_port" | xargs)"
+        [ -z "$endpoint_host" ] || [ -z "$endpoint_port" ] && continue
+        if nc -z -w 2 "$endpoint_host" "$endpoint_port" >/dev/null 2>&1; then
+          DIRECT_REACHABLE_CANDIDATE="${endpoint_host}:${endpoint_port}"
+          return 0
+        fi
+      fi
+    done
+    return 1
+  fi
+  IFS=',' read -r -a _hosts <<< "$host_csv"
+  IFS=',' read -r -a _ports <<< "$port_csv"
+  for _host in "${_hosts[@]}"; do
+    _host="$(echo "$_host" | xargs)"
+    [ -z "$_host" ] && continue
+    for _port in "${_ports[@]}"; do
+      _port="$(echo "$_port" | xargs)"
+      [ -z "$_port" ] && continue
+      if nc -z -w 2 "$_host" "$_port" >/dev/null 2>&1; then
+        DIRECT_REACHABLE_CANDIDATE="${_host}:${_port}"
+        return 0
+      fi
+    done
+  done
+  return 1
+}
+
 print_reachability_diagnostics() {
   local host_list="$1"
   local port_list="$2"
@@ -749,11 +795,21 @@ if [ "$DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE" = "1" ] && [ -z "$DGX_SSH_PROXY_J
       requires_tailscale=1
     fi
     if [ "$requires_tailscale" -eq 1 ]; then
-      echo "ERROR: local tailscale is not Running and all DGX candidates are Tailscale endpoints."
-      echo "$probe_target_summary"
-      echo "Hint: start/authenticate tailscaled, enable BOOTSTRAP_LOCAL_TAILSCALE=1, set DGX_SSH_PROXY_JUMP / DGX_SSH_PROXY_COMMAND, or provide a non-Tailscale DGX_HOST/DGX_ENDPOINT_CANDIDATES."
-      print_reachability_diagnostics "$DGX_HOST_CANDIDATES" "$DGX_PORT_CANDIDATES"
-      exit 1
+      if any_direct_candidate_tcp_reachable "$DGX_HOST_CANDIDATES" "$DGX_PORT_CANDIDATES" "$DGX_ENDPOINT_CANDIDATES" "$DGX_PORT"; then
+        echo "WARN: local tailscale is not Running, but direct TCP reachability exists (${DIRECT_REACHABLE_CANDIDATE}); continuing with SSH probing."
+      else
+        tcp_probe_status=$?
+        if [ "$tcp_probe_status" -eq 2 ]; then
+          echo "WARN: local tailscale is not Running and all DGX candidates are Tailscale endpoints."
+          echo "WARN: skipping fail-fast because netcat is unavailable for direct TCP preflight; continuing with SSH probing."
+        else
+          echo "ERROR: local tailscale is not Running and all DGX candidates are Tailscale endpoints."
+          echo "$probe_target_summary"
+          echo "Hint: start/authenticate tailscaled, enable BOOTSTRAP_LOCAL_TAILSCALE=1, set DGX_SSH_PROXY_JUMP / DGX_SSH_PROXY_COMMAND, or provide a non-Tailscale DGX_HOST/DGX_ENDPOINT_CANDIDATES."
+          print_reachability_diagnostics "$DGX_HOST_CANDIDATES" "$DGX_PORT_CANDIDATES"
+          exit 1
+        fi
+      fi
     fi
   fi
 fi
@@ -988,6 +1044,11 @@ WAIT_SECONDS='${WAIT_SECONDS}' \
   STRICT_RECOVER_BETWEEN_ATTEMPTS='${STRICT_RECOVER_BETWEEN_ATTEMPTS}' \
   RECOVER_ON_EXIT_CODES='${RECOVER_ON_EXIT_CODES}' \
   FATAL_EXIT_CODES='${FATAL_EXIT_CODES}' \
+  AUTO_REAUTH_ON_AUTH_FAILURE='${AUTO_REAUTH_ON_AUTH_FAILURE}' \
+  REAUTH_LOGIN_WAIT_SECONDS='${REAUTH_LOGIN_WAIT_SECONDS}' \
+  AUTH_AUTO_FILL='${AUTH_AUTO_FILL}' \
+  AUTH_SUBMIT_LOGIN='${AUTH_SUBMIT_LOGIN}' \
+  AUTH_USE_STEAM_LOGIN_CLI='${AUTH_USE_STEAM_LOGIN_CLI}' \
   AUTH_DEBUG_ON_REAUTH_FAILURE='${AUTH_DEBUG_ON_REAUTH_FAILURE}' \
   ALLOW_UI_AUTH_FALLBACK='${ALLOW_UI_AUTH_FALLBACK}' \
   AUTH_BOOTSTRAP_STEAM_STACK='${AUTH_BOOTSTRAP_STEAM_STACK}' \
