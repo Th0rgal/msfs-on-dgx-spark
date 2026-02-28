@@ -117,6 +117,23 @@ Window geometry normalization is also enabled during restore (`AUTH_NORMALIZE_WI
 `90-remote-dgx-stable-check.sh` now supports remote credential sourcing via `REMOTE_AUTH_ENV_FILE` (default `$HOME/.config/msfs-on-dgx-spark/steam-auth.env`) with permission check (`REQUIRE_REMOTE_AUTH_ENV_PERMS=1` expects mode `600`).
 If unauthenticated failures occur with no active `steamwebhelper`, keep `AUTH_BOOTSTRAP_STEAM_STACK=1` and `AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER=1` (defaults) so verification first restarts the Steam/UI stack and repairs runtime roots before deciding auth is missing.
 
+### Dispatch not accepted (`exit 4`) after auth succeeds
+
+**Symptom**: dispatch logs report `RESULT: no launch session accepted via pipe in this attempt.`
+
+**Fix**:
+```bash
+# Normalize Steam UI, then run multiple fallback dispatch methods in order
+DISPATCH_FORCE_UI_ON_FAILURE=1 \
+DISPATCH_FALLBACK_CHAIN='applaunch,steam_uri,snap_uri' \
+./scripts/54-launch-and-capture-evidence.sh
+
+# Same knobs can be forwarded through remote DGX orchestration
+DGX_PASS='<password>' DISPATCH_FORCE_UI_ON_FAILURE=1 \
+DISPATCH_FALLBACK_CHAIN='applaunch,steam_uri,snap_uri' \
+./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1
+```
+
 ### Steam crashes on launch
 
 **Symptom**: Steam exits immediately or shows a blank window.

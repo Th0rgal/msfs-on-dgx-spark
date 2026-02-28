@@ -1,5 +1,34 @@
 # Progress Log
 
+## 2026-02-28 (15:22-15:26 UTC, dispatch fallback chain + Steam UI normalization before fallback)
+
+Validation from this checkout:
+
+- `bash -n scripts/54-launch-and-capture-evidence.sh scripts/90-remote-dgx-stable-check.sh` (pass).
+- Remote connectivity check remains blocked in this runner:
+  - `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 STRICT_MIN_STABLE_SECONDS=45 STRICT_MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - exits with explicit fail-fast diagnostics:
+    - `ERROR: local tailscaled is unavailable and all DGX candidates are Tailscale endpoints.`
+    - per-endpoint probes still show timeout for `spark-de79` / `100.77.4.93` on `22,2222`.
+
+Repo hardening in this pass:
+
+- Updated `scripts/54-launch-and-capture-evidence.sh`:
+  - added `DISPATCH_FORCE_UI_ON_FAILURE` (default `1`) to run `59-force-steam-ui.sh` before fallback dispatch attempts,
+  - added ordered `DISPATCH_FALLBACK_CHAIN` (default `applaunch,steam_uri,snap_uri`) so fallback can try multiple launch methods with separate logs:
+    - `steam -applaunch <appid>`
+    - `steam steam://rungameid/<appid>`
+    - `snap run steam steam://rungameid/<appid>`
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - forwards `DISPATCH_FORCE_UI_ON_FAILURE` and `DISPATCH_FALLBACK_CHAIN` to remote runners.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` now document the new fallback-chain controls and remote usage.
+
+Assessment update:
+
+- Current blocker in this environment is still network reachability to DGX.
+- Launch-path resilience improved for authenticated sessions where pipe dispatch intermittently fails to confirm acceptance.
+
 ## 2026-02-28 (15:20-15:21 UTC, remote-check fail-fast for Tailscale-unavailable runners)
 
 Validation from this checkout:

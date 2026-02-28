@@ -19,6 +19,8 @@ DISPATCH_RECOVER_ON_NO_ACCEPT="${DISPATCH_RECOVER_ON_NO_ACCEPT:-1}"
 DISPATCH_ACCEPT_WAIT_SECONDS="${DISPATCH_ACCEPT_WAIT_SECONDS:-45}"
 DISPATCH_FALLBACK_APP_LAUNCH="${DISPATCH_FALLBACK_APP_LAUNCH:-1}"
 DISPATCH_FALLBACK_WAIT_SECONDS="${DISPATCH_FALLBACK_WAIT_SECONDS:-20}"
+DISPATCH_FORCE_UI_ON_FAILURE="${DISPATCH_FORCE_UI_ON_FAILURE:-1}"
+DISPATCH_FALLBACK_CHAIN="${DISPATCH_FALLBACK_CHAIN:-applaunch,steam_uri,snap_uri}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 OUT_DIR="${OUT_DIR:-$REPO_ROOT/output}"
@@ -124,15 +126,46 @@ done
 
 if [ "$dispatch_rc" -ne 0 ]; then
   echo "  WARN: launch dispatch did not confirm acceptance after $DISPATCH_MAX_ATTEMPTS attempt(s) (last rc=$dispatch_rc)"
+  if [ "$DISPATCH_FORCE_UI_ON_FAILURE" = "1" ] && [ -x "$SCRIPT_DIR/59-force-steam-ui.sh" ]; then
+    echo "  normalizing Steam UI before fallback dispatches"
+    DISPLAY_NUM="$DISPLAY_NUM" "$SCRIPT_DIR/59-force-steam-ui.sh" \
+      >"$OUT_DIR/dispatch-force-ui-${MSFS_APPID}-${STAMP}.log" 2>&1 || true
+    sleep 2
+  fi
   if [ "$DISPATCH_FALLBACK_APP_LAUNCH" = "1" ]; then
-    fallback_log="$OUT_DIR/dispatch-fallback-applaunch-${MSFS_APPID}-${STAMP}.log"
-    echo "  trying DISPLAY-bound steam -applaunch fallback"
-    set +e
-    timeout "${DISPATCH_FALLBACK_WAIT_SECONDS}s" env DISPLAY="$DISPLAY_NUM" steam -applaunch "$MSFS_APPID" \
-      >"$fallback_log" 2>&1
-    fallback_rc=$?
-    set -e
-    echo "  applaunch fallback exit code: $fallback_rc"
+    IFS=',' read -r -a fallback_steps <<< "$DISPATCH_FALLBACK_CHAIN"
+    fallback_uri="steam://rungameid/${MSFS_APPID}"
+    for step in "${fallback_steps[@]}"; do
+      step="$(echo "$step" | xargs)"
+      [ -z "$step" ] && continue
+      fallback_log="$OUT_DIR/dispatch-fallback-${step}-${MSFS_APPID}-${STAMP}.log"
+      set +e
+      case "$step" in
+        applaunch)
+          echo "  trying DISPLAY-bound steam -applaunch fallback"
+          timeout "${DISPATCH_FALLBACK_WAIT_SECONDS}s" env DISPLAY="$DISPLAY_NUM" steam -applaunch "$MSFS_APPID" \
+            >"$fallback_log" 2>&1
+          ;;
+        steam_uri)
+          echo "  trying DISPLAY-bound steam URI fallback"
+          timeout "${DISPATCH_FALLBACK_WAIT_SECONDS}s" env DISPLAY="$DISPLAY_NUM" steam "$fallback_uri" \
+            >"$fallback_log" 2>&1
+          ;;
+        snap_uri)
+          echo "  trying DISPLAY-bound snap run steam URI fallback"
+          timeout "${DISPATCH_FALLBACK_WAIT_SECONDS}s" env DISPLAY="$DISPLAY_NUM" snap run steam "$fallback_uri" \
+            >"$fallback_log" 2>&1
+          ;;
+        *)
+          echo "  WARN: unknown DISPATCH_FALLBACK_CHAIN step '$step' (skipping)"
+          : >"$fallback_log"
+          ;;
+      esac
+      fallback_rc=$?
+      set -e
+      echo "  fallback '$step' exit code: $fallback_rc"
+      sleep 2
+    done
   fi
 fi
 

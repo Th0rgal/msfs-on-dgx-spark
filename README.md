@@ -176,6 +176,7 @@ Auth checks now require strong Steam session evidence by default (`steamid` via 
 When `AUTO_REAUTH_ON_AUTH_FAILURE=1` is enabled and auth recovery fails, `90-remote-dgx-stable-check.sh` now captures `steam-debug-*.log/.png` before exit (`AUTH_DEBUG_ON_REAUTH_FAILURE=1` by default), ensuring remote auth failures still sync actionable evidence locally.
 `FATAL_EXIT_CODES=''` is treated as an intentional empty list (fatal auth exits disabled), not auto-reset to defaults.
 `54-launch-and-capture-evidence.sh` now retries dispatch inside a single attempt (`DISPATCH_MAX_ATTEMPTS`, default `2`) and can auto-run `57-recover-steam-runtime.sh` between redispatches (`DISPATCH_RECOVER_ON_NO_ACCEPT=1`) before launch verification begins; these dispatch knobs are forwarded by `90-remote-dgx-stable-check.sh`.
+When dispatch still fails, fallback now runs as an ordered chain (`DISPATCH_FALLBACK_CHAIN`, default `applaunch,steam_uri,snap_uri`) and can auto-normalize Steam windows first (`DISPATCH_FORCE_UI_ON_FAILURE=1`) to recover from hidden/off-screen UI states before retrying launch methods.
 
 See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [docs/progress.md](docs/progress.md) for live validation notes.
 

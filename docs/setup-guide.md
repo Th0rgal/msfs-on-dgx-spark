@@ -225,6 +225,14 @@ For one-shot launch plus artifact capture (dispatch log, verify log, Steam state
 ./scripts/54-launch-and-capture-evidence.sh
 ```
 
+If pipe dispatch is flaky in your session, keep the fallback chain enabled (default) and tune it explicitly:
+
+```bash
+DISPATCH_FORCE_UI_ON_FAILURE=1 \
+DISPATCH_FALLBACK_CHAIN='applaunch,steam_uri,snap_uri' \
+./scripts/54-launch-and-capture-evidence.sh
+```
+
 For repeated retries until a stable runtime window is reached:
 
 ```bash
