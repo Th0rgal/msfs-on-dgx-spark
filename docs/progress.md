@@ -1,5 +1,28 @@
 # Progress Log
 
+## 2026-02-28 (12:59-13:05 UTC, live DGX: remote orchestrator policy passthrough hardening)
+
+Live checks on `spark-de79` from this checkout:
+
+- `DGX_PASS=... ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1`
+  - trailing `KEY=VALUE` overrides are now accepted and applied.
+  - run reached remote auth gate and exited deterministically with `exit 7` (`Steam session unauthenticated`), with evidence synced locally.
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - accepts positional `KEY=VALUE` overrides for safer operator UX,
+  - forwards `ALLOW_UI_AUTH_FALLBACK` to both `58-ensure-steam-auth.sh` and remote verification runners,
+  - forwards `FATAL_EXIT_CODES` to remote verification runners so auth failures can be policy-tuned during recovery windows.
+- Updated docs:
+  - `README.md` now documents positional override support and remote auth/fatal policy passthrough.
+  - `docs/troubleshooting.md` adds remote auth-gate examples, including temporary UI-fallback mode.
+
+Assessment update:
+
+- Runtime path remains healthy; current blocker remains Steam account auth state (`steamid=0`).
+- Remote orchestration is now more controllable for unattended and semi-interactive recovery workflows.
+
 ## 2026-02-28 (12:52-12:57 UTC, live DGX: remote auth-recovery path added)
 
 Live checks on `spark-de79` from this checkout:

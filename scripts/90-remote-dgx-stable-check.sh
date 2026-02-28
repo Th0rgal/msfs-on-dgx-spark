@@ -5,6 +5,19 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 
+# Accept optional KEY=VALUE overrides as positional args for convenience.
+# This allows invocations like:
+#   ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1
+for arg in "$@"; do
+  if [[ "$arg" == *=* ]]; then
+    export "$arg"
+  else
+    echo "ERROR: unsupported argument: $arg"
+    echo "Hint: pass overrides as KEY=VALUE (for example MIN_STABLE_SECONDS=30)."
+    exit 1
+  fi
+done
+
 DGX_HOST="${DGX_HOST:-100.77.4.93}"
 DGX_USER="${DGX_USER:-th0rgal}"
 DGX_PASS="${DGX_PASS:-}"
@@ -20,9 +33,11 @@ STRICT_MAX_ATTEMPTS="${STRICT_MAX_ATTEMPTS:-3}"
 RECOVER_BETWEEN_ATTEMPTS="${RECOVER_BETWEEN_ATTEMPTS:-0}"
 STRICT_RECOVER_BETWEEN_ATTEMPTS="${STRICT_RECOVER_BETWEEN_ATTEMPTS:-$RECOVER_BETWEEN_ATTEMPTS}"
 RECOVER_ON_EXIT_CODES="${RECOVER_ON_EXIT_CODES:-2,3,4}"
+FATAL_EXIT_CODES="${FATAL_EXIT_CODES:-7}"
 AUTO_REAUTH_ON_AUTH_FAILURE="${AUTO_REAUTH_ON_AUTH_FAILURE:-0}"
 STEAM_GUARD_CODE="${STEAM_GUARD_CODE:-}"
 REAUTH_LOGIN_WAIT_SECONDS="${REAUTH_LOGIN_WAIT_SECONDS:-300}"
+ALLOW_UI_AUTH_FALLBACK="${ALLOW_UI_AUTH_FALLBACK:-0}"
 FETCH_EVIDENCE="${FETCH_EVIDENCE:-1}"
 LOCAL_EVIDENCE_DIR="${LOCAL_EVIDENCE_DIR:-$REPO_ROOT/output/remote-runs}"
 
@@ -88,7 +103,10 @@ tar xzf /tmp/msfs-on-dgx-spark-sync.tgz -C \"\$TARGET_DIR\"
 cd \"\$TARGET_DIR\"
 if [ \"${AUTO_REAUTH_ON_AUTH_FAILURE}\" = \"1\" ]; then
   echo \"Running optional Steam auth recovery gate before verification...\"
-  LOGIN_WAIT_SECONDS='${REAUTH_LOGIN_WAIT_SECONDS}' STEAM_GUARD_CODE='${STEAM_GUARD_CODE}' ./scripts/58-ensure-steam-auth.sh
+  LOGIN_WAIT_SECONDS='${REAUTH_LOGIN_WAIT_SECONDS}' \
+  STEAM_GUARD_CODE='${STEAM_GUARD_CODE}' \
+  ALLOW_UI_AUTH_FALLBACK='${ALLOW_UI_AUTH_FALLBACK}' \
+  ./scripts/58-ensure-steam-auth.sh
 fi
 MSFS_APPID='${MSFS_APPID}' \
 MIN_STABLE_SECONDS='${MIN_STABLE_SECONDS}' \
@@ -100,6 +118,8 @@ WAIT_SECONDS='${WAIT_SECONDS}' \
   RECOVER_BETWEEN_ATTEMPTS='${RECOVER_BETWEEN_ATTEMPTS}' \
   STRICT_RECOVER_BETWEEN_ATTEMPTS='${STRICT_RECOVER_BETWEEN_ATTEMPTS}' \
   RECOVER_ON_EXIT_CODES='${RECOVER_ON_EXIT_CODES}' \
+  FATAL_EXIT_CODES='${FATAL_EXIT_CODES}' \
+  ALLOW_UI_AUTH_FALLBACK='${ALLOW_UI_AUTH_FALLBACK}' \
   BASELINE_MIN_STABLE_SECONDS='${MIN_STABLE_SECONDS}' \
   BASELINE_MAX_ATTEMPTS='${MAX_ATTEMPTS}' \
   \"${remote_runner}\"

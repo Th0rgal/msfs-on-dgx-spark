@@ -73,6 +73,15 @@ apt list --upgradable 2>/dev/null | grep nvidia
 MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=2 ./scripts/55-run-until-stable-runtime.sh
 ```
 
+Remote helper equivalents:
+```bash
+# Run remote check and fail-fast on unauthenticated sessions (default)
+DGX_PASS='<password>' ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1
+
+# Temporarily allow UI-only auth signal during interactive recovery windows
+DGX_PASS='<password>' ALLOW_UI_AUTH_FALLBACK=1 FATAL_EXIT_CODES='' ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1
+```
+
 ### Steam crashes on launch
 
 **Symptom**: Steam exits immediately or shows a blank window.
