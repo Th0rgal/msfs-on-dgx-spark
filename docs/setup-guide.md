@@ -337,6 +337,7 @@ LOCAL_TAILSCALE_INTERACTIVE_LOGIN=1 \
 ```
 
 If login URL retrieval times out before you can complete browser auth, raise `LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS` (for example `LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS=120`).
+To make this auth gate orchestration-friendly, set `LOCAL_TAILSCALE_AUTH_URL_FILE=/path/to/url.txt` so the script writes the login URL to disk whenever available; unauthenticated bootstrap exits with `LOCAL_TAILSCALE_NEEDS_LOGIN_EXIT_CODE` (default `10`).
 If userspace daemon startup is flaky in your runner, tune bootstrap retries with `LOCAL_TAILSCALE_BOOTSTRAP_RETRIES` and `LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS`; bootstrap now also removes stale sockets and isolates retry socket/log paths automatically.
 `LOCAL_TAILSCALE_AUTHKEY_FILE` is fail-closed by default: it must exist, be non-empty, and be mode `600` (`REQUIRE_LOCAL_TAILSCALE_AUTHKEY_FILE_PERMS=1`).
 

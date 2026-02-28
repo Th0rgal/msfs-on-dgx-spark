@@ -1,5 +1,31 @@
 # Progress Log
 
+## 2026-02-28 (17:21-17:26 UTC, auth-gated bootstrap signaling hardening)
+
+Validation from this checkout:
+
+- Direct SSH to DGX still times out from this runner:
+  - `sshpass -p '...' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=8 th0rgal@100.77.4.93 'hostname; uname -a'`
+  - result: `ssh: connect to host 100.77.4.93 port 22: Connection timed out`.
+- Userspace tailscale bootstrap reaches deterministic auth-required state:
+  - `DGX_PASS=... BOOTSTRAP_LOCAL_TAILSCALE=1 MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 FETCH_EVIDENCE=0 ./scripts/90-remote-dgx-stable-check.sh`
+  - key output includes:
+    - `Local tailscale needs login: https://login.tailscale.com/...`
+    - `ERROR: local tailscale is not in Running state after bootstrap.`
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - added `LOCAL_TAILSCALE_AUTH_URL_FILE` to persist the Tailscale login URL for orchestration/CI handoff,
+  - added `LOCAL_TAILSCALE_NEEDS_LOGIN_EXIT_CODE` (default `10`) so callers can distinguish auth-required exits from generic bootstrap/runtime failures.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` now describe login URL file export and dedicated auth-required exit signaling.
+
+Assessment update:
+
+- End-to-end DGX runtime verification remains blocked by missing Tailnet authentication in this runner.
+- Remote-check automation is now easier to integrate in unattended pipelines that need to detect and handle interactive Tailscale login handoff explicitly.
+
 ## 2026-02-28 (16:18-16:24 UTC, live connectivity recheck from this runner)
 
 Validation from this checkout:

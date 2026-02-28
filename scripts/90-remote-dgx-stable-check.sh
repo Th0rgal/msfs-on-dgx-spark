@@ -55,6 +55,8 @@ LOCAL_TAILSCALE_INTERACTIVE_LOGIN="${LOCAL_TAILSCALE_INTERACTIVE_LOGIN:-0}"
 LOCAL_TAILSCALE_ACCEPT_ROUTES="${LOCAL_TAILSCALE_ACCEPT_ROUTES:-0}"
 LOCAL_TAILSCALE_BOOTSTRAP_RETRIES="${LOCAL_TAILSCALE_BOOTSTRAP_RETRIES:-2}"
 LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS="${LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS:-2}"
+LOCAL_TAILSCALE_AUTH_URL_FILE="${LOCAL_TAILSCALE_AUTH_URL_FILE:-}"
+LOCAL_TAILSCALE_NEEDS_LOGIN_EXIT_CODE="${LOCAL_TAILSCALE_NEEDS_LOGIN_EXIT_CODE:-10}"
 
 MSFS_APPID="${MSFS_APPID:-2537590}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-20}"
@@ -214,6 +216,15 @@ increment_socks5_addr_port() {
   echo "${host}:$((port + increment))"
 }
 
+persist_local_tailscale_login_url() {
+  local login_url="$1"
+  if [ -z "$LOCAL_TAILSCALE_AUTH_URL_FILE" ] || [ -z "$login_url" ]; then
+    return 0
+  fi
+  mkdir -p "$(dirname "$LOCAL_TAILSCALE_AUTH_URL_FILE")"
+  printf '%s\n' "$login_url" >"$LOCAL_TAILSCALE_AUTH_URL_FILE"
+}
+
 bootstrap_local_tailscale_userspace() {
   if [ "$BOOTSTRAP_LOCAL_TAILSCALE" != "1" ]; then
     return 0
@@ -328,7 +339,11 @@ bootstrap_local_tailscale_userspace() {
     else
       login_url="$(tailscale_cmd status 2>/dev/null | sed -n 's/^Log in at:[[:space:]]*//p' | head -n 1 || true)"
       if [ -n "$login_url" ]; then
+        persist_local_tailscale_login_url "$login_url"
         echo "Local tailscale needs login: $login_url"
+        if [ -n "$LOCAL_TAILSCALE_AUTH_URL_FILE" ]; then
+          echo "Wrote login URL to: $LOCAL_TAILSCALE_AUTH_URL_FILE"
+        fi
       else
         echo "Local tailscale needs login. Run:"
         echo "  tailscale --socket '$LOCAL_TAILSCALE_SOCKET' login"
@@ -344,6 +359,13 @@ bootstrap_local_tailscale_userspace() {
     echo "  tailscale --socket '$LOCAL_TAILSCALE_SOCKET' up"
     echo "State file: $LOCAL_TAILSCALE_STATE"
     echo "Log: $LOCAL_TAILSCALE_LOG"
+    if [ -z "$LOCAL_TAILSCALE_AUTHKEY" ]; then
+      login_url="$(tailscale_cmd status 2>/dev/null | sed -n 's/^Log in at:[[:space:]]*//p' | head -n 1 || true)"
+      if [ -n "$login_url" ]; then
+        persist_local_tailscale_login_url "$login_url"
+      fi
+      return "$LOCAL_TAILSCALE_NEEDS_LOGIN_EXIT_CODE"
+    fi
     return 1
   fi
 
