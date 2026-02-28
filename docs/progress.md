@@ -1,5 +1,31 @@
 # Progress Log
 
+## 2026-02-28 (13:40-13:42 UTC, live DGX: auth window geometry normalization for headless recovery)
+
+Live checks on `spark-de79` from this checkout:
+
+- `DGX_PASS=... AUTO_REAUTH_ON_AUTH_FAILURE=1 REAUTH_LOGIN_WAIT_SECONDS=30 MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=60 ./scripts/90-remote-dgx-stable-check.sh`
+  - auth recovery still times out without credentials/Steam Guard (`exit 2`), but state is now `unauthenticated (ui-only evidence)` instead of hidden-window ambiguity.
+  - synced debug evidence confirms Steam windows are now visible and normalized on `:2`:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T134028Z/output/steam-debug-20260228T134152Z.log`
+    - visible windows include:
+      - `steam` at `1600x900+52+82`
+      - `steamwebhelper` at `1600x900+52+82`
+
+Repo hardening in this pass:
+
+- Updated `scripts/58-ensure-steam-auth.sh`:
+  - added window normalization during restore (`AUTH_NORMALIZE_WINDOWS=1` by default),
+  - added geometry controls (`AUTH_WINDOW_WIDTH`, `AUTH_WINDOW_HEIGHT`, `AUTH_WINDOW_X`, `AUTH_WINDOW_Y`),
+  - applies `windowmap + windowsize + windowmove + windowraise` to Steam windows during recovery polls.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` now document default window normalization behavior.
+
+Assessment update:
+
+- This removes a major headless trust gap where Steam/login UI existed but was effectively invisible (`10x10`/off-screen).
+- Remaining blocker is now explicit and expected: session credentials / Steam Guard completion.
+
 ## 2026-02-28 (13:36-13:40 UTC, live DGX: auth-gate bootstrap + deterministic diagnostics hardening)
 
 Live check on `spark-de79` from this checkout:

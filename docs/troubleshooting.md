@@ -94,6 +94,7 @@ DGX_PASS='<password>' ALLOW_UI_AUTH_FALLBACK=1 FATAL_EXIT_CODES='' ./scripts/90-
 
 If auth recovery times out and debug logs show no visible Steam/login windows, `58-ensure-steam-auth.sh` now reports that condition explicitly; use `AUTH_USE_STEAM_LOGIN_CLI=1` (default) with credentials to avoid depending on visible UI prompts.
 It also attempts Steam window restore/focus by default (`AUTH_RESTORE_WINDOWS=1`) so headless-minimized dialogs can be surfaced automatically.
+Window geometry normalization is also enabled during restore (`AUTH_NORMALIZE_WINDOWS=1`), resizing/moving tiny or off-screen Steam windows to a visible region by default.
 If unauthenticated failures occur with no active `steamwebhelper`, keep `AUTH_BOOTSTRAP_STEAM_STACK=1` and `AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER=1` (defaults) so verification first restarts the Steam/UI stack and repairs runtime roots before deciding auth is missing.
 
 ### Steam crashes on launch

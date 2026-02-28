@@ -244,6 +244,7 @@ DGX_PASS='<password>' AUTO_REAUTH_ON_AUTH_FAILURE=1 STEAM_USERNAME='<steam_user>
 ```
 
 Window restore is also enabled by default during re-auth (`AUTH_RESTORE_WINDOWS=1`) to unminimize/focus hidden Steam windows before timing out.
+Re-auth now also normalizes Steam window geometry by default (`AUTH_NORMALIZE_WINDOWS=1`) so tiny/off-screen windows are resized/moved into a visible area for manual login.
 During launch verification, auth checks now bootstrap Steam/UI first (`AUTH_BOOTSTRAP_STEAM_STACK=1`) and can auto-run runtime recovery when `steamwebhelper` is missing (`AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER=1`).
 
 Useful overrides:

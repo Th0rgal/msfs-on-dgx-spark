@@ -18,6 +18,11 @@ AUTH_SUBMIT_LOGIN="${AUTH_SUBMIT_LOGIN:-1}"
 AUTH_USE_STEAM_LOGIN_CLI="${AUTH_USE_STEAM_LOGIN_CLI:-1}"
 AUTH_FORCE_OPEN_MAIN="${AUTH_FORCE_OPEN_MAIN:-1}"
 AUTH_RESTORE_WINDOWS="${AUTH_RESTORE_WINDOWS:-1}"
+AUTH_NORMALIZE_WINDOWS="${AUTH_NORMALIZE_WINDOWS:-1}"
+AUTH_WINDOW_WIDTH="${AUTH_WINDOW_WIDTH:-1600}"
+AUTH_WINDOW_HEIGHT="${AUTH_WINDOW_HEIGHT:-900}"
+AUTH_WINDOW_X="${AUTH_WINDOW_X:-50}"
+AUTH_WINDOW_Y="${AUTH_WINDOW_Y:-50}"
 
 STEAM_DIR="$(find_steam_dir || true)"
 if [ -z "$STEAM_DIR" ]; then
@@ -60,6 +65,10 @@ restore_steam_windows() {
   local id
   for id in "${ids[@]}"; do
     DISPLAY="$DISPLAY_NUM" xdotool windowmap "$id" >/dev/null 2>&1 || true
+    if [ "$AUTH_NORMALIZE_WINDOWS" = "1" ]; then
+      DISPLAY="$DISPLAY_NUM" xdotool windowsize "$id" "$AUTH_WINDOW_WIDTH" "$AUTH_WINDOW_HEIGHT" >/dev/null 2>&1 || true
+      DISPLAY="$DISPLAY_NUM" xdotool windowmove "$id" "$AUTH_WINDOW_X" "$AUTH_WINDOW_Y" >/dev/null 2>&1 || true
+    fi
     DISPLAY="$DISPLAY_NUM" xdotool windowraise "$id" >/dev/null 2>&1 || true
   done
   DISPLAY="$DISPLAY_NUM" xdotool windowactivate --sync "${ids[0]}" >/dev/null 2>&1 || true
@@ -172,6 +181,9 @@ while true; do
       echo "Observed Steam X11 windows, but no visible login/auth dialog was detected."
       if [ "$AUTH_RESTORE_WINDOWS" = "1" ]; then
         echo "Tried to restore/focus Steam windows automatically (`AUTH_RESTORE_WINDOWS=1`)."
+        if [ "$AUTH_NORMALIZE_WINDOWS" = "1" ]; then
+          echo "Applied window normalization (`${AUTH_WINDOW_WIDTH}x${AUTH_WINDOW_HEIGHT}+${AUTH_WINDOW_X}+${AUTH_WINDOW_Y}`) while restoring."
+        fi
       fi
       echo "Hint: window manager/UI may be headless-minimized; run ./scripts/11-debug-steam-window-state.sh for evidence."
     fi
