@@ -288,7 +288,7 @@ bootstrap_local_tailscale_userspace() {
     fi
   fi
 
-  if ! is_tailscale_running; then
+  run_local_tailscale_up() {
     echo "Bringing local tailscale online..."
     up_log_file="$(mktemp)"
     up_cmd=(tailscale_cmd up --timeout "${LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS}s")
@@ -301,8 +301,15 @@ bootstrap_local_tailscale_userspace() {
     if ! "${up_cmd[@]}" >"$up_log_file" 2>&1; then
       echo "WARN: tailscale up did not complete successfully."
       sed -n '1,30p' "$up_log_file" || true
+      rm -f "$up_log_file"
+      return 1
     fi
     rm -f "$up_log_file"
+    return 0
+  }
+
+  if ! is_tailscale_running; then
+    run_local_tailscale_up || true
   fi
 
   if ! is_tailscale_running && [ -z "$LOCAL_TAILSCALE_AUTHKEY" ]; then
@@ -314,6 +321,10 @@ bootstrap_local_tailscale_userspace() {
       fi
       sed -n '1,30p' "$login_log_file" || true
       rm -f "$login_log_file"
+      if ! is_tailscale_running; then
+        echo "Re-attempting tailscale up after interactive login..."
+        run_local_tailscale_up || true
+      fi
     else
       login_url="$(tailscale_cmd status 2>/dev/null | sed -n 's/^Log in at:[[:space:]]*//p' | head -n 1 || true)"
       if [ -n "$login_url" ]; then

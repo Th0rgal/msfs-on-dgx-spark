@@ -1,5 +1,31 @@
 # Progress Log
 
+## 2026-02-28 (16:15-16:20 UTC, userspace interactive-login bootstrap continuation fix)
+
+Validation from this checkout:
+
+- Direct DGX SSH is still unreachable without local Tailnet auth:
+  - `sshpass -p '...' ssh -o ConnectTimeout=10 th0rgal@100.77.4.93 'hostname'`
+  - result: `ssh: connect to host 100.77.4.93 port 22: Connection timed out`.
+- `bash -n scripts/90-remote-dgx-stable-check.sh` (pass).
+- Bootstrap smoke with interactive login mode now shows post-login continuation attempt in the same run:
+  - `DGX_PASS=... BOOTSTRAP_LOCAL_TAILSCALE=1 LOCAL_TAILSCALE_INTERACTIVE_LOGIN=1 LOCAL_TAILSCALE_UP_TIMEOUT_SECONDS=5 LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS=5 MAX_ATTEMPTS=1 FETCH_EVIDENCE=0 ./scripts/90-remote-dgx-stable-check.sh`
+  - key output includes:
+    - `Attempting interactive tailscale login URL retrieval...`
+    - `Re-attempting tailscale up after interactive login...`
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - factored userspace `tailscale up` into a reusable helper,
+  - when `LOCAL_TAILSCALE_INTERACTIVE_LOGIN=1`, the script now re-runs `tailscale up` after login URL/auth flow to continue bootstrap in the same invocation.
+- Updated docs:
+  - `README.md` and `docs/troubleshooting.md` now document automatic post-login `tailscale up` behavior in interactive mode.
+
+Assessment update:
+
+- Network/auth remains the active blocker from this runner (Tailnet login not completed), but interactive bootstrap behavior is now less error-prone and no longer requires a guaranteed second script run after successful login.
+
 ## 2026-02-28 (16:05-16:10 UTC, offline-DGX detection + clearer remote probe failures)
 
 Validation from this checkout:
