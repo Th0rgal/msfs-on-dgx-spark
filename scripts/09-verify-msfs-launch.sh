@@ -35,13 +35,13 @@ fi
 MANIFEST="$STEAM_DIR/steamapps/appmanifest_${MSFS_APPID}.acf"
 
 candidate_processes() {
-  pgrep -af "FlightSimulator2024|FlightSimulator\\.exe|gamelaunchhelper\\.exe|AppId=${MSFS_APPID}|proton\\.real|wineserver|rungameid/${MSFS_APPID}" || true
+  pgrep -af "FlightSimulator2024|FlightSimulator\\.exe|KittyHawkx64|gamelaunchhelper\\.exe|AppId=${MSFS_APPID}|proton\\.real|wineserver|rungameid/${MSFS_APPID}" || true
 }
 
 strong_processes() {
   local lines="$1"
   printf "%s\n" "$lines" \
-    | grep -Ei 'FlightSimulator2024(\.exe)?|FlightSimulator\.exe|gamelaunchhelper\.exe|c:\\windows\\system32\\steam\.exe.*FlightSimulator|Z:\\.*FlightSimulator' \
+    | grep -Ei 'FlightSimulator2024(\.exe)?|FlightSimulator\.exe|KittyHawkx64(\.exe)?|gamelaunchhelper\.exe|c:\\windows\\system32\\steam\.exe.*FlightSimulator|Z:\\.*FlightSimulator|MSFS2024/FlightSimulator2024\.exe' \
     | grep -Evi 'waitforexitandrun|steam-launch-wrapper|SteamLaunch AppId|pressure-vessel|/reaper' \
     || true
 }

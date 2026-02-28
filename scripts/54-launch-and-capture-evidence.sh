@@ -16,6 +16,9 @@ AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER="${AUTH_RECOVER_RUNTIME_ON_MISSING_WEB
 DISPATCH_MAX_ATTEMPTS="${DISPATCH_MAX_ATTEMPTS:-2}"
 DISPATCH_RETRY_DELAY_SECONDS="${DISPATCH_RETRY_DELAY_SECONDS:-8}"
 DISPATCH_RECOVER_ON_NO_ACCEPT="${DISPATCH_RECOVER_ON_NO_ACCEPT:-1}"
+DISPATCH_ACCEPT_WAIT_SECONDS="${DISPATCH_ACCEPT_WAIT_SECONDS:-45}"
+DISPATCH_FALLBACK_APP_LAUNCH="${DISPATCH_FALLBACK_APP_LAUNCH:-1}"
+DISPATCH_FALLBACK_WAIT_SECONDS="${DISPATCH_FALLBACK_WAIT_SECONDS:-20}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 OUT_DIR="${OUT_DIR:-$REPO_ROOT/output}"
@@ -23,6 +26,7 @@ STEAM_DIR="${STEAM_DIR:-$HOME/snap/steam/common/.local/share/Steam}"
 PFX="$STEAM_DIR/steamapps/compatdata/${MSFS_APPID}/pfx"
 
 mkdir -p "$OUT_DIR"
+RUN_START_EPOCH="$(date +%s)"
 
 if [ "$AUTH_BOOTSTRAP_STEAM_STACK" = "1" ]; then
   bootstrap_log="$OUT_DIR/auth-bootstrap-${MSFS_APPID}-${STAMP}.log"
@@ -95,7 +99,7 @@ d=1
 while [ "$d" -le "$DISPATCH_MAX_ATTEMPTS" ]; do
   dispatch_log="$OUT_DIR/dispatch-${MSFS_APPID}-${STAMP}-d${d}.log"
   set +e
-  MSFS_APPID="$MSFS_APPID" DISPLAY_NUM="$DISPLAY_NUM" WAIT_SECONDS=20 \
+  MSFS_APPID="$MSFS_APPID" DISPLAY_NUM="$DISPLAY_NUM" WAIT_SECONDS="$DISPATCH_ACCEPT_WAIT_SECONDS" \
     "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" \
     >"$dispatch_log" 2>&1
   dispatch_rc=$?
@@ -120,6 +124,16 @@ done
 
 if [ "$dispatch_rc" -ne 0 ]; then
   echo "  WARN: launch dispatch did not confirm acceptance after $DISPATCH_MAX_ATTEMPTS attempt(s) (last rc=$dispatch_rc)"
+  if [ "$DISPATCH_FALLBACK_APP_LAUNCH" = "1" ]; then
+    fallback_log="$OUT_DIR/dispatch-fallback-applaunch-${MSFS_APPID}-${STAMP}.log"
+    echo "  trying DISPLAY-bound steam -applaunch fallback"
+    set +e
+    timeout "${DISPATCH_FALLBACK_WAIT_SECONDS}s" env DISPLAY="$DISPLAY_NUM" steam -applaunch "$MSFS_APPID" \
+      >"$fallback_log" 2>&1
+    fallback_rc=$?
+    set -e
+    echo "  applaunch fallback exit code: $fallback_rc"
+  fi
 fi
 
 echo "[3/5] Runtime stability verification"
@@ -162,6 +176,37 @@ if [ -d "$PFX" ]; then
   latest_asobo="$(ls -1t "$PFX"/drive_c/users/steamuser/AppData/Roaming/Microsoft\ Flight\ Simulator\ 2024/AsoboReport-Crash.txt 2>/dev/null | head -n 1 || true)"
   if [ -n "${latest_asobo:-}" ] && [ -f "$latest_asobo" ]; then
     cp -f "$latest_asobo" "$OUT_DIR/AsoboReport-Crash-${MSFS_APPID}-${STAMP}.txt"
+  fi
+fi
+
+recent_crash_detected() {
+  local latest=""
+  local latest_ts=0
+  local f ts
+  for f in \
+    "$OUT_DIR/crashdata-${MSFS_APPID}-${STAMP}.txt" \
+    "$OUT_DIR/crashdata-${MSFS_APPID}-${STAMP}.utf8.txt" \
+    "$OUT_DIR/AsoboReport-Crash-${MSFS_APPID}-${STAMP}.txt" \
+    "$OUT_DIR"/Bifrost-*-"${MSFS_APPID}-${STAMP}.log"; do
+    [ -f "$f" ] || continue
+    ts="$(stat -c %Y "$f" 2>/dev/null || echo 0)"
+    if [ "${ts:-0}" -gt "$latest_ts" ]; then
+      latest="$f"
+      latest_ts="$ts"
+    fi
+  done
+  if [ -n "$latest" ] && [ "$latest_ts" -ge "$RUN_START_EPOCH" ]; then
+    echo "$latest"
+    return 0
+  fi
+  return 1
+}
+
+if [ "$verify_rc" -eq 2 ]; then
+  if crash_file="$(recent_crash_detected)"; then
+    echo "  INFO: crash artifacts detected for this run: $crash_file"
+    echo "  INFO: remapping verifier result 2 -> 3 (launch observed, transient crash)."
+    verify_rc=3
   fi
 fi
 

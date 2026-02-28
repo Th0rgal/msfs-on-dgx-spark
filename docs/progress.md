@@ -1,5 +1,30 @@
 # Progress Log
 
+## 2026-02-28 (14:05-14:15 UTC, local hardening: launch classification + dispatch fallback; DGX connectivity timeout)
+
+Local hardening completed in this checkout:
+
+- Updated `scripts/54-launch-and-capture-evidence.sh`:
+  - increased dispatch acceptance wait from fixed `20s` to configurable `DISPATCH_ACCEPT_WAIT_SECONDS` (default `45`),
+  - added fallback dispatch path (`DISPATCH_FALLBACK_APP_LAUNCH=1`) that runs `steam -applaunch <AppID>` on the selected display if pipe dispatch remains unaccepted,
+  - added crash-artifact-aware remap: when verifier returns `2` (`no launch observed`) but same-run crash artifacts are present, result is remapped to `3` (`transient launch/crash`), avoiding false negatives in retry policy.
+- Updated `scripts/09-verify-msfs-launch.sh`:
+  - expanded process signatures to include `KittyHawkx64` runtime names seen in recent crash evidence.
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - forwards new dispatch controls (`DISPATCH_ACCEPT_WAIT_SECONDS`, `DISPATCH_FALLBACK_APP_LAUNCH`, `DISPATCH_FALLBACK_WAIT_SECONDS`) to remote runners.
+
+Validation in this pass:
+
+- `bash -n scripts/09-verify-msfs-launch.sh scripts/54-launch-and-capture-evidence.sh scripts/90-remote-dgx-stable-check.sh` (pass).
+- attempted remote validation command:
+  - `DGX_PASS=... ALLOW_UI_AUTH_FALLBACK=1 FATAL_EXIT_CODES='' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=120 DISPATCH_MAX_ATTEMPTS=2 DISPATCH_ACCEPT_WAIT_SECONDS=45 DISPATCH_FALLBACK_APP_LAUNCH=1 DISPATCH_FALLBACK_WAIT_SECONDS=20 ./scripts/90-remote-dgx-stable-check.sh`
+  - result: SSH connectivity failure (`ssh: connect to host 100.77.4.93 port 22: Connection timed out`).
+
+Assessment update:
+
+- Current blocker for live validation is DGX network reachability, not script execution flow.
+- Once connectivity returns, rerun the command above to verify whether launch classification shifts from prior false `exit 2` to transient/crash (`exit 3`) or reaches stable runtime (`exit 0`).
+
 ## 2026-02-28 (13:45-14:50 UTC, live DGX: auth-gate recheck + remote credential-file hardening)
 
 Live checks on `spark-de79` from this checkout:
