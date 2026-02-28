@@ -1,5 +1,33 @@
 # Progress Log
 
+## 2026-02-28 (15:52-16:55 UTC, auto-load tailscale authkey file + longer interactive login window)
+
+Validation from this checkout:
+
+- Direct DGX reachability remains blocked from this runner without Tailscale auth:
+  - `sshpass -p '...' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 th0rgal@100.77.4.93 'hostname; uname -a'`
+  - result: `ssh: connect to host 100.77.4.93 port 22: Connection timed out`.
+- Remote check with userspace bootstrap now reaches deterministic Tailscale auth gate with a login URL and fails closed when unauthenticated:
+  - `DGX_PASS=... BOOTSTRAP_LOCAL_TAILSCALE=1 MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=120 STRICT_MIN_STABLE_SECONDS= ./scripts/90-remote-dgx-stable-check.sh`
+  - key output:
+    - `To authenticate, visit: https://login.tailscale.com/...`
+    - `ERROR: local tailscale is not in Running state after bootstrap.`
+- `bash -n scripts/90-remote-dgx-stable-check.sh` (pass).
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - added `LOCAL_TAILSCALE_AUTHKEY_DEFAULT_FILE` (default `$HOME/.config/msfs-on-dgx-spark/tailscale-authkey`),
+  - added `AUTO_LOAD_LOCAL_TAILSCALE_AUTHKEY_FILE` (default `1`) to auto-load file-based auth key when bootstrapping userspace Tailscale,
+  - increased default `LOCAL_TAILSCALE_LOGIN_TIMEOUT_SECONDS` from `30` to `300` to make one-time interactive auth practical in headless/container environments.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` now describe default authkey auto-load behavior and expected file location.
+
+Assessment update:
+
+- Functional blocker remains external authentication to local userspace Tailscale in this runner.
+- Once a valid local Tailscale auth state/authkey is provided, the remote DGX stable-check path is ready for end-to-end rerun without additional script patching.
+
 ## 2026-02-28 (15:46-15:55 UTC, tailscale authkey-file fail-closed bootstrap hardening)
 
 Validation from this checkout:
