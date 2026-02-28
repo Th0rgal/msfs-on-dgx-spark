@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-02-28 (11:46 UTC)
+
+Live validation on `spark-de79` after hardening script display selection:
+
+- Added `scripts/lib-display.sh` with resilient display resolution:
+  - uses `DISPLAY_NUM` override when provided
+  - falls back to `00-select-msfs-display.sh` when available
+  - otherwise auto-detects active displays (`:2`, `:1`, `:0`, `:3`) and finally active `Xvfb`
+- Wired the helper into core entrypoints:
+  - `scripts/05-resume-headless-msfs.sh`
+  - `scripts/06-verify-msfs-state.sh`
+  - `scripts/07-await-login-and-install.sh`
+  - `scripts/08-finalize-auth-and-run-msfs.sh`
+  - `scripts/09-verify-msfs-launch.sh`
+  - `scripts/54-launch-and-capture-evidence.sh`
+
+Why this matters:
+
+- Launch/evidence scripts no longer hard-fail when `00-select-msfs-display.sh` is missing in older checkouts or ad-hoc runtime copies.
+- This removed the immediate blocker observed on host (`No such file or directory` on the display helper) and restored unattended launch verification.
+
+Fresh runtime evidence from this pass:
+
+- `MSFS_APPID=2537590 WAIT_SECONDS=60 MIN_STABLE_SECONDS=20 ./scripts/54-launch-and-capture-evidence.sh`
+- Exit code: `0`
+- Verifier output: `RESULT: MSFS reached stable runtime (>=20s)`
+- Strong process evidence included:
+  - `.../Proton - Experimental/.../wine64 c:\\windows\\system32\\steam.exe .../MSFS2024/FlightSimulator2024.exe`
+  - `Z:\\...\\MSFS2024\\FlightSimulator2024.exe`
+- Artifacts:
+  - `output/dispatch-2537590-20260228T114630Z.log`
+  - `output/verify-launch-2537590-20260228T114630Z.log`
+  - `output/content-state-2537590-20260228T114630Z.log`
+  - `output/compat-state-2537590-20260228T114630Z.log`
+
 ## 2026-02-27
 
 Validated on live DGX Spark host `spark-de79`:

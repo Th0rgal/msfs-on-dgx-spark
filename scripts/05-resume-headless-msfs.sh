@@ -5,8 +5,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 "$SCRIPT_DIR/17-fix-xdg-user-dirs.sh" >/dev/null 2>&1 || true
 "$SCRIPT_DIR/18-fix-steam-uri-handler.sh" >/dev/null 2>&1 || true
+source "$SCRIPT_DIR/lib-display.sh"
 
-DISPLAY_NUM="${DISPLAY_NUM:-$("$SCRIPT_DIR/00-select-msfs-display.sh")}"
+DISPLAY_NUM="$(resolve_display_num "$SCRIPT_DIR")"
 RESOLUTION="${RESOLUTION:-1920x1080x24}"
 MSFS_APPID="${MSFS_APPID:-2537590}"
 ACTION="${1:-install}"   # install|launch

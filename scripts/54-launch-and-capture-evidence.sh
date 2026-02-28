@@ -4,7 +4,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MSFS_APPID="${MSFS_APPID:-2537590}"
-DISPLAY_NUM="${DISPLAY_NUM:-$("$SCRIPT_DIR/00-select-msfs-display.sh")}"
+source "$SCRIPT_DIR/lib-display.sh"
+DISPLAY_NUM="$(resolve_display_num "$SCRIPT_DIR")"
 WAIT_SECONDS="${WAIT_SECONDS:-240}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-45}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
