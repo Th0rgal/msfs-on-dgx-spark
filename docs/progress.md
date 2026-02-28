@@ -7,6 +7,12 @@ Live checks on `spark-de79` from this checkout:
 - `DGX_PASS=... ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1`
   - trailing `KEY=VALUE` overrides are now accepted and applied.
   - run reached remote auth gate and exited deterministically with `exit 7` (`Steam session unauthenticated`), with evidence synced locally.
+- `DGX_PASS=... ALLOW_UI_AUTH_FALLBACK=1 FATAL_EXIT_CODES=7 ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 WAIT_SECONDS=60`
+  - remote runner consumed forwarded auth/retry policy and proceeded past auth gate to launch dispatch.
+  - launch dispatch still not accepted in that session (`GameAction`/`StartSession` counters unchanged), verifier result: `no MSFS launch process detected after 60s`.
+  - remote evidence synced locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T130020Z/output/dispatch-2537590-20260228T130022Z.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T130020Z/output/verify-launch-2537590-20260228T130022Z.log`
 
 Repo hardening in this pass:
 
@@ -21,7 +27,7 @@ Repo hardening in this pass:
 Assessment update:
 
 - Runtime path remains healthy; current blocker remains Steam account auth state (`steamid=0`).
-- Remote orchestration is now more controllable for unattended and semi-interactive recovery workflows.
+- Remote orchestration is now more controllable for unattended and semi-interactive recovery workflows, and launch acceptance failures are captured with deterministic, synced evidence.
 
 ## 2026-02-28 (12:52-12:57 UTC, live DGX: remote auth-recovery path added)
 
