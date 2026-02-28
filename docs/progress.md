@@ -1,5 +1,26 @@
 # Progress Log
 
+## 2026-02-28 (23:45-23:50 UTC, secret removal + sudo guardrails)
+
+Validation from this checkout:
+
+- Removed hardcoded plaintext sudo password usage from `scripts/26-enable-userns-and-fex-thunks.sh`.
+- Added privileged-command helper behavior in `26-enable-userns-and-fex-thunks.sh`:
+  - runs directly as root,
+  - uses `sudo -n` when available,
+  - optionally uses `SUDO_PASSWORD` for non-interactive automation,
+  - otherwise fails fast with actionable instructions.
+- Expanded CI validator guardrails in `scripts/99-ci-validate.sh`:
+  - fails if scripts contain hardcoded `echo '...' | sudo -S` patterns.
+- Updated contributor guidance in `README.md` to include the new CI secret guardrail.
+- Local verification:
+  - `bash -n scripts/26-enable-userns-and-fex-thunks.sh` passes.
+  - `./scripts/99-ci-validate.sh` passes in this workspace.
+
+Assessment update:
+
+- This removes a repository-embedded credential and adds automated regression prevention for similar secret-handling mistakes.
+
 ## 2026-02-28 (23:56-23:59 UTC, CI docs-reference + strict-mode guardrails)
 
 Validation from this checkout:

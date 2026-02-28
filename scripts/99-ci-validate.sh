@@ -60,4 +60,13 @@ for script_path in "${critical_strict_scripts[@]}"; do
   fi
 done
 
+echo "==> Hardcoded sudo password guardrails"
+hardcoded_sudo_pattern="echo[[:space:]]+[\"'][^\"']+[\"'][[:space:]]*\\|[[:space:]]*sudo[[:space:]]+-S"
+if grep -RInE "${hardcoded_sudo_pattern}" scripts/*.sh >/dev/null; then
+  echo "ERROR: found disallowed hardcoded password pipe into sudo -S." >&2
+  echo "Use root, sudo -n, or environment-driven secure injection instead." >&2
+  grep -RInE "${hardcoded_sudo_pattern}" scripts/*.sh >&2 || true
+  exit 1
+fi
+
 echo "CI validation passed."
