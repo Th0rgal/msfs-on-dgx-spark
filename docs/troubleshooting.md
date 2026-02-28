@@ -61,6 +61,10 @@ apt list --upgradable 2>/dev/null | grep nvidia
 
 **Cause**: Steam logged out (for example after runtime recovery/restart), so launch dispatch cannot be accepted.
 
+`54-launch-and-capture-evidence.sh` now captures auth-debug artifacts by default on this failure path:
+- `output/steam-debug-<timestamp>.log` (window/process snapshot)
+- `output/steam-debug-<timestamp>.png` (root screenshot, when ImageMagick `import` is available)
+
 **Fix**:
 ```bash
 # Verify Steam auth/session state

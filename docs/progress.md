@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-02-28 (13:02-13:05 UTC, live DGX: auth-gate diagnostics hardening + UI-signal trust fix)
+
+Live checks on `spark-de79` from this checkout:
+
+- `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - run reached auth gate and exited deterministically with `exit 7` (`Steam session unauthenticated`).
+  - remote evidence synced locally:
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T130420Z/output/auth-state-2537590-20260228T130422Z.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T130420Z/output/steam-debug-20260228T130422Z.log`
+    - `output/remote-runs/msfs-on-dgx-spark-run-20260228T130420Z/output/steam-debug-20260228T130422Z.png`
+- Re-ran after auth-detector patch:
+  - `output/remote-runs/msfs-on-dgx-spark-run-20260228T130448Z/output/auth-state-2537590-20260228T130450Z.log`
+  - auth status now reports `unauthenticated` (not misleading `ui-only evidence`) when no visible Steam window exists.
+
+Repo hardening in this pass:
+
+- Updated `scripts/54-launch-and-capture-evidence.sh`:
+  - on auth-gate failure, now auto-runs `scripts/11-debug-steam-window-state.sh` (default `AUTH_DEBUG_ON_FAILURE=1`),
+  - records debug artifact paths directly inside `auth-state-*.log`.
+- Tightened `scripts/lib-steam-auth.sh` UI fallback:
+  - requires visible Steam-related windows before using UI evidence,
+  - treats visible `Sign in to Steam`/`Steam Guard` dialogs as unauthenticated,
+  - avoids false `ui-only evidence` reports when no window is visible.
+- Updated docs:
+  - `README.md` documents new auth-debug artifact capture.
+  - `docs/troubleshooting.md` includes auth-debug outputs for exit-code `7` triage.
+
+Assessment update:
+
+- Launch reliability remains blocked by real Steam logout/auth drift in current DGX session.
+- Auth failures now carry deterministic UI/process evidence, improving remote recovery speed and reducing trust-boundary ambiguity.
+
 ## 2026-02-28 (12:59-13:05 UTC, live DGX: remote orchestrator policy passthrough hardening)
 
 Live checks on `spark-de79` from this checkout:

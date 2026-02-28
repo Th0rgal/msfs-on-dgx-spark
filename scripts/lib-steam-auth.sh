@@ -47,11 +47,28 @@ steamid_from_connection_log() {
 
 steam_ui_authenticated() {
   local display_num="${1:-}"
+  local has_visible_window=1
   [ -n "$display_num" ] || return 1
 
   command -v xdotool >/dev/null 2>&1 || return 1
-  DISPLAY="$display_num" xdotool search --name "Steam" >/dev/null 2>&1 \
-    && ! DISPLAY="$display_num" xdotool search --name "Sign in to Steam" >/dev/null 2>&1
+
+  # Require at least one visible Steam-related window as UI evidence.
+  if DISPLAY="$display_num" xdotool search --onlyvisible --class steam >/dev/null 2>&1; then
+    has_visible_window=0
+  elif DISPLAY="$display_num" xdotool search --onlyvisible --name "Steam|Friends|Library|Store" >/dev/null 2>&1; then
+    has_visible_window=0
+  fi
+
+  if [ "$has_visible_window" -ne 0 ]; then
+    return 1
+  fi
+
+  # A visible login/guard dialog means session is not authenticated.
+  if DISPLAY="$display_num" xdotool search --onlyvisible --name "Sign in to Steam|Steam Guard" >/dev/null 2>&1; then
+    return 1
+  fi
+
+  return 0
 }
 
 steam_auth_status() {

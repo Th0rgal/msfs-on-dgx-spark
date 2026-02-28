@@ -9,6 +9,7 @@ source "$SCRIPT_DIR/lib-steam-auth.sh"
 DISPLAY_NUM="$(resolve_display_num "$SCRIPT_DIR")"
 WAIT_SECONDS="${WAIT_SECONDS:-240}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-45}"
+AUTH_DEBUG_ON_FAILURE="${AUTH_DEBUG_ON_FAILURE:-1}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 OUT_DIR="${OUT_DIR:-$REPO_ROOT/output}"
@@ -19,11 +20,25 @@ mkdir -p "$OUT_DIR"
 
 auth_log="$OUT_DIR/auth-state-${MSFS_APPID}-${STAMP}.log"
 if ! steam_session_authenticated "$DISPLAY_NUM" "$STEAM_DIR"; then
+  debug_note=""
+  if [ "$AUTH_DEBUG_ON_FAILURE" = "1" ] && [ -x "$SCRIPT_DIR/11-debug-steam-window-state.sh" ]; then
+    set +e
+    debug_output="$(
+      DISPLAY_NUM="$DISPLAY_NUM" OUT_DIR="$OUT_DIR" "$SCRIPT_DIR/11-debug-steam-window-state.sh" 2>&1
+    )"
+    set -e
+    debug_report="$(printf '%s\n' "$debug_output" | sed -n 's/^report=//p' | tail -n 1)"
+    debug_screenshot="$(printf '%s\n' "$debug_output" | sed -n 's/^screenshot=//p' | tail -n 1)"
+    if [ -n "${debug_report:-}" ] || [ -n "${debug_screenshot:-}" ]; then
+      debug_note="  Auth debug: report=${debug_report:-n/a} screenshot=${debug_screenshot:-n/a}"
+    fi
+  fi
   {
     echo "RESULT: Steam session unauthenticated; launch skipped."
     echo "  DISPLAY: $DISPLAY_NUM"
     echo "  Steam dir: $STEAM_DIR"
     echo "  Auth status: $(steam_auth_status "$DISPLAY_NUM" "$STEAM_DIR" || true)"
+    [ -n "$debug_note" ] && echo "$debug_note"
     echo "Hint: complete Steam login/Steam Guard in the active UI session, then retry."
   } | tee "$auth_log"
   exit 7
