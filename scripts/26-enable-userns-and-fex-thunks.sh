@@ -7,10 +7,32 @@ if [ -z "$ROOTFS_NAME" ]; then
   ROOTFS_NAME="Fedora_43"
 fi
 
+run_privileged() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+    return
+  fi
+
+  if sudo -n true >/dev/null 2>&1; then
+    sudo "$@"
+    return
+  fi
+
+  if [ -n "${SUDO_PASSWORD:-}" ]; then
+    # Optional non-interactive path for automation; password is never stored in repo.
+    printf '%s\n' "$SUDO_PASSWORD" | sudo -S "$@"
+    return
+  fi
+
+  echo "ERROR: privileged command requires sudo access." >&2
+  echo "Set up passwordless sudo, run this script as root, or export SUDO_PASSWORD for non-interactive automation." >&2
+  exit 1
+}
+
 echo "[1/3] Enabling user namespaces (AppArmor gate)..."
-echo "odkwgfQM" | sudo -S sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 >/dev/null
+run_privileged sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 >/dev/null
 # This key may be missing on some builds.
-echo "odkwgfQM" | sudo -S sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=0 >/dev/null 2>&1 || true
+run_privileged sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=0 >/dev/null 2>&1 || true
 
 echo "[2/3] Writing FEX thunk config..."
 mkdir -p "$HOME/.fex-emu"
