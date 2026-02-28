@@ -101,6 +101,12 @@ DGX_PASS='<password>' ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS
 
 # Temporarily allow UI-only auth signal during interactive recovery windows
 DGX_PASS='<password>' ALLOW_UI_AUTH_FALLBACK=1 FATAL_EXIT_CODES='' ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1
+
+# If direct DGX SSH is unreachable from this runner, route via bastion/jump host
+DGX_PASS='<password>' DGX_SSH_PROXY_JUMP='user@jump-host' ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1
+
+# Alternative proxy command mode (custom transport)
+DGX_PASS='<password>' DGX_SSH_PROXY_COMMAND='ssh -W %h:%p jump-host' ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1
 ```
 
 If auth recovery times out and debug logs show no visible Steam/login windows, `58-ensure-steam-auth.sh` now reports that condition explicitly; use `AUTH_USE_STEAM_LOGIN_CLI=1` (default) with credentials to avoid depending on visible UI prompts.

@@ -1,5 +1,31 @@
 # Progress Log
 
+## 2026-02-28 (15:10-15:18 UTC, connectivity hardening: SSH proxy/jump support for remote DGX checks)
+
+Validation from this checkout:
+
+- Re-ran remote verification against DGX:
+  - `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 STRICT_MIN_STABLE_SECONDS=45 STRICT_MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - result: unreachable from this runner (`spark-de79` and `100.77.4.93` timed out on `22` and `2222`), with deterministic diagnostics and per-endpoint probe errors.
+- Script-level validation:
+  - `bash -n scripts/90-remote-dgx-stable-check.sh` (pass).
+  - `DGX_SSH_PROXY_JUMP='a@b' DGX_SSH_PROXY_COMMAND='ssh -W %h:%p c' ./scripts/90-remote-dgx-stable-check.sh` exits immediately with explicit mutual-exclusion error (expected).
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - added `DGX_SSH_PROXY_JUMP` support (`ssh -J`),
+  - added `DGX_SSH_PROXY_COMMAND` support (`-o ProxyCommand=...`),
+  - added `DGX_SSH_EXTRA_OPTS_CSV` for additional comma-separated `ssh -o` options,
+  - enforced fail-closed mutual exclusion between `DGX_SSH_PROXY_JUMP` and `DGX_SSH_PROXY_COMMAND`.
+- Updated docs:
+  - `README.md`, `docs/setup-guide.md`, and `docs/troubleshooting.md` now document proxy/jump usage for environments without direct Tailscale pathing.
+
+Assessment update:
+
+- Current blocker in this runner remains direct DGX network reachability.
+- Remote orchestration can now be routed through bastion/jump infrastructure without patching scripts, improving odds of running local DGX checks from restricted environments.
+
 ## 2026-02-28 (15:06-15:08 UTC, local hardening: deterministic endpoint probing + dedupe)
 
 Local validation from this checkout:

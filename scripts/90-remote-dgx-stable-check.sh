@@ -33,6 +33,9 @@ SSH_SERVER_ALIVE_INTERVAL_SECONDS="${SSH_SERVER_ALIVE_INTERVAL_SECONDS:-10}"
 SSH_SERVER_ALIVE_COUNT_MAX="${SSH_SERVER_ALIVE_COUNT_MAX:-2}"
 DGX_PROBE_ATTEMPTS="${DGX_PROBE_ATTEMPTS:-2}"
 DGX_PROBE_BACKOFF_SECONDS="${DGX_PROBE_BACKOFF_SECONDS:-2}"
+DGX_SSH_PROXY_JUMP="${DGX_SSH_PROXY_JUMP:-}"
+DGX_SSH_PROXY_COMMAND="${DGX_SSH_PROXY_COMMAND:-}"
+DGX_SSH_EXTRA_OPTS_CSV="${DGX_SSH_EXTRA_OPTS_CSV:-}"
 
 MSFS_APPID="${MSFS_APPID:-2537590}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-20}"
@@ -97,6 +100,24 @@ BASE_SSH_COMMON_OPTS=(
   -o ServerAliveInterval="${SSH_SERVER_ALIVE_INTERVAL_SECONDS}"
   -o ServerAliveCountMax="${SSH_SERVER_ALIVE_COUNT_MAX}"
 )
+if [ -n "$DGX_SSH_PROXY_JUMP" ] && [ -n "$DGX_SSH_PROXY_COMMAND" ]; then
+  echo "ERROR: set only one of DGX_SSH_PROXY_JUMP or DGX_SSH_PROXY_COMMAND."
+  exit 1
+fi
+if [ -n "$DGX_SSH_PROXY_JUMP" ]; then
+  BASE_SSH_COMMON_OPTS+=(-J "$DGX_SSH_PROXY_JUMP")
+fi
+if [ -n "$DGX_SSH_PROXY_COMMAND" ]; then
+  BASE_SSH_COMMON_OPTS+=(-o "ProxyCommand=$DGX_SSH_PROXY_COMMAND")
+fi
+if [ -n "$DGX_SSH_EXTRA_OPTS_CSV" ]; then
+  IFS=',' read -r -a _ssh_extra_opts <<< "$DGX_SSH_EXTRA_OPTS_CSV"
+  for _opt in "${_ssh_extra_opts[@]}"; do
+    _opt="$(echo "$_opt" | xargs)"
+    [ -z "$_opt" ] && continue
+    BASE_SSH_COMMON_OPTS+=(-o "$_opt")
+  done
+fi
 build_ssh_base_cmd() {
   local port="$1"
   local cmd=(ssh "${BASE_SSH_COMMON_OPTS[@]}" -p "$port")
@@ -336,7 +357,7 @@ fi
 if [ -z "$selected_host" ]; then
   echo "ERROR: unable to reach DGX over SSH for any host candidate: $DGX_HOST_CANDIDATES"
   echo "$probe_target_summary"
-  echo "Hint: verify Tailscale connectivity, set DGX_PORT_CANDIDATES, or set DGX_HOST to a reachable endpoint."
+  echo "Hint: verify Tailscale connectivity, set DGX_PORT_CANDIDATES, set DGX_HOST to a reachable endpoint, or use DGX_SSH_PROXY_JUMP / DGX_SSH_PROXY_COMMAND."
   if [ "${#failed_candidates[@]}" -gt 0 ]; then
     echo "Per-candidate SSH probe errors:"
     for failed in "${failed_candidates[@]}"; do

@@ -272,6 +272,21 @@ DGX_HOST=100.77.4.93 DGX_USER=th0rgal MSFS_APPID=2537590 MIN_STABLE_SECONDS=20 \
 MAX_ATTEMPTS=2 WAIT_SECONDS=120 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
+If your local runner cannot reach DGX directly, route SSH through a jump host:
+
+```bash
+DGX_PASS='<password>' DGX_SSH_PROXY_JUMP='user@jump-host' \
+MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh
+```
+
+Or provide a custom proxy command:
+
+```bash
+DGX_PASS='<password>' DGX_SSH_PROXY_COMMAND='ssh -W %h:%p jump-host' \
+DGX_SSH_EXTRA_OPTS_CSV='IdentityFile=/path/to/key,UserKnownHostsFile=/dev/null' \
+./scripts/90-remote-dgx-stable-check.sh
+```
+
 Optional staged gate (baseline + strict):
 
 ```bash
