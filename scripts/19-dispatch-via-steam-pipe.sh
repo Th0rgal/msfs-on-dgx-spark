@@ -5,6 +5,7 @@ set -euo pipefail
 MSFS_APPID="${MSFS_APPID:-2537590}"
 WAIT_SECONDS="${WAIT_SECONDS:-15}"
 LAUNCH_URI="${LAUNCH_URI:-steam://rungameid/${MSFS_APPID}}"
+PIPE_WRITE_TIMEOUT_SECONDS="${PIPE_WRITE_TIMEOUT_SECONDS:-3}"
 
 STEAM_PIPE="${STEAM_PIPE:-$HOME/snap/steam/common/.steam/steam.pipe}"
 STEAM_DIR="${STEAM_DIR:-$HOME/snap/steam/common/.local/share/Steam}"
@@ -30,10 +31,17 @@ echo "Dispatch via steam pipe"
 echo "  AppID: $MSFS_APPID"
 echo "  URI:   $LAUNCH_URI"
 echo "  Pipe:  $STEAM_PIPE"
+echo "  Pipe write timeout: ${PIPE_WRITE_TIMEOUT_SECONDS}s"
 echo "  GameAction before: $before_ga"
 echo "  StartSession before: $before_start"
 
-printf '%s\n' "$LAUNCH_URI" > "$STEAM_PIPE"
+if ! timeout "${PIPE_WRITE_TIMEOUT_SECONDS}s" sh -c 'printf "%s\n" "$1" > "$2"' sh "$LAUNCH_URI" "$STEAM_PIPE"; then
+  echo "RESULT: failed to write launch URI to steam pipe within timeout."
+  echo "Hint: this usually means Steam has no active pipe consumer in the current session."
+  pgrep -af "steam|steamwebhelper|steamwebhelper_sniper_wrap|pressure-vessel|pv-bwrap" | sed -n "1,80p" || true
+  exit 5
+fi
+
 sleep "$WAIT_SECONDS"
 
 after_ga="$(grep -F -c "GameAction [AppID ${MSFS_APPID}" "$CONSOLE_LOG" || true)"

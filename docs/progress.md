@@ -1465,3 +1465,35 @@ Assessment update:
 
 - The strict layer-disable experiment is now scripted and ready, but runtime validation is blocked in this environment.
 - It must be executed on `spark-de79` (or equivalent host with Steam state present) to determine if DX12 init behavior changes.
+
+## 2026-02-28 (05:58 UTC, dispatch hardening + single-namespace recovery cycle)
+
+New likely fix path addressed:
+
+- The latest blocker sequence shows Steam launch-control breakage before MSFS runtime init:
+  - intermittent/blocked `steam.pipe` writes,
+  - webhelper/bootstrap instability,
+  - stale mixed runtime namespaces.
+- Most likely untried remediation is a strict single-runtime startup path (`snap run steam`) with runtime-root rebuild before dispatch.
+
+Changes made:
+
+- Hardened `scripts/19-dispatch-via-steam-pipe.sh`:
+  - added `PIPE_WRITE_TIMEOUT_SECONDS` (default `3`) so writes to `steam.pipe` cannot hang indefinitely,
+  - emits a focused process snapshot on timeout.
+- Added `scripts/51-test-single-namespace-runtime-rebuild-dispatch.sh`:
+  - kills existing Steam/webhelper/pressure-vessel tree,
+  - non-destructively moves `steamrt64/pv-runtime` and `steamrt64/var/tmp-*` aside,
+  - relaunches Steam strictly through `snap run steam -silent` in one namespace,
+  - waits for pipe restoration, dispatches via script `19`, and captures auth/dispatch/webhelper evidence.
+
+Execution in this workspace:
+
+- Script run attempted with explicit repo/output overrides.
+- This machine does not have Steam Snap state at expected path, so cycle exits early:
+  - `ERROR: Steam dir not found: /root/snap/steam/common/.local/share/Steam`
+
+Assessment update:
+
+- The next most likely fix has now been encoded as a reproducible cycle.
+- End-to-end validation remains blocked in this workspace and must run on `spark-de79` (or an equivalent host that has active Steam Snap state and logs).
