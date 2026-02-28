@@ -1,5 +1,45 @@
 # Progress Log
 
+## 2026-02-28 (12:14-12:18 UTC, live DGX: strict-60 boundary confirmation + retry-recovery hardening)
+
+Live staged check on `spark-de79` from this checkout:
+
+- Command:
+  - `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 STRICT_MIN_STABLE_SECONDS=60 STRICT_MAX_ATTEMPTS=2 ./scripts/90-remote-dgx-stable-check.sh`
+- Baseline gate passed on attempt 1 (`>=30s` stable runtime).
+- Strict gate failed on both attempts with consistent transient runtime:
+  - `Strong runtime lifetime: ~35s (<60s)`
+- Remote evidence:
+  - `/home/th0rgal/msfs-on-dgx-spark-run-20260228T121438Z/output/verify-launch-2537590-20260228T121532Z.log`
+  - `/home/th0rgal/msfs-on-dgx-spark-run-20260228T121438Z/output/verify-launch-2537590-20260228T121640Z.log`
+- Additional follow-up validations:
+  - `...run-20260228T121928Z`: strict-recovery path executed (`steam-runtime-recover-...log` present), strict gate still failed.
+  - `...run-20260228T123240Z`: recovery now triggers on `verify exit code: 2` and remote evidence sync completes cleanly.
+
+Repo hardening in this pass:
+
+- Added `scripts/57-recover-steam-runtime.sh`:
+  - stops Steam/webhelper/pressure-vessel tree,
+  - optionally moves `steamrt64/pv-runtime` and `steamrt64/var/tmp-*` aside,
+  - relaunches `snap run steam -silent` in a single namespace,
+  - waits for `steam.pipe` restoration and records a recovery log.
+- Extended retry/staged/remote runners:
+  - `scripts/55-run-until-stable-runtime.sh` now supports optional inter-attempt recovery:
+    - `RECOVER_BETWEEN_ATTEMPTS=1`
+    - `RECOVER_ON_EXIT_CODES` (default `2,3,4`)
+  - `scripts/56-run-staged-stability-check.sh` now supports strict-only recovery toggle:
+    - `STRICT_RECOVER_BETWEEN_ATTEMPTS=1`
+  - `scripts/90-remote-dgx-stable-check.sh` now propagates recovery controls to remote runs.
+- Follow-up fix from live test:
+  - recovery backups are now stored under `steamrt64/recovery-backups/` (not `output/`) to keep remote evidence sync deterministic.
+  - default `RECOVER_ON_EXIT_CODES` expanded to `2,3,4` so retry recovery also runs on `no launch observed`.
+- Updated README with remote strict-recovery example and script index entries for `56`, `57`, and `90`.
+
+Assessment update:
+
+- Baseline local-run proof remains reproducible.
+- Strict 60s stability remains the active boundary, but retries can now be configured to rebuild runtime state between attempts instead of reusing potentially contaminated namespaces.
+
 ## 2026-02-28 (12:03-12:09 UTC, live DGX: staged stability gating + fresh reproducibility)
 
 Live validation on `spark-de79` with this checkout:

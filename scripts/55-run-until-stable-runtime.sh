@@ -8,6 +8,8 @@ MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-20}"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-5}"
 ATTEMPT_PAUSE_SECONDS="${ATTEMPT_PAUSE_SECONDS:-12}"
 WAIT_SECONDS="${WAIT_SECONDS:-240}"
+RECOVER_BETWEEN_ATTEMPTS="${RECOVER_BETWEEN_ATTEMPTS:-0}"
+RECOVER_ON_EXIT_CODES="${RECOVER_ON_EXIT_CODES:-2,3,4}"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 OUT_DIR="${OUT_DIR:-$REPO_ROOT/output}"
 
@@ -22,6 +24,12 @@ echo "MSFS retry-to-stable runner"
 echo "  AppID: $MSFS_APPID"
 echo "  Target stable window: ${MIN_STABLE_SECONDS}s"
 echo "  Max attempts: $MAX_ATTEMPTS"
+echo "  Retry recovery: ${RECOVER_BETWEEN_ATTEMPTS} (on exit codes: ${RECOVER_ON_EXIT_CODES})"
+
+should_recover() {
+  local rc="$1"
+  [[ ",${RECOVER_ON_EXIT_CODES}," == *",${rc},"* ]]
+}
 
 a=1
 while [ "$a" -le "$MAX_ATTEMPTS" ]; do
@@ -52,6 +60,16 @@ while [ "$a" -le "$MAX_ATTEMPTS" ]; do
   fi
 
   if [ "$a" -lt "$MAX_ATTEMPTS" ]; then
+    if [ "$RECOVER_BETWEEN_ATTEMPTS" = "1" ] && should_recover "$rc"; then
+      recover_log="$OUT_DIR/recover-between-attempts-${MSFS_APPID}-${stamp}-a${a}.log"
+      echo "  running Steam runtime recovery before retry"
+      set +e
+      OUT_DIR="$OUT_DIR" "$SCRIPT_DIR/57-recover-steam-runtime.sh" 2>&1 | tee "$recover_log"
+      recover_rc=${PIPESTATUS[0]}
+      set -e
+      echo "  recovery exit code: $recover_rc"
+      echo "  recovery log: $recover_log"
+    fi
     echo "  waiting ${ATTEMPT_PAUSE_SECONDS}s before retry"
     sleep "$ATTEMPT_PAUSE_SECONDS"
   fi

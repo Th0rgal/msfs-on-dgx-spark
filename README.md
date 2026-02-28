@@ -130,6 +130,9 @@ DGX_PASS='<password>' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 ./scripts/90-remote-d
 
 # 13. Optional: staged reliability check (baseline + strict gate) on remote DGX
 DGX_PASS='<password>' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=2 STRICT_MIN_STABLE_SECONDS=45 STRICT_MAX_ATTEMPTS=3 ./scripts/90-remote-dgx-stable-check.sh
+
+# 14. Optional: staged reliability with automatic Steam runtime recovery between strict retries
+DGX_PASS='<password>' MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 STRICT_MIN_STABLE_SECONDS=60 STRICT_MAX_ATTEMPTS=2 STRICT_RECOVER_BETWEEN_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
 `09-verify-msfs-launch.sh` now requires a stable runtime window (default `30s`) to avoid false positives from short-lived launch wrappers. Tune with `MIN_STABLE_SECONDS=<N>`.
@@ -137,6 +140,8 @@ Launch/verify scripts now auto-select an NVIDIA-backed X display when available 
 `90-remote-dgx-stable-check.sh` now resolves a deterministic remote run directory and, by default, copies the remote `output/` evidence bundle back to local `output/remote-runs/<run-dir>/output` (`FETCH_EVIDENCE=0` disables copying).
 Remote evidence fetch is performed even when remote verification fails, so strict-gate/transient runs still produce local artifacts.
 `90-remote-dgx-stable-check.sh` can optionally run a staged gate when `STRICT_MIN_STABLE_SECONDS` is set: baseline success proves local run-path health; strict gate captures higher-stability confidence without conflating the two.
+When strict retries are enabled, `STRICT_RECOVER_BETWEEN_ATTEMPTS=1` can rebuild Steam runtime state between retries to reduce contamination from prior transient launch attempts.
+Default recovery-trigger exit codes are `2,3,4` (`no launch observed`, `transient launch`, and `launch seen but not stable in time window`); override with `RECOVER_ON_EXIT_CODES`.
 
 See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [docs/progress.md](docs/progress.md) for live validation notes.
 
@@ -171,6 +176,9 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 │   ├── 53-preflight-runtime-repair.sh # Repairs pv-adverb, Vulkan overrides, and MSFS package paths
 │   ├── 54-launch-and-capture-evidence.sh # One-shot launch + verification + crash artifact collection
 │   ├── 55-run-until-stable-runtime.sh # Repeat launch+verify cycles until stable runtime succeeds
+│   ├── 56-run-staged-stability-check.sh # Baseline + strict staged stability gates
+│   ├── 57-recover-steam-runtime.sh # Rebuild Steam runtime namespace between retries
+│   ├── 90-remote-dgx-stable-check.sh # Sync current checkout to DGX and run staged checks remotely
 │   ├── 14-install-ge-proton.sh # Install latest GE-Proton into compatibilitytools.d
 └── docs/
     ├── setup-guide.md         # Detailed setup walkthrough
