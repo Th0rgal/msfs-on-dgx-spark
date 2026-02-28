@@ -213,6 +213,12 @@ After launch is triggered, verify a candidate MSFS process is actually running:
 ./scripts/09-verify-msfs-launch.sh
 ```
 
+By default this verifier requires a stable runtime window of 30 seconds (to avoid wrapper-only false positives). Override when needed:
+
+```bash
+MIN_STABLE_SECONDS=20 ./scripts/09-verify-msfs-launch.sh
+```
+
 ## Phase 4: Remote Streaming (Optional)
 
 If the DGX Spark is headless or you want to play from another device, use Sunshine + Moonlight.

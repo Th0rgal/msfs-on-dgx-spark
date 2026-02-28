@@ -1565,3 +1565,33 @@ Current blocker after this pass:
 
 - End-to-end "first frame" MSFS stability is still constrained by runtime/graphics init compatibility on ARM+FEX+Proton.
 - However, launch control path reliability improved: install state persists, webhelper loop is recoverable, and dispatch/session creation is again deterministic.
+
+## 2026-02-28 (11:11-11:14 UTC, live DGX: stable-runtime verification hardening)
+
+Live retest on `spark-de79` with current scripts:
+
+- Install/auth path remains healthy for MSFS 2024 (`AppID 2537590`):
+  - manifest present and fully downloaded (`BytesDownloaded == BytesToDownload`)
+  - Steam session authenticated in UI and launch dispatch accepted.
+- Existing launch verification was too optimistic: it could report success on short-lived wrapper processes.
+
+Repo hardening applied:
+
+- `scripts/09-verify-msfs-launch.sh`
+  - now distinguishes wrapper-only launch signals from strong runtime signals,
+  - requires a configurable stability window (`MIN_STABLE_SECONDS`, default 30s),
+  - returns explicit `transient launch` failure when processes exit before stability.
+- `scripts/08-finalize-auth-and-run-msfs.sh`
+  - passes `LAUNCH_MIN_STABLE_SECONDS` through to launch verification,
+  - updates step numbering and failure messaging to reflect stable-runtime criteria.
+
+Live validation result after patch (`LAUNCH_MIN_STABLE_SECONDS=20`):
+
+- Launch reached wrapper/runtime startup but exited before stable runtime.
+- New verifier correctly reported:
+  - `RESULT: transient launch only; processes exited before stability window`
+  - `Wrapper-only lifetime: ~5s`
+
+Assessment update:
+
+- The launch-control path is reproducible; the blocker is now explicitly measured as a pre-stability runtime exit, not a false positive "running" state.

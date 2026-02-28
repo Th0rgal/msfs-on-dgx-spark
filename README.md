@@ -116,12 +116,14 @@ NVIDIA GB10 Blackwell GPU
 # 8. Optional: one-shot finalize (Steam Guard code -> install -> launch)
 ./scripts/08-finalize-auth-and-run-msfs.sh <STEAM_GUARD_CODE>
 
-# 9. Optional: verify MSFS launch process state
+# 9. Optional: verify MSFS launch reached stable runtime
 ./scripts/09-verify-msfs-launch.sh
 
 # 10. Optional: run DGX runtime preflight repairs directly
 ./scripts/53-preflight-runtime-repair.sh
 ```
+
+`09-verify-msfs-launch.sh` now requires a stable runtime window (default `30s`) to avoid false positives from short-lived launch wrappers. Tune with `MIN_STABLE_SECONDS=<N>`.
 
 See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [docs/progress.md](docs/progress.md) for live validation notes.
 

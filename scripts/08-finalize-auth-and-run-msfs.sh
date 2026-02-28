@@ -8,6 +8,7 @@ LOGIN_WAIT_SECONDS="${LOGIN_WAIT_SECONDS:-3600}"
 INSTALL_WAIT_SECONDS="${INSTALL_WAIT_SECONDS:-0}"  # 0 = do not wait for full download
 POLL_SECONDS="${POLL_SECONDS:-20}"
 LAUNCH_VERIFY_WAIT_SECONDS="${LAUNCH_VERIFY_WAIT_SECONDS:-120}"
+LAUNCH_MIN_STABLE_SECONDS="${LAUNCH_MIN_STABLE_SECONDS:-30}"
 ALLOW_OFFLINE_LAUNCH_IF_INSTALLED="${ALLOW_OFFLINE_LAUNCH_IF_INSTALLED:-1}"
 GUARD_CODE="${1:-${STEAM_GUARD_CODE:-}}"
 
@@ -85,21 +86,21 @@ if [ -z "$STEAM_DIR" ]; then
 fi
 MANIFEST="$STEAM_DIR/steamapps/appmanifest_${MSFS_APPID}.acf"
 
-echo "[1/7] Ensuring headless stack is running..."
+echo "[1/8] Ensuring headless stack is running..."
 "$(dirname "$0")/05-resume-headless-msfs.sh" install >/tmp/msfs-resume.log 2>&1 || true
 
 if [ -n "$GUARD_CODE" ]; then
-  echo "[2/7] Attempting Steam Guard code entry via xdotool on ${DISPLAY_NUM}..."
+  echo "[2/8] Attempting Steam Guard code entry via xdotool on ${DISPLAY_NUM}..."
   if command -v xdotool >/dev/null 2>&1; then
     DISPLAY="$DISPLAY_NUM" xdotool key --delay 80 "$GUARD_CODE" Return || true
   else
     echo "WARN: xdotool not installed; cannot auto-type Steam Guard code."
   fi
 else
-  echo "[2/7] No Steam Guard code supplied; skipping code entry."
+  echo "[2/8] No Steam Guard code supplied; skipping code entry."
 fi
 
-echo "[3/7] Waiting for authenticated Steam session..."
+echo "[3/8] Waiting for authenticated Steam session..."
 start_ts="$(date +%s)"
 allow_offline=0
 while true; do
@@ -198,10 +199,11 @@ if command -v import >/dev/null 2>&1; then
 fi
 
 echo "[8/8] Verifying launch process state..."
-if WAIT_SECONDS="$LAUNCH_VERIFY_WAIT_SECONDS" "$(dirname "$0")/09-verify-msfs-launch.sh"; then
+if WAIT_SECONDS="$LAUNCH_VERIFY_WAIT_SECONDS" MIN_STABLE_SECONDS="$LAUNCH_MIN_STABLE_SECONDS" "$(dirname "$0")/09-verify-msfs-launch.sh"; then
   echo "Launch verification succeeded."
 else
-  echo "WARN: Launch verification did not find a running MSFS process yet."
+  echo "WARN: Launch verification failed to confirm stable MSFS runtime."
+  echo "Hint: this usually means a transient init crash if launch wrappers appeared."
   if [ "$allow_offline" -eq 1 ]; then
     echo "Note: this run used offline launch mode because auth was not detected."
   fi
