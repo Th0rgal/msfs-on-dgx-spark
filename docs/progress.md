@@ -2379,3 +2379,23 @@ Assessment update:
 
 - "Can run locally on DGX Spark" is now reproduced in both direct and remote-clean execution paths with a 30s stability threshold.
 - Remaining work is runtime longevity/interactive-frame hardening beyond current stable-launch thresholds.
+
+## 2026-02-28 (15:03 UTC, remote SSH probe hardening)
+
+Local follow-up hardening in this checkout focused on remote orchestration reliability when DGX connectivity is flaky or temporarily unavailable:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh` with explicit multi-attempt SSH probe support:
+  - `DGX_PROBE_ATTEMPTS` (default `2`)
+  - `DGX_PROBE_BACKOFF_SECONDS` (default `2`)
+- Added per-candidate SSH error summaries so failures are attributable by host/port pair.
+- Kept existing diagnostics (`tailscale`/route/ping/tcp checks) and now prepend concrete probe failures before diagnostic dump.
+
+Validation:
+
+- `bash -n scripts/90-remote-dgx-stable-check.sh` passes.
+- Fast smoke test against unreachable local endpoint shows expected fail-fast behavior with clear probe error detail:
+  - `DGX_HOST=127.0.0.1 DGX_PORT_CANDIDATES=1 DGX_PROBE_ATTEMPTS=1 SSH_CONNECT_TIMEOUT_SECONDS=2 FETCH_EVIDENCE=0 ./scripts/90-remote-dgx-stable-check.sh`
+
+Current blocker in this runner:
+
+- `spark-de79` / `100.77.4.93` remains unreachable from this environment (SSH timeout + ICMP no reply), so live DGX runtime validation could not be re-executed in this pass.

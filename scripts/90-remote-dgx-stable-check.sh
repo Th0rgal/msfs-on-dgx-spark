@@ -30,6 +30,8 @@ SSH_CONNECT_TIMEOUT_SECONDS="${SSH_CONNECT_TIMEOUT_SECONDS:-15}"
 SSH_CONNECTION_ATTEMPTS="${SSH_CONNECTION_ATTEMPTS:-1}"
 SSH_SERVER_ALIVE_INTERVAL_SECONDS="${SSH_SERVER_ALIVE_INTERVAL_SECONDS:-10}"
 SSH_SERVER_ALIVE_COUNT_MAX="${SSH_SERVER_ALIVE_COUNT_MAX:-2}"
+DGX_PROBE_ATTEMPTS="${DGX_PROBE_ATTEMPTS:-2}"
+DGX_PROBE_BACKOFF_SECONDS="${DGX_PROBE_BACKOFF_SECONDS:-2}"
 
 MSFS_APPID="${MSFS_APPID:-2537590}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-20}"
@@ -192,6 +194,33 @@ append_host_candidate() {
   fi
 }
 
+probe_ssh_candidate() {
+  local host="$1"
+  local port="$2"
+  local attempt=1
+  local stderr_file
+  stderr_file="$(mktemp)"
+  while [ "$attempt" -le "$DGX_PROBE_ATTEMPTS" ]; do
+    mapfile -t _probe_ssh_cmd < <(build_ssh_base_cmd "$port")
+    echo "Checking DGX SSH reachability (${DGX_USER}@${host}, port ${port}, attempt ${attempt}/${DGX_PROBE_ATTEMPTS})..." >&2
+    if "${_probe_ssh_cmd[@]}" "${DGX_USER}@${host}" "echo 'DGX SSH reachable' >/dev/null" 2>"$stderr_file"; then
+      rm -f "$stderr_file"
+      return 0
+    fi
+    if [ "$attempt" -lt "$DGX_PROBE_ATTEMPTS" ] && [ "$DGX_PROBE_BACKOFF_SECONDS" -gt 0 ]; then
+      sleep "$DGX_PROBE_BACKOFF_SECONDS"
+    fi
+    attempt=$((attempt + 1))
+  done
+  if [ -s "$stderr_file" ]; then
+    tr '\n' ' ' <"$stderr_file" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'
+  else
+    echo "ssh probe failed with no stderr output"
+  fi
+  rm -f "$stderr_file"
+  return 1
+}
+
 if [ "$DGX_DISCOVER_TAILSCALE_IPS" = "1" ] && command -v tailscale >/dev/null 2>&1; then
   discovered_hosts="$DGX_HOST_CANDIDATES"
   if is_tailscale_daemon_ready; then
@@ -214,6 +243,7 @@ fi
 
 selected_host=""
 selected_port=""
+failed_candidates=()
 IFS=',' read -r -a host_candidates <<< "$DGX_HOST_CANDIDATES"
 IFS=',' read -r -a port_candidates <<< "$DGX_PORT_CANDIDATES"
 for host_candidate in "${host_candidates[@]}"; do
@@ -222,12 +252,12 @@ for host_candidate in "${host_candidates[@]}"; do
   for port_candidate in "${port_candidates[@]}"; do
     port_candidate="$(echo "$port_candidate" | xargs)"
     [ -z "$port_candidate" ] && continue
-    mapfile -t SSH_BASE_CMD < <(build_ssh_base_cmd "$port_candidate")
-    echo "Checking DGX SSH reachability (${DGX_USER}@${host_candidate}, port ${port_candidate})..."
-    if "${SSH_BASE_CMD[@]}" "${DGX_USER}@${host_candidate}" "echo 'DGX SSH reachable' >/dev/null"; then
+    if probe_error="$(probe_ssh_candidate "$host_candidate" "$port_candidate")"; then
       selected_host="$host_candidate"
       selected_port="$port_candidate"
       break 2
+    else
+      failed_candidates+=("${host_candidate}:${port_candidate} -> ${probe_error}")
     fi
   done
 done
@@ -236,6 +266,12 @@ if [ -z "$selected_host" ]; then
   echo "ERROR: unable to reach DGX over SSH for any host candidate: $DGX_HOST_CANDIDATES"
   echo "Ports tested: $DGX_PORT_CANDIDATES"
   echo "Hint: verify Tailscale connectivity, set DGX_PORT_CANDIDATES, or set DGX_HOST to a reachable endpoint."
+  if [ "${#failed_candidates[@]}" -gt 0 ]; then
+    echo "Per-candidate SSH probe errors:"
+    for failed in "${failed_candidates[@]}"; do
+      echo "  - $failed"
+    done
+  fi
   print_reachability_diagnostics "$DGX_HOST_CANDIDATES" "$DGX_PORT_CANDIDATES"
   exit 1
 fi
