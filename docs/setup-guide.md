@@ -287,6 +287,8 @@ DGX_SSH_EXTRA_OPTS_CSV='IdentityFile=/path/to/key,UserKnownHostsFile=/dev/null' 
 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
+If all configured DGX targets are Tailscale-only and local `tailscaled` is unavailable, remote checks now fail fast by default (`DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=1`). Set `DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=0` to force full timeout-based SSH probing.
+
 Optional staged gate (baseline + strict):
 
 ```bash

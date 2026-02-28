@@ -109,6 +109,8 @@ DGX_PASS='<password>' DGX_SSH_PROXY_JUMP='user@jump-host' ./scripts/90-remote-dg
 DGX_PASS='<password>' DGX_SSH_PROXY_COMMAND='ssh -W %h:%p jump-host' ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1
 ```
 
+By default, `90-remote-dgx-stable-check.sh` now exits early when all DGX candidates resolve to Tailscale endpoints and local `tailscaled` is unavailable (`DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=1`). Set `DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=0` only when you intentionally want full SSH timeout probing.
+
 If auth recovery times out and debug logs show no visible Steam/login windows, `58-ensure-steam-auth.sh` now reports that condition explicitly; use `AUTH_USE_STEAM_LOGIN_CLI=1` (default) with credentials to avoid depending on visible UI prompts.
 It also attempts Steam window restore/focus by default (`AUTH_RESTORE_WINDOWS=1`) so headless-minimized dialogs can be surfaced automatically.
 Window geometry normalization is also enabled during restore (`AUTH_NORMALIZE_WINDOWS=1`), resizing/moving tiny or off-screen Steam windows to a visible region by default.

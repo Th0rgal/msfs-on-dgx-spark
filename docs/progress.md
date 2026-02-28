@@ -1,5 +1,28 @@
 # Progress Log
 
+## 2026-02-28 (15:20-15:21 UTC, remote-check fail-fast for Tailscale-unavailable runners)
+
+Validation from this checkout:
+
+- `bash -n scripts/90-remote-dgx-stable-check.sh` (pass).
+- Re-ran remote verification command:
+  - `DGX_PASS=... MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1 STRICT_MIN_STABLE_SECONDS=45 STRICT_MAX_ATTEMPTS=1 ./scripts/90-remote-dgx-stable-check.sh`
+  - result now fails fast with explicit root cause instead of spending full probe timeouts:
+    - `ERROR: local tailscaled is unavailable and all DGX candidates are Tailscale endpoints.`
+
+Repo hardening in this pass:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh`:
+  - added `DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE` (default `1`),
+  - detects Tailscale-only candidates from both direct IPs and hostnames that resolve into `100.64.0.0/10`,
+  - exits early with deterministic guidance when no proxy/jump path is configured and local `tailscaled` is unavailable.
+- Updated docs:
+  - `README.md` and `docs/troubleshooting.md` now document the new fast-fail default and override (`DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE=0`).
+
+Assessment update:
+
+- Current blocker in this runner is unchanged (no local Tailscale daemon and no SSH route to DGX), but failure latency and diagnosis quality are improved for repeated remote-check runs.
+
 ## 2026-02-28 (15:10-15:18 UTC, connectivity hardening: SSH proxy/jump support for remote DGX checks)
 
 Validation from this checkout:

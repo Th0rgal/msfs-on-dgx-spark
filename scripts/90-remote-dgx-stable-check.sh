@@ -36,6 +36,7 @@ DGX_PROBE_BACKOFF_SECONDS="${DGX_PROBE_BACKOFF_SECONDS:-2}"
 DGX_SSH_PROXY_JUMP="${DGX_SSH_PROXY_JUMP:-}"
 DGX_SSH_PROXY_COMMAND="${DGX_SSH_PROXY_COMMAND:-}"
 DGX_SSH_EXTRA_OPTS_CSV="${DGX_SSH_EXTRA_OPTS_CSV:-}"
+DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE="${DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE:-1}"
 
 MSFS_APPID="${MSFS_APPID:-2537590}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-20}"
@@ -144,6 +145,69 @@ fi
 
 is_tailscale_daemon_ready() {
   command -v tailscale >/dev/null 2>&1 && tailscale status >/dev/null 2>&1
+}
+
+is_tailscale_ip() {
+  local ip="$1"
+  [[ "$ip" =~ ^100\.([6-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3}$ ]]
+}
+
+is_likely_tailscale_host() {
+  local host="$1"
+  if [[ "$host" == *.ts.net ]]; then
+    return 0
+  fi
+  # Tailscale IPs are allocated from 100.64.0.0/10.
+  if is_tailscale_ip "$host"; then
+    return 0
+  fi
+  # Hostnames may still resolve to a Tailscale IP (for example `spark-de79`).
+  if command -v getent >/dev/null 2>&1; then
+    resolved_ip="$(getent ahostsv4 "$host" 2>/dev/null | awk 'NR==1 {print $1}')"
+    resolved_ip="$(echo "$resolved_ip" | xargs)"
+    if [ -n "$resolved_ip" ] && is_tailscale_ip "$resolved_ip"; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+all_hosts_require_tailscale() {
+  local host_csv="$1"
+  IFS=',' read -r -a _hosts <<< "$host_csv"
+  local saw_host=0
+  for _host in "${_hosts[@]}"; do
+    _host="$(echo "$_host" | xargs)"
+    [ -z "$_host" ] && continue
+    saw_host=1
+    if ! is_likely_tailscale_host "$_host"; then
+      return 1
+    fi
+  done
+  [ "$saw_host" -eq 1 ]
+}
+
+all_endpoints_require_tailscale() {
+  local endpoint_csv="$1"
+  local default_port="$2"
+  IFS=',' read -r -a _endpoints <<< "$endpoint_csv"
+  local saw_endpoint=0
+  for _endpoint in "${_endpoints[@]}"; do
+    _endpoint="$(echo "$_endpoint" | xargs)"
+    [ -z "$_endpoint" ] && continue
+    if split_result="$(split_endpoint_candidate "$_endpoint" "$default_port")"; then
+      endpoint_host="${split_result%%,*}"
+      endpoint_host="$(echo "$endpoint_host" | xargs)"
+      [ -z "$endpoint_host" ] && continue
+      saw_endpoint=1
+      if ! is_likely_tailscale_host "$endpoint_host"; then
+        return 1
+      fi
+    else
+      return 1
+    fi
+  done
+  [ "$saw_endpoint" -eq 1 ]
 }
 
 print_reachability_diagnostics() {
@@ -310,6 +374,26 @@ DGX_ENDPOINT_CANDIDATES="$(normalize_csv_candidates "$DGX_ENDPOINT_CANDIDATES")"
 probe_target_summary="Ports tested: $DGX_PORT_CANDIDATES"
 if [ -n "$DGX_ENDPOINT_CANDIDATES" ]; then
   probe_target_summary="Endpoints tested: $DGX_ENDPOINT_CANDIDATES"
+fi
+
+if [ "$DGX_FAST_FAIL_ON_UNREACHABLE_TAILSCALE" = "1" ] && [ -z "$DGX_SSH_PROXY_JUMP" ] && [ -z "$DGX_SSH_PROXY_COMMAND" ]; then
+  if ! is_tailscale_daemon_ready; then
+    requires_tailscale=0
+    if [ -n "$DGX_ENDPOINT_CANDIDATES" ]; then
+      if all_endpoints_require_tailscale "$DGX_ENDPOINT_CANDIDATES" "$DGX_PORT"; then
+        requires_tailscale=1
+      fi
+    elif all_hosts_require_tailscale "$DGX_HOST_CANDIDATES"; then
+      requires_tailscale=1
+    fi
+    if [ "$requires_tailscale" -eq 1 ]; then
+      echo "ERROR: local tailscaled is unavailable and all DGX candidates are Tailscale endpoints."
+      echo "$probe_target_summary"
+      echo "Hint: start tailscaled, set DGX_SSH_PROXY_JUMP / DGX_SSH_PROXY_COMMAND, or provide a non-Tailscale DGX_HOST/DGX_ENDPOINT_CANDIDATES."
+      print_reachability_diagnostics "$DGX_HOST_CANDIDATES" "$DGX_PORT_CANDIDATES"
+      exit 1
+    fi
+  fi
 fi
 
 selected_host=""
