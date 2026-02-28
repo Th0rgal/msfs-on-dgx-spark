@@ -21,8 +21,10 @@ done
 DGX_HOST="${DGX_HOST:-}"
 DGX_USER="${DGX_USER:-th0rgal}"
 DGX_PASS="${DGX_PASS:-}"
+DGX_PORT="${DGX_PORT:-22}"
 DGX_TARGET_DIR="${DGX_TARGET_DIR:-\$HOME/msfs-on-dgx-spark-run-\$(date -u +%Y%m%dT%H%M%SZ)}"
 DGX_HOST_CANDIDATES="${DGX_HOST_CANDIDATES:-spark-de79,100.77.4.93}"
+DGX_DISCOVER_TAILSCALE_IPS="${DGX_DISCOVER_TAILSCALE_IPS:-1}"
 SSH_CONNECT_TIMEOUT_SECONDS="${SSH_CONNECT_TIMEOUT_SECONDS:-15}"
 SSH_CONNECTION_ATTEMPTS="${SSH_CONNECTION_ATTEMPTS:-1}"
 SSH_SERVER_ALIVE_INTERVAL_SECONDS="${SSH_SERVER_ALIVE_INTERVAL_SECONDS:-10}"
@@ -86,13 +88,22 @@ SSH_OPTS=(
   -o ConnectionAttempts="${SSH_CONNECTION_ATTEMPTS}"
   -o ServerAliveInterval="${SSH_SERVER_ALIVE_INTERVAL_SECONDS}"
   -o ServerAliveCountMax="${SSH_SERVER_ALIVE_COUNT_MAX}"
+  -p "${DGX_PORT}"
+)
+SCP_OPTS=(
+  -o StrictHostKeyChecking=no
+  -o ConnectTimeout="${SSH_CONNECT_TIMEOUT_SECONDS}"
+  -o ConnectionAttempts="${SSH_CONNECTION_ATTEMPTS}"
+  -o ServerAliveInterval="${SSH_SERVER_ALIVE_INTERVAL_SECONDS}"
+  -o ServerAliveCountMax="${SSH_SERVER_ALIVE_COUNT_MAX}"
+  -P "${DGX_PORT}"
 )
 if [ -n "$DGX_HOST" ]; then
   DGX_HOST_CANDIDATES="$DGX_HOST"
 fi
 
 SSH_BASE_CMD=(ssh "${SSH_OPTS[@]}")
-SCP_BASE_CMD=(scp "${SSH_OPTS[@]}")
+SCP_BASE_CMD=(scp "${SCP_OPTS[@]}")
 
 if [ -n "$DGX_PASS" ]; then
   if ! command -v sshpass >/dev/null 2>&1; then
@@ -132,11 +143,48 @@ print_reachability_diagnostics() {
       ping -c 1 -W 2 "$_h" >/dev/null 2>&1 && echo "icmp: reachable" || echo "icmp: no-reply"
     fi
     if command -v nc >/dev/null 2>&1; then
-      nc -z -w 2 "$_h" 22 >/dev/null 2>&1 && echo "tcp/22: open" || echo "tcp/22: closed-or-timeout"
+      nc -z -w 2 "$_h" "$DGX_PORT" >/dev/null 2>&1 && echo "tcp/${DGX_PORT}: open" || echo "tcp/${DGX_PORT}: closed-or-timeout"
     fi
   done
   echo "===== end diagnostics ====="
 }
+
+append_host_candidate() {
+  local new_host="$1"
+  local existing_list="$2"
+  if [ -z "$new_host" ]; then
+    echo "$existing_list"
+    return 0
+  fi
+  IFS=',' read -r -a _hosts <<< "$existing_list"
+  for _h in "${_hosts[@]}"; do
+    if [ "$(echo "$_h" | xargs)" = "$new_host" ]; then
+      echo "$existing_list"
+      return 0
+    fi
+  done
+  if [ -z "$existing_list" ]; then
+    echo "$new_host"
+  else
+    echo "${existing_list},${new_host}"
+  fi
+}
+
+if [ "$DGX_DISCOVER_TAILSCALE_IPS" = "1" ] && command -v tailscale >/dev/null 2>&1; then
+  discovered_hosts="$DGX_HOST_CANDIDATES"
+  IFS=',' read -r -a _candidate_hosts <<< "$DGX_HOST_CANDIDATES"
+  for candidate in "${_candidate_hosts[@]}"; do
+    candidate="$(echo "$candidate" | xargs)"
+    [ -z "$candidate" ] && continue
+    if resolved_ip="$(tailscale ip -4 "$candidate" 2>/dev/null | head -n 1)"; then
+      resolved_ip="$(echo "$resolved_ip" | xargs)"
+      if [ -n "$resolved_ip" ]; then
+        discovered_hosts="$(append_host_candidate "$resolved_ip" "$discovered_hosts")"
+      fi
+    fi
+  done
+  DGX_HOST_CANDIDATES="$discovered_hosts"
+fi
 
 selected_host=""
 IFS=',' read -r -a host_candidates <<< "$DGX_HOST_CANDIDATES"

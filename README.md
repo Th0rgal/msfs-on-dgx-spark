@@ -162,6 +162,7 @@ When the auth gate fails, `54-launch-and-capture-evidence.sh` now captures Steam
 `90-remote-dgx-stable-check.sh` now resolves a deterministic remote run directory and, by default, copies the remote `output/` evidence bundle back to local `output/remote-runs/<run-dir>/output` (`FETCH_EVIDENCE=0` disables copying).
 Remote evidence fetch is performed even when remote verification fails, so strict-gate/transient runs still produce local artifacts.
 `90-remote-dgx-stable-check.sh` can optionally run a staged gate when `STRICT_MIN_STABLE_SECONDS` is set: baseline success proves local run-path health; strict gate captures higher-stability confidence without conflating the two.
+`90-remote-dgx-stable-check.sh` supports `DGX_PORT=<port>` for non-default SSH ports and auto-discovers Tailscale IPv4 endpoints from the candidate host list by default (`DGX_DISCOVER_TAILSCALE_IPS=1`, disable with `0`).
 When strict retries are enabled, `STRICT_RECOVER_BETWEEN_ATTEMPTS=1` can rebuild Steam runtime state between retries to reduce contamination from prior transient launch attempts.
 Default recovery-trigger exit codes are `2,3,4` (`no launch observed`, `transient launch`, and `launch seen but not stable in time window`); override with `RECOVER_ON_EXIT_CODES`.
 When auth drift is expected, `AUTO_REAUTH_ON_AUTH_FAILURE=1` runs `58-ensure-steam-auth.sh` remotely before verification; for unattended recovery provide `STEAM_USERNAME`/`STEAM_PASSWORD` (login form) and optionally `STEAM_GUARD_CODE` (2FA).
