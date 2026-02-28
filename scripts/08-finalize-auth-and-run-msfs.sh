@@ -8,6 +8,7 @@ LOGIN_WAIT_SECONDS="${LOGIN_WAIT_SECONDS:-3600}"
 INSTALL_WAIT_SECONDS="${INSTALL_WAIT_SECONDS:-0}"  # 0 = do not wait for full download
 POLL_SECONDS="${POLL_SECONDS:-20}"
 LAUNCH_VERIFY_WAIT_SECONDS="${LAUNCH_VERIFY_WAIT_SECONDS:-120}"
+ALLOW_OFFLINE_LAUNCH_IF_INSTALLED="${ALLOW_OFFLINE_LAUNCH_IF_INSTALLED:-1}"
 GUARD_CODE="${1:-${STEAM_GUARD_CODE:-}}"
 
 find_steam_dir() {
@@ -66,6 +67,17 @@ manifest_progress() {
   ' "$manifest"
 }
 
+manifest_is_fully_installed() {
+  local manifest="$1"
+  [ -f "$manifest" ] || return 1
+  local dl todo
+  dl="$(awk -F '"' '/"BytesDownloaded"/ {print $4; exit}' "$manifest")"
+  todo="$(awk -F '"' '/"BytesToDownload"/ {print $4; exit}' "$manifest")"
+  [ -n "$dl" ] || dl=0
+  [ -n "$todo" ] || todo=0
+  [ "$todo" -gt 0 ] && [ "$dl" -ge "$todo" ]
+}
+
 STEAM_DIR="$(find_steam_dir || true)"
 if [ -z "$STEAM_DIR" ]; then
   echo "ERROR: Steam directory not found."
@@ -89,11 +101,18 @@ fi
 
 echo "[3/7] Waiting for authenticated Steam session..."
 start_ts="$(date +%s)"
+allow_offline=0
 while true; do
   if steam_session_authenticated; then
     sid="$(steamid_from_processes || true)"
     [ -z "$sid" ] && sid="ui-detected"
     echo "Authenticated Steam session detected: steamid=$sid"
+    break
+  fi
+
+  if [ "$ALLOW_OFFLINE_LAUNCH_IF_INSTALLED" = "1" ] && manifest_is_fully_installed "$MANIFEST"; then
+    allow_offline=1
+    echo "Steam auth not detected, but manifest shows full install; continuing in offline launch mode."
     break
   fi
 
@@ -112,19 +131,23 @@ echo "[4/7] Ensuring Steam Play compatibility mappings..."
 "$(dirname "$0")/10-enable-steam-play.sh" >/tmp/msfs-enable-steamplay.log 2>&1 || true
 
 echo "[5/7] Triggering install and checking manifest..."
-DISPLAY="$DISPLAY_NUM" steam "steam://install/${MSFS_APPID}" >/tmp/msfs-install-uri.log 2>&1 || true
+if manifest_is_fully_installed "$MANIFEST"; then
+  echo "Manifest already shows a fully downloaded install; skipping install trigger."
+else
+  DISPLAY="$DISPLAY_NUM" steam "steam://install/${MSFS_APPID}" >/tmp/msfs-install-uri.log 2>&1 || true
 
-wait_manifest_start="$(date +%s)"
-while [ ! -f "$MANIFEST" ]; do
-  elapsed=$(( $(date +%s) - wait_manifest_start ))
-  if [ "$elapsed" -ge 300 ]; then
-    echo "ERROR: Manifest did not appear within 300s: $MANIFEST"
-    echo "Steam UI may still need one manual click to confirm install."
-    exit 3
-  fi
-  printf "  waiting manifest... (%ss)\n" "$elapsed"
-  sleep "$POLL_SECONDS"
-done
+  wait_manifest_start="$(date +%s)"
+  while [ ! -f "$MANIFEST" ]; do
+    elapsed=$(( $(date +%s) - wait_manifest_start ))
+    if [ "$elapsed" -ge 300 ]; then
+      echo "ERROR: Manifest did not appear within 300s: $MANIFEST"
+      echo "Steam UI may still need one manual click to confirm install."
+      exit 3
+    fi
+    printf "  waiting manifest... (%ss)\n" "$elapsed"
+    sleep "$POLL_SECONDS"
+  done
+fi
 
 manifest_progress "$MANIFEST"
 
@@ -153,7 +176,9 @@ if [ "$INSTALL_WAIT_SECONDS" -gt 0 ]; then
 fi
 
 echo "[6/7] Launching MSFS via ~/launch-msfs.sh ..."
-if [ -x "$HOME/launch-msfs.sh" ]; then
+if [ -x "$(dirname "$0")/19-dispatch-via-steam-pipe.sh" ]; then
+  WAIT_SECONDS=20 "$(dirname "$0")/19-dispatch-via-steam-pipe.sh" >/tmp/msfs-launch.log 2>&1 || true
+elif [ -x "$HOME/launch-msfs.sh" ]; then
   GAME_ARG="2020"
   if [ "$MSFS_APPID" = "2537590" ]; then
     GAME_ARG="2024"
@@ -174,6 +199,9 @@ if WAIT_SECONDS="$LAUNCH_VERIFY_WAIT_SECONDS" "$(dirname "$0")/09-verify-msfs-la
   echo "Launch verification succeeded."
 else
   echo "WARN: Launch verification did not find a running MSFS process yet."
+  if [ "$allow_offline" -eq 1 ]; then
+    echo "Note: this run used offline launch mode because auth was not detected."
+  fi
 fi
 
 echo "Done. Review /tmp/msfs-launch.log and run scripts/06-verify-msfs-state.sh for current status."

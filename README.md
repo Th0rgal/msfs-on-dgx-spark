@@ -129,9 +129,10 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 | Research & documentation | Done |
 | Vulkan driver fix | Validated on DGX (580.95.05 Vulkan active) |
 | FEX + Steam installation | Validated (Steam Snap on ARM64) |
-| MSFS 2020 launch attempt | In progress (blocked at Steam Guard login) |
-| MSFS 2020 playable | Pending full install + first boot |
-| MSFS 2024 attempt | Not started |
+| MSFS 2024 install | Done (`AppID 2537590`, manifest present, bytes fully downloaded) |
+| MSFS launch dispatch | Done (Steam pipe dispatch + `StartSession` + running process tree observed) |
+| First-frame stability | In progress (runtime/init crash path still under investigation) |
+| MSFS 2020 parity path | Pending |
 | Performance tuning (DLSS, MFG) | Not started |
 
 ## Repository Structure
@@ -148,6 +149,7 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 │   ├── 06-verify-msfs-state.sh # Verify readiness/install state + capture Steam screen
 │   ├── 07-await-login-and-install.sh # Wait for Steam auth and auto-queue MSFS install
 │   ├── 08-finalize-auth-and-run-msfs.sh # One-shot auth/install/launch orchestrator
+│   ├── 52-install-pvadverb-fex-wrapper.sh # Repair pressure-vessel host pv-adverb path on ARM
 │   ├── 14-install-ge-proton.sh # Install latest GE-Proton into compatibilitytools.d
 └── docs/
     ├── setup-guide.md         # Detailed setup walkthrough

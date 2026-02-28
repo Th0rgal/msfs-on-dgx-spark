@@ -1523,3 +1523,30 @@ Why this matters:
 Current highest-priority blocker:
 
 - pressure-vessel webhelper startup is stuck on missing `pv-adverb` execution path in runtime context, preventing reliable dispatch consumption and making launch attempts nondeterministic.
+
+## 2026-02-28 (10:56-11:01 UTC, live DGX: pv-adverb shim validation + finalize hardening)
+
+Live DGX validation on `spark-de79` confirmed and improved the current launch path:
+
+- Reproduced the active webhelper failure loop in `webhelper-linux.txt`:
+  - `bwrap: execvp /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb: No such file or directory`
+- Verified that this path can be recovered by providing a host-side `pv-adverb` wrapper and re-testing under Steam's `_v2-entry-point`.
+- After shimmed `pv-adverb` recovery, webhelper startup progressed (no repeated `execvp ... pv-adverb` loop), and Steam resumed accepting pipe dispatches for `AppID 2537590`.
+- Confirmed fresh launch acceptance via `scripts/19-dispatch-via-steam-pipe.sh`:
+  - `StartSession` count increased (`before=158`, `after=160`)
+  - `AppID 2537590 state changed : Fully Installed,App Running`
+
+Repo updates from this pass:
+
+- Added `scripts/52-install-pvadverb-fex-wrapper.sh`:
+  - installs `/usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb` as a host wrapper running x86 helper through `FEXInterpreter`,
+  - keeps backup of any previous host shim.
+- Hardened `scripts/08-finalize-auth-and-run-msfs.sh`:
+  - supports `ALLOW_OFFLINE_LAUNCH_IF_INSTALLED=1` (default) to continue when Steam auth detection is flaky but manifest is fully downloaded,
+  - skips install URI step if manifest already indicates full download,
+  - prefers pipe dispatch (`scripts/19-dispatch-via-steam-pipe.sh`) for launch to avoid fragile URI dispatch.
+
+Current blocker after this pass:
+
+- End-to-end "first frame" MSFS stability is still constrained by runtime/graphics init compatibility on ARM+FEX+Proton.
+- However, launch control path reliability improved: install state persists, webhelper loop is recoverable, and dispatch/session creation is again deterministic.

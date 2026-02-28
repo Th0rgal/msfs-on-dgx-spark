@@ -190,6 +190,23 @@ For a single command that can enter Steam Guard (if provided), queue install, an
 ./scripts/08-finalize-auth-and-run-msfs.sh <STEAM_GUARD_CODE>
 ```
 
+If Steam webhelper is crash-looping with:
+`bwrap: execvp .../pv-adverb: No such file or directory`,
+install the host `pv-adverb` wrapper once (requires sudo):
+
+```bash
+./scripts/52-install-pvadverb-fex-wrapper.sh
+```
+
+Then restart the flow:
+
+```bash
+./scripts/08-finalize-auth-and-run-msfs.sh
+```
+
+`08-finalize-auth-and-run-msfs.sh` now supports offline launch continuation for already downloaded builds.
+Set `ALLOW_OFFLINE_LAUNCH_IF_INSTALLED=0` to force strict authenticated-session behavior.
+
 After launch is triggered, verify a candidate MSFS process is actually running:
 
 ```bash
