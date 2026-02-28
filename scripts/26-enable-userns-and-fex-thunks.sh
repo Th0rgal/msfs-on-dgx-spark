@@ -13,6 +13,12 @@ run_privileged() {
     return
   fi
 
+  if ! command -v sudo >/dev/null 2>&1; then
+    echo "ERROR: sudo is required for non-root execution." >&2
+    echo "Run this script as root or install sudo." >&2
+    exit 1
+  fi
+
   if sudo -n true >/dev/null 2>&1; then
     sudo "$@"
     return
