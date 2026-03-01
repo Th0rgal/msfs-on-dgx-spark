@@ -1,5 +1,21 @@
 # Progress Log
 
+## 2026-03-01 (CI local markdown-link integrity checks)
+
+Validation from this checkout:
+
+- Extended `scripts/99-ci-validate.sh` with local markdown-link integrity checks across all tracked markdown files.
+- The validator now extracts inline markdown links and fails when a relative/local target does not exist.
+- Link validation intentionally skips external schemes (`http:`, `https:`, `mailto:`, etc.) and anchor-only links.
+- Updated `README.md` contributing guidance to include this new docs-integrity guardrail.
+- Local verification:
+  - `bash -n scripts/99-ci-validate.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a documentation reliability gap where broken local links could ship unnoticed and degrade onboarding/troubleshooting workflows.
+
 ## 2026-03-01 (unique numbered-script prefix guardrails)
 
 Validation from this checkout:
