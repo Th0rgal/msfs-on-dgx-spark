@@ -1,5 +1,19 @@
 # Progress Log
 
+## 2026-03-01 (tracked-markdown docs integrity guardrails)
+
+Validation from this checkout:
+
+- Expanded `scripts/99-ci-validate.sh` docs script-reference checks to scan all tracked markdown files (`git ls-files '*.md'`) instead of only a fixed subset.
+- Fixed one stale historical script reference in this log that pointed to a removed legacy trace script path.
+- Local verification:
+  - `bash -n scripts/99-ci-validate.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a documentation-drift gap where stale script references outside the previously-scanned docs set could silently survive and break command copy/paste reliability.
+
 ## 2026-03-01 (expanded strict-mode CI guardrails across critical orchestration chain)
 
 Validation from this checkout:
@@ -2800,7 +2814,7 @@ Assessment update:
 
 Live validation on `spark-de79` against the current runtime state:
 
-- Re-ran latest package/bootstrap trace flow (`scripts/53-trace-msfs-package-probes-and-retest.sh` in remote working copy).
+- Re-ran latest package/bootstrap trace flow (legacy `53-trace-msfs-package-probes-and-retest.sh` from the remote working copy at that time).
 - Bootstrap confirms MSFS 2024 package content is present under canonical tree (`markers=260`) and symlink bridge/UserCfg path rewrites are applied.
 - Dispatch is currently blocked upstream of game launch due to Steam runtime/webhelper instability in this session:
   - repeated `bwrap: execvp /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb: No such file or directory`
