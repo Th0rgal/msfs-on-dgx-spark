@@ -67,6 +67,10 @@ acquire_script_lock() {
     echo "ERROR: MSFS_FORCE_MKDIR_LOCK must be 0 or 1 (got: $force_mkdir_lock)"
     return 1
   fi
+  if [[ "$lock_reclaim_stale" != "0" && "$lock_reclaim_stale" != "1" ]]; then
+    echo "ERROR: MSFS_LOCK_RECLAIM_STALE must be 0 or 1 (got: $lock_reclaim_stale)"
+    return 1
+  fi
 
   if [[ "$force_mkdir_lock" != "1" ]] && command -v flock >/dev/null 2>&1; then
     MSFS_LOCK_FILE="$locks_dir/${lock_name}.lock"

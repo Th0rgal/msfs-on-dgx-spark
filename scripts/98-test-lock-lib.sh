@@ -153,4 +153,38 @@ if ! grep -q "ERROR: lock busy: ci-mkdir-no-reclaim" <<<"$no_reclaim_output"; th
   exit 1
 fi
 
+echo "[lock-test] invalid MSFS_LOCK_RECLAIM_STALE fails fast"
+set +e
+invalid_reclaim_output="$(
+  MSFS_LOCKS_DIR="$tmp_dir" MSFS_LOCK_RECLAIM_STALE=true bash -c "source \"$SCRIPT_DIR/lib-lock.sh\"; acquire_script_lock 'ci-invalid-reclaim' 0" 2>&1
+)"
+invalid_reclaim_rc=$?
+set -e
+if [ "$invalid_reclaim_rc" -eq 0 ]; then
+  echo "ERROR: expected invalid MSFS_LOCK_RECLAIM_STALE to fail." >&2
+  exit 1
+fi
+if ! grep -q "ERROR: MSFS_LOCK_RECLAIM_STALE must be 0 or 1" <<<"$invalid_reclaim_output"; then
+  echo "ERROR: missing validation diagnostic for invalid MSFS_LOCK_RECLAIM_STALE." >&2
+  echo "$invalid_reclaim_output" >&2
+  exit 1
+fi
+
+echo "[lock-test] invalid MSFS_FORCE_MKDIR_LOCK fails fast"
+set +e
+invalid_force_mkdir_output="$(
+  MSFS_LOCKS_DIR="$tmp_dir" MSFS_FORCE_MKDIR_LOCK=maybe bash -c "source \"$SCRIPT_DIR/lib-lock.sh\"; acquire_script_lock 'ci-invalid-force-mkdir' 0" 2>&1
+)"
+invalid_force_mkdir_rc=$?
+set -e
+if [ "$invalid_force_mkdir_rc" -eq 0 ]; then
+  echo "ERROR: expected invalid MSFS_FORCE_MKDIR_LOCK to fail." >&2
+  exit 1
+fi
+if ! grep -q "ERROR: MSFS_FORCE_MKDIR_LOCK must be 0 or 1" <<<"$invalid_force_mkdir_output"; then
+  echo "ERROR: missing validation diagnostic for invalid MSFS_FORCE_MKDIR_LOCK." >&2
+  echo "$invalid_force_mkdir_output" >&2
+  exit 1
+fi
+
 echo "Lock helper self-test passed."
