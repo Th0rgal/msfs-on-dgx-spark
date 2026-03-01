@@ -32,6 +32,24 @@ while IFS= read -r script_path; do
   fi
 done < <(find scripts -maxdepth 1 -type f -name '[0-9][0-9]-*.sh' | sort)
 
+echo "==> Unique numbered-script prefix checks"
+if duplicate_prefixes="$(
+  find scripts -maxdepth 1 -type f -name '[0-9][0-9]-*.sh' -printf '%f\n' \
+    | sed -E 's/^([0-9][0-9])-.*/\1/' \
+    | sort \
+    | uniq -d
+)"; then
+  if [[ -n "${duplicate_prefixes}" ]]; then
+    echo "ERROR: duplicate two-digit script prefixes detected:" >&2
+    while IFS= read -r prefix; do
+      [[ -n "${prefix}" ]] || continue
+      echo "  - ${prefix}" >&2
+      find scripts -maxdepth 1 -type f -name "${prefix}-*.sh" -printf '    %f\n' | sort >&2
+    done <<< "${duplicate_prefixes}"
+    exit 1
+  fi
+fi
+
 echo "==> Docs script-reference checks"
 mapfile -t markdown_files < <(git ls-files '*.md')
 if [[ "${#markdown_files[@]}" -eq 0 ]]; then
