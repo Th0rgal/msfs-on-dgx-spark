@@ -1,5 +1,24 @@
 # Progress Log
 
+## 2026-03-01 (unique numbered-script prefix guardrails)
+
+Validation from this checkout:
+
+- Renamed legacy `20-test-gpu-spoof-launch.sh` to `scripts/40-test-gpu-spoof-launch.sh` to remove a numeric prefix collision (`20-*`).
+- Added duplicate-prefix CI guardrails in `scripts/99-ci-validate.sh`:
+  - enumerates all `scripts/[0-9][0-9]-*.sh`,
+  - fails when duplicate two-digit prefixes exist,
+  - prints conflicting prefixes and filenames for quick remediation.
+- Updated `README.md` contributor guidance to include the new unique-prefix check.
+- Updated historical script path references in this progress log to the renamed script.
+- Local verification:
+  - `bash -n scripts/99-ci-validate.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a naming-convention reliability gap in the numbered orchestration flow and prevents accidental future collisions from merging unnoticed.
+
 ## 2026-03-01 (CI shebang guardrails for Bash scripts)
 
 Validation from this checkout:
@@ -2058,7 +2077,7 @@ Another full runtime fix cycle on `spark-de79` focused on two untried high-proba
 What was changed:
 
 - Fixed a bug in `scripts/19-dispatch-via-steam-pipe.sh` (`printf %sn` -> `printf %s\n`) so URI writes to `steam.pipe` are correctly newline-terminated.
-- Added `scripts/20-test-gpu-spoof-launch.sh` to run one controlled launch cycle with:
+- Added `scripts/40-test-gpu-spoof-launch.sh` to run one controlled launch cycle with:
   - `PROTON_HIDE_NVIDIA_GPU=1`
   - `PROTON_ENABLE_NVAPI=0`
   - `PROTON_NO_ESYNC=1`
