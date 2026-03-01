@@ -173,6 +173,13 @@ if grep -RInE "${hardcoded_sudo_pattern}" scripts/*.sh >/dev/null; then
   exit 1
 fi
 
+echo "==> Merge-conflict marker guardrails"
+if git grep -nE '^(<<<<<<< |=======|>>>>>>> )' -- . >/dev/null; then
+  echo "ERROR: unresolved merge-conflict markers detected in tracked files." >&2
+  git grep -nE '^(<<<<<<< |=======|>>>>>>> )' -- . >&2 || true
+  exit 1
+fi
+
 echo "==> ShellCheck error-level guardrails"
 if ! command -v shellcheck >/dev/null 2>&1; then
   echo "ERROR: shellcheck is required but was not found in PATH." >&2
