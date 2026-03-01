@@ -192,6 +192,24 @@ snap refresh steam --edge
 
 **Fix**: Same as the Vulkan llvmpipe issue above. Steam relies on Vulkan being properly configured.
 
+### Launch script exits with code 8 (no NVIDIA-backed display)
+
+**Symptom**: `54-launch-and-capture-evidence.sh` returns `8` and reports no NVIDIA-backed display.
+
+**Cause**: Launch default is now fail-closed (`REQUIRE_NVIDIA_DISPLAY=1`) to prevent DX12 runs on Xvfb/llvmpipe.
+
+**Fixes**:
+```bash
+# Inspect auto-selected display and renderer
+./scripts/00-select-msfs-display.sh
+DISPLAY=:2 glxinfo -B | grep -E "OpenGL vendor|OpenGL renderer"
+
+# Force the known GPU display if needed
+DISPLAY_NUM=:2 ./scripts/54-launch-and-capture-evidence.sh
+```
+
+Use `REQUIRE_NVIDIA_DISPLAY=0` only for diagnostics, not normal DX12 runs.
+
 ## MSFS Issues
 
 ### Crash on startup (before menus)

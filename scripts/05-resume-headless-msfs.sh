@@ -13,6 +13,12 @@ MSFS_APPID="${MSFS_APPID:-2537590}"
 ACTION="${1:-install}"   # install|launch
 AUTO_CONFIRM_ON_LAUNCH="${AUTO_CONFIRM_ON_LAUNCH:-1}"
 AUTO_CONFIRM_SECONDS="${AUTO_CONFIRM_SECONDS:-90}"
+REQUIRE_NVIDIA_DISPLAY="${REQUIRE_NVIDIA_DISPLAY:-1}"
+
+if ! [[ "$REQUIRE_NVIDIA_DISPLAY" =~ ^[01]$ ]]; then
+    echo "ERROR: REQUIRE_NVIDIA_DISPLAY must be 0 or 1 (got: $REQUIRE_NVIDIA_DISPLAY)"
+    exit 2
+fi
 
 find_steam_dir() {
     local paths=(
@@ -38,7 +44,21 @@ fi
 
 MANIFEST="$STEAM_DIR/steamapps/appmanifest_${MSFS_APPID}.acf"
 
+if [ "$ACTION" = "launch" ] && [ "$REQUIRE_NVIDIA_DISPLAY" = "1" ]; then
+    if ! DISPLAY_NUM="$(resolve_runtime_display_num "$SCRIPT_DIR" "1")"; then
+        echo "ERROR: No NVIDIA-backed X display detected; refusing MSFS launch on software display."
+        echo "Hint: start or expose the GPU-backed desktop (typically DISPLAY=:2), then retry."
+        echo "Override (unsafe for DX12): REQUIRE_NVIDIA_DISPLAY=0 ./scripts/05-resume-headless-msfs.sh launch"
+        exit 4
+    fi
+fi
+
 if ! DISPLAY="$DISPLAY_NUM" xset q >/dev/null 2>&1; then
+    if [ "$ACTION" = "launch" ] && [ "$REQUIRE_NVIDIA_DISPLAY" = "1" ]; then
+        echo "ERROR: Selected launch display is not live: $DISPLAY_NUM"
+        echo "Hint: a live NVIDIA X display is required for DX12 launch."
+        exit 4
+    fi
     Xvfb "$DISPLAY_NUM" -screen 0 "$RESOLUTION" >/tmp/xvfb-msfs.log 2>&1 &
     sleep 1
 fi

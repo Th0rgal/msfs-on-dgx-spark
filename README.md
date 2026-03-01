@@ -122,6 +122,9 @@ AUTO_CONFIRM_SECONDS=120 ./scripts/60-auto-confirm-steam-prompts.sh
 # 9. Optional: verify MSFS launch reached stable runtime
 ./scripts/09-verify-msfs-launch.sh
 
+# 9b. Optional: trigger Steam F12 and export latest MSFS screenshot into ./output
+./scripts/61-capture-steam-f12-screenshot.sh
+
 # 10. Optional: run DGX runtime preflight repairs directly
 ./scripts/53-preflight-runtime-repair.sh
 
@@ -171,6 +174,7 @@ LOCAL_TAILSCALE_AUTHKEY_FILE="$HOME/.config/msfs-on-dgx-spark/tailscale-authkey"
 
 `09-verify-msfs-launch.sh` now requires a stable runtime window (default `30s`) to avoid false positives from short-lived launch wrappers. Tune with `MIN_STABLE_SECONDS=<N>`.
 Launch/verify scripts now auto-select an NVIDIA-backed X display when available (typically `:2` on DGX). Override explicitly with `DISPLAY_NUM=:N` when needed.
+Launch orchestrators now fail closed on non-NVIDIA displays by default (`REQUIRE_NVIDIA_DISPLAY=1` in `05/08/54`), preventing DX12 runs on accidental Xvfb/llvmpipe sessions. Set `REQUIRE_NVIDIA_DISPLAY=0` only for diagnostics.
 `54-launch-and-capture-evidence.sh` now enforces a Steam authenticated-session gate and exits with code `7` when the session is logged out, so retry loops fail fast on auth drift instead of reporting ambiguous launch failures.
 When the auth gate fails, `54-launch-and-capture-evidence.sh` now captures Steam UI diagnostics by default (`AUTH_DEBUG_ON_FAILURE=1`), writing `steam-debug-*.log` and `steam-debug-*.png` into `output/`.
 `54-launch-and-capture-evidence.sh` now also bootstraps the Steam/UI stack before auth checks (`AUTH_BOOTSTRAP_STEAM_STACK=1`) and will run `57-recover-steam-runtime.sh` if `steamwebhelper` is missing (`AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER=1`), reducing false unauthenticated failures caused by partial Steam startup.
@@ -190,11 +194,12 @@ When auth drift is expected, `AUTO_REAUTH_ON_AUTH_FAILURE=1` runs `58-ensure-ste
 During restore, auth recovery now also normalizes Steam window geometry by default (`AUTH_NORMALIZE_WINDOWS=1`, `AUTH_WINDOW_WIDTH=1600`, `AUTH_WINDOW_HEIGHT=900`, `AUTH_WINDOW_X=50`, `AUTH_WINDOW_Y=50`) so tiny/off-screen windows become visible for VNC/manual login.
 Auth checks now require strong Steam session evidence by default (`steamid` via process/log); UI-only detection is treated as unauthenticated unless `ALLOW_UI_AUTH_FALLBACK=1` is explicitly set.
 Launch orchestrators now auto-start `60-auto-confirm-steam-prompts.sh` by default to acknowledge common Steam modal prompts during unattended launches (`AUTO_CONFIRM_ON_LAUNCH=1` in `05-resume-headless-msfs.sh`, `AUTO_CONFIRM_PROMPTS=1` in `08-finalize-auth-and-run-msfs.sh`). The helper now enforces a singleton lock per display by default (`ENABLE_SCRIPT_LOCKS=1`) to prevent overlapping prompt workers during retries/manual runs. Tune helper lifetime with `AUTO_CONFIRM_SECONDS`, lock wait with `AUTO_CONFIRM_LOCK_WAIT_SECONDS`, or disable auto-confirm explicitly with `0`.
+`61-capture-steam-f12-screenshot.sh` now provides a reliable screenshot path for Proton headless sessions: it injects `F12` into the MSFS/Steam window, waits for a new file under `userdata/*/760/remote/<appid>/screenshots/`, and exports it into `./output/`.
 `90-remote-dgx-stable-check.sh` forwards `ALLOW_UI_AUTH_FALLBACK` and `FATAL_EXIT_CODES` to the remote runners, and also accepts trailing `KEY=VALUE` overrides for convenience (for example `./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1`).
 `90-remote-dgx-stable-check.sh` can load an optional remote auth env file (`REMOTE_AUTH_ENV_FILE`, default `$HOME/.config/msfs-on-dgx-spark/steam-auth.env`) and will enforce `0600` permissions by default (`REQUIRE_REMOTE_AUTH_ENV_PERMS=1`) before sourcing it.
 `90-remote-dgx-stable-check.sh` can also push a local auth env to DGX before execution (`PUSH_REMOTE_AUTH_ENV=1`, `LOCAL_AUTH_ENV_FILE=...`), with `0600` enforcement on both sides by default.
 When `AUTO_REAUTH_ON_AUTH_FAILURE=1` is enabled and auth recovery fails, `90-remote-dgx-stable-check.sh` now captures `steam-debug-*.log/.png` before exit (`AUTH_DEBUG_ON_REAUTH_FAILURE=1` by default), ensuring remote auth failures still sync actionable evidence locally.
-`FATAL_EXIT_CODES=''` is treated as an intentional empty list (fatal auth exits disabled), not auto-reset to defaults.
+`FATAL_EXIT_CODES=''` is treated as an intentional empty list (fatal exits disabled), not auto-reset to defaults. Default fatal list is `7,8` (`7` unauthenticated Steam session, `8` no NVIDIA-backed display detected).
 `54-launch-and-capture-evidence.sh` now retries dispatch inside a single attempt (`DISPATCH_MAX_ATTEMPTS`, default `2`) and can auto-run `57-recover-steam-runtime.sh` between redispatches (`DISPATCH_RECOVER_ON_NO_ACCEPT=1`) before launch verification begins; these dispatch knobs are forwarded by `90-remote-dgx-stable-check.sh`.
 Pipe-write tuning is now also forwarded end-to-end by `90-remote-dgx-stable-check.sh`: `PIPE_WRITE_TIMEOUT_SECONDS` (default `6`), `PIPE_WRITE_RETRIES` (default `3`), `PIPE_WRITE_RETRY_DELAY_SECONDS`, `PIPE_WRITE_RECOVER_ON_TIMEOUT`, and URI fallback controls (`URI_FALLBACK_ON_PIPE_FAILURE`, `URI_FALLBACK_TIMEOUT_SECONDS`).
 When dispatch still fails, fallback now runs as an ordered chain (`DISPATCH_FALLBACK_CHAIN`, default `applaunch,steam_uri,snap_uri`) and can auto-normalize Steam windows first (`DISPATCH_FORCE_UI_ON_FAILURE=1`) to recover from hidden/off-screen UI states before retrying launch methods.
@@ -238,6 +243,7 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 │   ├── 57-recover-steam-runtime.sh # Rebuild Steam runtime namespace between retries
 │   ├── 58-ensure-steam-auth.sh # Ensure authenticated Steam session (optional credential + Steam Guard automation)
 │   ├── 60-auto-confirm-steam-prompts.sh # Best-effort Steam prompt auto-confirm helper for unattended launch
+│   ├── 61-capture-steam-f12-screenshot.sh # Trigger Steam F12 and export newest MSFS screenshot into output/
 │   ├── 90-remote-dgx-stable-check.sh # Sync current checkout to DGX and run staged checks remotely
 │   ├── 14-install-ge-proton.sh # Install latest GE-Proton into compatibilitytools.d
 └── docs/

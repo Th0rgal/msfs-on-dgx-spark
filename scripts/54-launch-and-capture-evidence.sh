@@ -10,6 +10,7 @@ source "$SCRIPT_DIR/lib-steam-auth.sh"
 DISPLAY_NUM="$(resolve_display_num "$SCRIPT_DIR")"
 WAIT_SECONDS="${WAIT_SECONDS:-240}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-45}"
+REQUIRE_NVIDIA_DISPLAY="${REQUIRE_NVIDIA_DISPLAY:-1}"
 AUTH_DEBUG_ON_FAILURE="${AUTH_DEBUG_ON_FAILURE:-1}"
 AUTH_BOOTSTRAP_STEAM_STACK="${AUTH_BOOTSTRAP_STEAM_STACK:-1}"
 AUTH_BOOTSTRAP_WAIT_SECONDS="${AUTH_BOOTSTRAP_WAIT_SECONDS:-8}"
@@ -35,6 +36,19 @@ STEAM_DIR="${STEAM_DIR:-$HOME/snap/steam/common/.local/share/Steam}"
 PFX="$STEAM_DIR/steamapps/compatdata/${MSFS_APPID}/pfx"
 ENABLE_SCRIPT_LOCKS="${ENABLE_SCRIPT_LOCKS:-1}"
 MSFS_LAUNCH_LOCK_WAIT_SECONDS="${MSFS_LAUNCH_LOCK_WAIT_SECONDS:-0}"
+
+if ! [[ "$REQUIRE_NVIDIA_DISPLAY" =~ ^[01]$ ]]; then
+  echo "ERROR: REQUIRE_NVIDIA_DISPLAY must be 0 or 1 (got: $REQUIRE_NVIDIA_DISPLAY)"
+  exit 1
+fi
+
+if [ "$REQUIRE_NVIDIA_DISPLAY" = "1" ]; then
+  if ! DISPLAY_NUM="$(resolve_runtime_display_num "$SCRIPT_DIR" "1")"; then
+    echo "RESULT: no NVIDIA-backed display detected; launch skipped."
+    echo "Hint: expose/start a GPU-backed X display (typically :2), or set REQUIRE_NVIDIA_DISPLAY=0 to bypass."
+    exit 8
+  fi
+fi
 
 mkdir -p "$OUT_DIR"
 RUN_START_EPOCH="$(date +%s)"

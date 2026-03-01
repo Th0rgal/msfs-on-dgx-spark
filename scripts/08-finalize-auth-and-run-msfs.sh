@@ -15,8 +15,25 @@ LAUNCH_MIN_STABLE_SECONDS="${LAUNCH_MIN_STABLE_SECONDS:-30}"
 ALLOW_OFFLINE_LAUNCH_IF_INSTALLED="${ALLOW_OFFLINE_LAUNCH_IF_INSTALLED:-1}"
 AUTO_CONFIRM_PROMPTS="${AUTO_CONFIRM_PROMPTS:-1}"
 AUTO_CONFIRM_SECONDS="${AUTO_CONFIRM_SECONDS:-120}"
+CAPTURE_STEAM_SCREENSHOT="${CAPTURE_STEAM_SCREENSHOT:-1}"
+SCREENSHOT_WAIT_SECONDS="${SCREENSHOT_WAIT_SECONDS:-25}"
+REQUIRE_NVIDIA_DISPLAY="${REQUIRE_NVIDIA_DISPLAY:-1}"
 GUARD_CODE="${1:-${STEAM_GUARD_CODE:-}}"
 AUTO_CONFIRM_PID=""
+
+if ! [[ "$REQUIRE_NVIDIA_DISPLAY" =~ ^[01]$ ]]; then
+  echo "ERROR: REQUIRE_NVIDIA_DISPLAY must be 0 or 1 (got: $REQUIRE_NVIDIA_DISPLAY)"
+  exit 2
+fi
+
+if [ "$REQUIRE_NVIDIA_DISPLAY" = "1" ]; then
+  if ! DISPLAY_NUM="$(resolve_runtime_display_num "$SCRIPT_DIR" "1")"; then
+    echo "ERROR: No NVIDIA-backed X display detected; refusing MSFS launch flow on software display."
+    echo "Hint: expose/start the GPU-backed desktop (typically DISPLAY=:2), then rerun."
+    echo "Override (unsafe for DX12): REQUIRE_NVIDIA_DISPLAY=0 ./scripts/08-finalize-auth-and-run-msfs.sh"
+    exit 4
+  fi
+fi
 
 cleanup() {
   if [ -n "${AUTO_CONFIRM_PID:-}" ] && kill -0 "$AUTO_CONFIRM_PID" >/dev/null 2>&1; then
@@ -61,7 +78,8 @@ fi
 MANIFEST="$STEAM_DIR/steamapps/appmanifest_${MSFS_APPID}.acf"
 
 echo "[1/8] Ensuring headless stack is running..."
-"$SCRIPT_DIR/05-resume-headless-msfs.sh" install >/tmp/msfs-resume.log 2>&1 || true
+DISPLAY_NUM="$DISPLAY_NUM" REQUIRE_NVIDIA_DISPLAY="$REQUIRE_NVIDIA_DISPLAY" \
+  "$SCRIPT_DIR/05-resume-headless-msfs.sh" install >/tmp/msfs-resume.log 2>&1 || true
 
 if [ -n "$GUARD_CODE" ]; then
   echo "[2/8] Attempting Steam Guard code entry via xdotool on ${DISPLAY_NUM}..."
@@ -208,6 +226,19 @@ else
     if [ "$allow_offline" -eq 1 ]; then
       echo "Note: this run used offline launch mode because auth was not detected."
     fi
+  fi
+fi
+
+if [ "$verify_rc" -eq 0 ] && [ "$CAPTURE_STEAM_SCREENSHOT" = "1" ] && [ -x "$SCRIPT_DIR/61-capture-steam-f12-screenshot.sh" ]; then
+  echo "Capturing a Steam in-game screenshot via F12..."
+  set +e
+  DISPLAY_NUM="$DISPLAY_NUM" MSFS_APPID="$MSFS_APPID" WAIT_SECONDS="$SCREENSHOT_WAIT_SECONDS" \
+    OUT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)/output" \
+    "$SCRIPT_DIR/61-capture-steam-f12-screenshot.sh"
+  shot_rc=$?
+  set -e
+  if [ "$shot_rc" -ne 0 ]; then
+    echo "WARN: screenshot capture did not produce a new image (rc=$shot_rc)"
   fi
 fi
 
