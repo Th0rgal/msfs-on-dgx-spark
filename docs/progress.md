@@ -3280,3 +3280,30 @@ Validation:
 Current blocker in this runner:
 
 - `spark-de79` / `100.77.4.93` remains unreachable from this environment (SSH timeout + ICMP no reply), so live DGX runtime validation could not be re-executed in this pass.
+
+## 2026-03-01 (DX12 launch guardrail: require NVIDIA-backed display)
+
+Implemented a reliability fix to prevent false launch cycles on software displays (Xvfb/llvmpipe), which were leading to DX12 device-creation failures.
+
+- Updated display helper library:
+  - `scripts/lib-display.sh`
+  - added `display_is_nvidia_gl`, `find_live_nvidia_display`, `resolve_runtime_display_num`
+- Updated launch orchestrators:
+  - `scripts/05-resume-headless-msfs.sh`
+  - `scripts/08-finalize-auth-and-run-msfs.sh`
+  - `scripts/54-launch-and-capture-evidence.sh`
+  - default behavior now fail-closed with `REQUIRE_NVIDIA_DISPLAY=1`
+  - clear operator guidance is printed when no NVIDIA display is detected
+  - bypass remains available for diagnostics (`REQUIRE_NVIDIA_DISPLAY=0`)
+- Updated retry fatal policy:
+  - `scripts/55-run-until-stable-runtime.sh` default `FATAL_EXIT_CODES=7,8`
+  - `scripts/90-remote-dgx-stable-check.sh` default `FATAL_EXIT_CODES=7,8`
+  - new fatal code `8`: no NVIDIA-backed display available for launch
+- Documentation updated:
+  - `README.md`
+  - `docs/troubleshooting.md`
+
+Validation:
+
+- `bash -n scripts/lib-display.sh scripts/05-resume-headless-msfs.sh scripts/08-finalize-auth-and-run-msfs.sh scripts/54-launch-and-capture-evidence.sh scripts/55-run-until-stable-runtime.sh scripts/90-remote-dgx-stable-check.sh scripts/61-capture-steam-f12-screenshot.sh` passed
+- `./scripts/99-ci-validate.sh` passed
