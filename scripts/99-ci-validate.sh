@@ -78,6 +78,67 @@ done < <(
   list_doc_script_refs | sort -u
 )
 
+echo "==> Local markdown-link integrity checks"
+extract_markdown_inline_links() {
+  local md_file="$1"
+  if [[ "${have_rg}" -eq 1 ]]; then
+    rg --no-filename -o '!?\[[^]]+\]\([^)]+\)' "${md_file}" || true
+  else
+    grep -Eo '!?\[[^]]+\]\([^)]+\)' "${md_file}" || true
+  fi
+}
+
+normalize_markdown_link_target() {
+  local raw_link="$1"
+  local target="${raw_link#*](}"
+  target="${target%)}"
+  target="${target#"${target%%[![:space:]]*}"}"
+  target="${target%"${target##*[![:space:]]}"}"
+  target="${target#<}"
+  target="${target%>}"
+
+  if [[ "${target}" == *" \""* ]] || [[ "${target}" == *" '"* ]]; then
+    target="${target%% *}"
+  fi
+
+  target="${target%%#*}"
+  target="${target%%\?*}"
+  printf '%s\n' "${target}"
+}
+
+if [[ "${#markdown_files[@]}" -gt 0 ]]; then
+  while IFS= read -r md_file; do
+    md_dir="$(dirname "${md_file}")"
+    while IFS= read -r raw_link; do
+      target="$(normalize_markdown_link_target "${raw_link}")"
+      [[ -n "${target}" ]] || continue
+
+      if [[ "${target}" =~ ^[A-Za-z][A-Za-z0-9+.-]*: ]]; then
+        continue
+      fi
+      if [[ "${target}" == \#* ]]; then
+        continue
+      fi
+
+      if [[ "${target}" == /* ]]; then
+        resolved_target="${target}"
+      else
+        resolved_target="${md_dir}/${target}"
+      fi
+
+      if [[ "${target}" == */ ]]; then
+        if [[ ! -d "${resolved_target}" ]]; then
+          echo "ERROR: broken local markdown link in ${md_file}: ${target}" >&2
+          exit 1
+        fi
+      elif [[ ! -e "${resolved_target}" ]]; then
+        echo "ERROR: broken local markdown link in ${md_file}: ${target}" >&2
+        exit 1
+      fi
+    done < <(extract_markdown_inline_links "${md_file}")
+  done < <(printf '%s\n' "${markdown_files[@]}")
+fi
+
 echo "==> Strict-mode guardrails (critical orchestrators)"
 critical_strict_scripts=(
   "scripts/53-preflight-runtime-repair.sh"
