@@ -58,6 +58,10 @@ LOCAL_TAILSCALE_BOOTSTRAP_RETRIES="${LOCAL_TAILSCALE_BOOTSTRAP_RETRIES:-2}"
 LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS="${LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS:-2}"
 LOCAL_TAILSCALE_AUTH_URL_FILE="${LOCAL_TAILSCALE_AUTH_URL_FILE:-}"
 LOCAL_TAILSCALE_NEEDS_LOGIN_EXIT_CODE="${LOCAL_TAILSCALE_NEEDS_LOGIN_EXIT_CODE:-10}"
+LOCAL_TAILSCALE_CLEANUP_ON_EXIT="${LOCAL_TAILSCALE_CLEANUP_ON_EXIT:-1}"
+LOCAL_TAILSCALE_STARTED_BY_SCRIPT=0
+LOCAL_TAILSCALE_BOOTSTRAP_PID=""
+LOCAL_TAILSCALE_BOOTSTRAP_SOCKET=""
 
 MSFS_APPID="${MSFS_APPID:-2537590}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-20}"
@@ -110,7 +114,31 @@ ENABLE_SCRIPT_LOCKS="${ENABLE_SCRIPT_LOCKS:-1}"
 MSFS_REMOTE_CHECK_LOCK_WAIT_SECONDS="${MSFS_REMOTE_CHECK_LOCK_WAIT_SECONDS:-0}"
 
 TMP_TAR="/tmp/msfs-on-dgx-spark-sync-$$.tgz"
+cleanup_local_tailscale_bootstrap() {
+  if [ "$BOOTSTRAP_LOCAL_TAILSCALE" != "1" ]; then
+    return 0
+  fi
+  if [ "$LOCAL_TAILSCALE_STARTED_BY_SCRIPT" != "1" ]; then
+    return 0
+  fi
+  if [ "$LOCAL_TAILSCALE_CLEANUP_ON_EXIT" != "1" ]; then
+    echo "Preserving script-started userspace tailscaled (LOCAL_TAILSCALE_CLEANUP_ON_EXIT=0)."
+    return 0
+  fi
+  if [ -n "$LOCAL_TAILSCALE_BOOTSTRAP_PID" ] && ps -p "$LOCAL_TAILSCALE_BOOTSTRAP_PID" >/dev/null 2>&1; then
+    process_cmd="$(ps -o args= -p "$LOCAL_TAILSCALE_BOOTSTRAP_PID" 2>/dev/null || true)"
+    if echo "$process_cmd" | grep -Eq '(^|[[:space:]])tailscaled([[:space:]]|$)'; then
+      kill "$LOCAL_TAILSCALE_BOOTSTRAP_PID" >/dev/null 2>&1 || true
+      wait "$LOCAL_TAILSCALE_BOOTSTRAP_PID" >/dev/null 2>&1 || true
+    fi
+  fi
+  if [ -n "$LOCAL_TAILSCALE_BOOTSTRAP_SOCKET" ] && [ -S "$LOCAL_TAILSCALE_BOOTSTRAP_SOCKET" ]; then
+    rm -f "$LOCAL_TAILSCALE_BOOTSTRAP_SOCKET" >/dev/null 2>&1 || true
+  fi
+}
+
 cleanup_remote_check() {
+  cleanup_local_tailscale_bootstrap
   rm -f "$TMP_TAR"
   release_script_lock
 }
@@ -286,6 +314,9 @@ bootstrap_local_tailscale_userspace() {
         LOCAL_TAILSCALE_SOCKET="$attempt_socket"
         LOCAL_TAILSCALE_LOG="$attempt_log"
         LOCAL_TAILSCALE_SOCKS5_ADDR="$attempt_socks"
+        LOCAL_TAILSCALE_BOOTSTRAP_PID="$bootstrap_pid"
+        LOCAL_TAILSCALE_BOOTSTRAP_SOCKET="$attempt_socket"
+        LOCAL_TAILSCALE_STARTED_BY_SCRIPT=1
         bootstrap_started=1
         break
       fi

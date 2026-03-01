@@ -115,6 +115,7 @@ For containerized/non-systemd runners, use `BOOTSTRAP_LOCAL_TAILSCALE=1` to star
 For deterministic auth handoff in CI, set `LOCAL_TAILSCALE_AUTH_URL_FILE=/path/to/url.txt`; the script writes the current Tailscale login URL there whenever available. Auth-required bootstrap exits can be keyed on `LOCAL_TAILSCALE_NEEDS_LOGIN_EXIT_CODE` (default `10`).
 When `BOOTSTRAP_LOCAL_TAILSCALE=1`, the script also auto-loads `$HOME/.config/msfs-on-dgx-spark/tailscale-authkey` by default (`AUTO_LOAD_LOCAL_TAILSCALE_AUTHKEY_FILE=1`) so unattended container runs do not need inline authkey env vars.
 If bootstrap intermittently reports daemon-readiness failures, increase `LOCAL_TAILSCALE_BOOTSTRAP_RETRIES` and `LOCAL_TAILSCALE_BOOTSTRAP_RETRY_DELAY_SECONDS`; startup now removes stale sockets and uses per-retry socket/log paths for deterministic failure evidence.
+When the script starts userspace `tailscaled`, it now tears down that script-started daemon on exit by default (`LOCAL_TAILSCALE_CLEANUP_ON_EXIT=1`) to avoid leaked daemons between runs. Set `LOCAL_TAILSCALE_CLEANUP_ON_EXIT=0` if you need to preserve the daemon for manual debugging.
 
 If auth recovery times out and debug logs show no visible Steam/login windows, `58-ensure-steam-auth.sh` now reports that condition explicitly; use `AUTH_USE_STEAM_LOGIN_CLI=1` (default) with credentials to avoid depending on visible UI prompts.
 It also attempts Steam window restore/focus by default (`AUTH_RESTORE_WINDOWS=1`) so headless-minimized dialogs can be surfaced automatically.
