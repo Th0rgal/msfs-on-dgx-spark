@@ -1,5 +1,27 @@
 # Progress Log
 
+## 2026-03-01 (concurrency guardrails for critical orchestrators)
+
+Validation from this checkout:
+
+- Added shared lock helper: `scripts/lib-lock.sh`.
+- Added default lock guardrails (`ENABLE_SCRIPT_LOCKS=1`) to:
+  - `scripts/54-launch-and-capture-evidence.sh` (`launch-cycle-<appid>`, `MSFS_LAUNCH_LOCK_WAIT_SECONDS`)
+  - `scripts/55-run-until-stable-runtime.sh` (`stable-runner-<appid>`, `MSFS_STABLE_RUN_LOCK_WAIT_SECONDS`)
+  - `scripts/90-remote-dgx-stable-check.sh` (`remote-check-<appid>`, `MSFS_REMOTE_CHECK_LOCK_WAIT_SECONDS`)
+- Locking is fail-fast by default (`*_LOCK_WAIT_SECONDS=0`) and now returns deterministic `ERROR: lock busy` diagnostics instead of allowing overlapping runs that can race on Steam/MSFS state.
+- Updated docs:
+  - `README.md`
+  - `docs/setup-guide.md`
+  - `docs/troubleshooting.md`
+- Local verification:
+  - `bash -n scripts/lib-lock.sh scripts/54-launch-and-capture-evidence.sh scripts/55-run-until-stable-runtime.sh scripts/90-remote-dgx-stable-check.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This reduces a high-impact operational risk: concurrent launch orchestration collisions on DGX (which can destabilize Steam/MSFS and confound evidence/results).
+
 ## 2026-02-28 (23:45-23:50 UTC, secret removal + sudo guardrails)
 
 Validation from this checkout:

@@ -3,6 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib-lock.sh"
 MSFS_APPID="${MSFS_APPID:-2537590}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-20}"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-5}"
@@ -19,8 +20,15 @@ AUTH_USE_STEAM_LOGIN_CLI="${AUTH_USE_STEAM_LOGIN_CLI:-1}"
 ALLOW_UI_AUTH_FALLBACK="${ALLOW_UI_AUTH_FALLBACK:-0}"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 OUT_DIR="${OUT_DIR:-$REPO_ROOT/output}"
+ENABLE_SCRIPT_LOCKS="${ENABLE_SCRIPT_LOCKS:-1}"
+MSFS_STABLE_RUN_LOCK_WAIT_SECONDS="${MSFS_STABLE_RUN_LOCK_WAIT_SECONDS:-0}"
 
 mkdir -p "$OUT_DIR"
+
+if [ "$ENABLE_SCRIPT_LOCKS" = "1" ]; then
+  acquire_script_lock "stable-runner-${MSFS_APPID}" "$MSFS_STABLE_RUN_LOCK_WAIT_SECONDS"
+  trap 'release_script_lock' EXIT
+fi
 
 if ! [[ "$MAX_ATTEMPTS" =~ ^[0-9]+$ ]] || [ "$MAX_ATTEMPTS" -lt 1 ]; then
   echo "ERROR: MAX_ATTEMPTS must be a positive integer (got: $MAX_ATTEMPTS)"
