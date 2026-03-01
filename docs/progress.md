@@ -1,5 +1,20 @@
 # Progress Log
 
+## 2026-03-01 (CI merge-conflict marker guardrails)
+
+Validation from this checkout:
+
+- Extended `scripts/99-ci-validate.sh` with merge-conflict marker detection across tracked files.
+- Validator now fails fast when unresolved Git conflict markers are present (`<<<<<<<`, `=======`, `>>>>>>>`).
+- Updated contributor guidance in `README.md` to include the new guardrail.
+- Local verification:
+  - `bash -n scripts/99-ci-validate.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a high-impact CI blind spot where accidental unresolved merge conflicts could otherwise land and break scripts/docs at runtime.
+
 ## 2026-03-01 (lock-name validation for safe lock paths)
 
 Validation from this checkout:
