@@ -1,5 +1,25 @@
 # Progress Log
 
+## 2026-03-01 (lock-name validation for safe lock paths)
+
+Validation from this checkout:
+
+- Hardened `scripts/lib-lock.sh` shared lock helper input validation:
+  - `acquire_script_lock` now fails fast unless `lock_name` matches `^[A-Za-z0-9_.-]+$`.
+  - This prevents unsafe lock path construction via slash/dot segments in lock names.
+- Expanded lock regression coverage in `scripts/98-test-lock-lib.sh`:
+  - verifies invalid lock names fail with a clear diagnostic.
+- Updated docs:
+  - `README.md`
+- Local verification:
+  - `bash -n scripts/lib-lock.sh scripts/98-test-lock-lib.sh` (pass)
+  - `./scripts/98-test-lock-lib.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a defensive-programming gap in the shared locking layer by constraining lock identifiers to safe filename tokens, reducing accidental path traversal-style lock path risks.
+
 ## 2026-03-01 (lock acquire failure-state cleanup hardening)
 
 Validation from this checkout:
