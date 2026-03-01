@@ -54,6 +54,49 @@ if ! grep -q "holder pid:" <<<"$contention_output"; then
   exit 1
 fi
 
+echo "[lock-test] failed flock acquire leaves no stale lock state"
+unset MSFS_LOCK_FILE MSFS_LOCK_FD MSFS_LOCK_DIR
+(
+  MSFS_LOCKS_DIR="$tmp_dir" acquire_script_lock "ci-flock-clean-state" 0
+  sleep 3
+  release_script_lock
+) &
+flock_cleanup_holder_pid=$!
+
+flock_cleanup_pid_file="$tmp_dir/ci-flock-clean-state.lock.pid"
+for _ in $(seq 1 40); do
+  [ -f "$flock_cleanup_pid_file" ] && break
+  sleep 0.1
+done
+if [ ! -f "$flock_cleanup_pid_file" ]; then
+  echo "ERROR: flock cleanup-state holder pid file was not created in time." >&2
+  wait "$flock_cleanup_holder_pid" || true
+  exit 1
+fi
+
+set +e
+MSFS_LOCKS_DIR="$tmp_dir" acquire_script_lock "ci-flock-clean-state" 0 >/dev/null 2>&1
+flock_cleanup_rc=$?
+set -e
+wait "$flock_cleanup_holder_pid"
+
+if [ "$flock_cleanup_rc" -eq 0 ]; then
+  echo "ERROR: expected flock contention during cleanup-state test." >&2
+  exit 1
+fi
+if [ -n "${MSFS_LOCK_FILE:-}" ]; then
+  echo "ERROR: MSFS_LOCK_FILE should be empty after failed flock acquire." >&2
+  exit 1
+fi
+if [ -n "${MSFS_LOCK_DIR:-}" ]; then
+  echo "ERROR: MSFS_LOCK_DIR should be empty after failed flock acquire." >&2
+  exit 1
+fi
+if [ -n "${MSFS_LOCK_FD:-}" ] && [ -e "/proc/$$/fd/${MSFS_LOCK_FD}" ]; then
+  echo "ERROR: flock fd remained open after failed acquire." >&2
+  exit 1
+fi
+
 echo "[lock-test] stale lockdir reclaim removes non-running holder lock"
 stale_lock_dir="$tmp_dir/stale.lockdir"
 mkdir -p "$stale_lock_dir"
@@ -120,6 +163,49 @@ fi
 if ! grep -q "holder pid:" <<<"$mkdir_contention_output"; then
   echo "ERROR: mkdir contention output missing holder pid context." >&2
   echo "$mkdir_contention_output" >&2
+  exit 1
+fi
+
+echo "[lock-test] failed mkdir acquire leaves no stale lock state"
+unset MSFS_LOCK_FILE MSFS_LOCK_FD MSFS_LOCK_DIR
+(
+  MSFS_LOCKS_DIR="$tmp_dir" MSFS_FORCE_MKDIR_LOCK=1 acquire_script_lock "ci-mkdir-clean-state" 0
+  sleep 3
+  release_script_lock
+) &
+mkdir_cleanup_holder_pid=$!
+
+mkdir_cleanup_pid_file="$tmp_dir/ci-mkdir-clean-state.lockdir/pid"
+for _ in $(seq 1 40); do
+  [ -f "$mkdir_cleanup_pid_file" ] && break
+  sleep 0.1
+done
+if [ ! -f "$mkdir_cleanup_pid_file" ]; then
+  echo "ERROR: mkdir cleanup-state holder pid file was not created in time." >&2
+  wait "$mkdir_cleanup_holder_pid" || true
+  exit 1
+fi
+
+set +e
+MSFS_LOCKS_DIR="$tmp_dir" MSFS_FORCE_MKDIR_LOCK=1 acquire_script_lock "ci-mkdir-clean-state" 0 >/dev/null 2>&1
+mkdir_cleanup_rc=$?
+set -e
+wait "$mkdir_cleanup_holder_pid"
+
+if [ "$mkdir_cleanup_rc" -eq 0 ]; then
+  echo "ERROR: expected mkdir contention during cleanup-state test." >&2
+  exit 1
+fi
+if [ -n "${MSFS_LOCK_FILE:-}" ]; then
+  echo "ERROR: MSFS_LOCK_FILE should be empty after failed mkdir acquire." >&2
+  exit 1
+fi
+if [ -n "${MSFS_LOCK_FD:-}" ]; then
+  echo "ERROR: MSFS_LOCK_FD should be empty after failed mkdir acquire." >&2
+  exit 1
+fi
+if [ -n "${MSFS_LOCK_DIR:-}" ]; then
+  echo "ERROR: MSFS_LOCK_DIR should be empty after failed mkdir acquire." >&2
   exit 1
 fi
 
