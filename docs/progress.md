@@ -1,5 +1,27 @@
 # Progress Log
 
+## 2026-03-01 (auto-confirm helper singleton lock hardening)
+
+Validation from this checkout:
+
+- Hardened `scripts/60-auto-confirm-steam-prompts.sh` to avoid overlapping helper workers on the same display:
+  - added shared lock integration via `scripts/lib-lock.sh`,
+  - defaults to `ENABLE_SCRIPT_LOCKS=1` with a per-display lock name,
+  - duplicate helper instances now exit cleanly with a warning instead of racing UI input.
+- Added strict env validation for new lock knobs:
+  - `ENABLE_SCRIPT_LOCKS` (`0|1`),
+  - `AUTO_CONFIRM_LOCK_WAIT_SECONDS` (non-negative integer),
+  - optional `AUTO_CONFIRM_LOCK_NAME` override for advanced flows.
+- Updated docs:
+  - `README.md`
+- Local verification:
+  - `bash -n scripts/60-auto-confirm-steam-prompts.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This removes retry/manual-run contention from concurrent prompt helpers, improving unattended launch determinism without breaking best-effort behavior.
+
 ## 2026-03-01 (unattended Steam prompt auto-confirm during launch)
 
 Validation from this checkout:

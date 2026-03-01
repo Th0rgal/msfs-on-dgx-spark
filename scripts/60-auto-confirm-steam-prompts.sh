@@ -5,11 +5,24 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib-display.sh"
 source "$SCRIPT_DIR/lib-steam-auth.sh"
+source "$SCRIPT_DIR/lib-lock.sh"
 
 DISPLAY_NUM="${DISPLAY_NUM:-$(resolve_display_num "$SCRIPT_DIR")}"
 AUTO_CONFIRM_SECONDS="${AUTO_CONFIRM_SECONDS:-120}"
 AUTO_CONFIRM_INTERVAL="${AUTO_CONFIRM_INTERVAL:-2}"
 AUTO_CONFIRM_MAX_WINDOWS="${AUTO_CONFIRM_MAX_WINDOWS:-6}"
+ENABLE_SCRIPT_LOCKS="${ENABLE_SCRIPT_LOCKS:-1}"
+AUTO_CONFIRM_LOCK_WAIT_SECONDS="${AUTO_CONFIRM_LOCK_WAIT_SECONDS:-0}"
+display_lock_suffix="$(printf '%s' "$DISPLAY_NUM" | tr -c 'A-Za-z0-9_.-' '-')"
+AUTO_CONFIRM_LOCK_NAME="${AUTO_CONFIRM_LOCK_NAME:-auto-confirm-${display_lock_suffix}}"
+AUTO_CONFIRM_LOCK_ACQUIRED=0
+
+cleanup() {
+  if [ "${AUTO_CONFIRM_LOCK_ACQUIRED}" = "1" ]; then
+    release_script_lock
+  fi
+}
+trap cleanup EXIT
 
 if ! [[ "$AUTO_CONFIRM_SECONDS" =~ ^[0-9]+$ ]] || [ "$AUTO_CONFIRM_SECONDS" -lt 1 ]; then
   echo "ERROR: AUTO_CONFIRM_SECONDS must be a positive integer"
@@ -23,6 +36,14 @@ if ! [[ "$AUTO_CONFIRM_MAX_WINDOWS" =~ ^[0-9]+$ ]] || [ "$AUTO_CONFIRM_MAX_WINDO
   echo "ERROR: AUTO_CONFIRM_MAX_WINDOWS must be a positive integer"
   exit 2
 fi
+if [[ "$ENABLE_SCRIPT_LOCKS" != "0" && "$ENABLE_SCRIPT_LOCKS" != "1" ]]; then
+  echo "ERROR: ENABLE_SCRIPT_LOCKS must be 0 or 1"
+  exit 2
+fi
+if ! [[ "$AUTO_CONFIRM_LOCK_WAIT_SECONDS" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: AUTO_CONFIRM_LOCK_WAIT_SECONDS must be a non-negative integer"
+  exit 2
+fi
 
 for cmd in xdotool; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -30,6 +51,15 @@ for cmd in xdotool; do
     exit 0
   fi
 done
+
+if [ "$ENABLE_SCRIPT_LOCKS" = "1" ]; then
+  if acquire_script_lock "$AUTO_CONFIRM_LOCK_NAME" "$AUTO_CONFIRM_LOCK_WAIT_SECONDS"; then
+    AUTO_CONFIRM_LOCK_ACQUIRED=1
+  else
+    echo "WARN: auto-confirm helper already active for ${DISPLAY_NUM}; skipping duplicate instance."
+    exit 0
+  fi
+fi
 
 click_window_hotspots() {
   local window_id="$1"
