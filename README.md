@@ -116,6 +116,9 @@ NVIDIA GB10 Blackwell GPU
 # 8. Optional: one-shot finalize (Steam Guard code -> install -> launch)
 ./scripts/08-finalize-auth-and-run-msfs.sh <STEAM_GUARD_CODE>
 
+# 8b. Optional: run Steam prompt auto-confirm helper directly
+AUTO_CONFIRM_SECONDS=120 ./scripts/60-auto-confirm-steam-prompts.sh
+
 # 9. Optional: verify MSFS launch reached stable runtime
 ./scripts/09-verify-msfs-launch.sh
 
@@ -186,6 +189,7 @@ When auth drift is expected, `AUTO_REAUTH_ON_AUTH_FAILURE=1` runs `58-ensure-ste
 `58-ensure-steam-auth.sh` now also attempts to restore/focus Steam windows by default (`AUTH_RESTORE_WINDOWS=1`), which helps when dialogs are present but headless-minimized.
 During restore, auth recovery now also normalizes Steam window geometry by default (`AUTH_NORMALIZE_WINDOWS=1`, `AUTH_WINDOW_WIDTH=1600`, `AUTH_WINDOW_HEIGHT=900`, `AUTH_WINDOW_X=50`, `AUTH_WINDOW_Y=50`) so tiny/off-screen windows become visible for VNC/manual login.
 Auth checks now require strong Steam session evidence by default (`steamid` via process/log); UI-only detection is treated as unauthenticated unless `ALLOW_UI_AUTH_FALLBACK=1` is explicitly set.
+Launch orchestrators now auto-start `60-auto-confirm-steam-prompts.sh` by default to acknowledge common Steam modal prompts during unattended launches (`AUTO_CONFIRM_ON_LAUNCH=1` in `05-resume-headless-msfs.sh`, `AUTO_CONFIRM_PROMPTS=1` in `08-finalize-auth-and-run-msfs.sh`). Tune helper lifetime with `AUTO_CONFIRM_SECONDS` or disable explicitly with `0`.
 `90-remote-dgx-stable-check.sh` forwards `ALLOW_UI_AUTH_FALLBACK` and `FATAL_EXIT_CODES` to the remote runners, and also accepts trailing `KEY=VALUE` overrides for convenience (for example `./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1`).
 `90-remote-dgx-stable-check.sh` can load an optional remote auth env file (`REMOTE_AUTH_ENV_FILE`, default `$HOME/.config/msfs-on-dgx-spark/steam-auth.env`) and will enforce `0600` permissions by default (`REQUIRE_REMOTE_AUTH_ENV_PERMS=1`) before sourcing it.
 `90-remote-dgx-stable-check.sh` can also push a local auth env to DGX before execution (`PUSH_REMOTE_AUTH_ENV=1`, `LOCAL_AUTH_ENV_FILE=...`), with `0600` enforcement on both sides by default.
@@ -233,6 +237,7 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 │   ├── 56-run-staged-stability-check.sh # Baseline + strict staged stability gates
 │   ├── 57-recover-steam-runtime.sh # Rebuild Steam runtime namespace between retries
 │   ├── 58-ensure-steam-auth.sh # Ensure authenticated Steam session (optional credential + Steam Guard automation)
+│   ├── 60-auto-confirm-steam-prompts.sh # Best-effort Steam prompt auto-confirm helper for unattended launch
 │   ├── 90-remote-dgx-stable-check.sh # Sync current checkout to DGX and run staged checks remotely
 │   ├── 14-install-ge-proton.sh # Install latest GE-Proton into compatibilitytools.d
 └── docs/

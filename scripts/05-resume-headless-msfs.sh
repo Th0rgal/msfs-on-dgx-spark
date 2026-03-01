@@ -11,6 +11,8 @@ DISPLAY_NUM="$(resolve_display_num "$SCRIPT_DIR")"
 RESOLUTION="${RESOLUTION:-1920x1080x24}"
 MSFS_APPID="${MSFS_APPID:-2537590}"
 ACTION="${1:-install}"   # install|launch
+AUTO_CONFIRM_ON_LAUNCH="${AUTO_CONFIRM_ON_LAUNCH:-1}"
+AUTO_CONFIRM_SECONDS="${AUTO_CONFIRM_SECONDS:-90}"
 
 find_steam_dir() {
     local paths=(
@@ -62,6 +64,11 @@ if [ "$ACTION" = "install" ]; then
 else
     timeout 12s env DISPLAY="$DISPLAY_NUM" steam "steam://rungameid/${MSFS_APPID}" >/tmp/msfs-launch-uri.log 2>&1 || true
     echo "Triggered Steam launch URI for AppID ${MSFS_APPID}."
+    if [ "$AUTO_CONFIRM_ON_LAUNCH" = "1" ] && [ -x "$SCRIPT_DIR/60-auto-confirm-steam-prompts.sh" ]; then
+        DISPLAY_NUM="$DISPLAY_NUM" AUTO_CONFIRM_SECONDS="$AUTO_CONFIRM_SECONDS" \
+          "$SCRIPT_DIR/60-auto-confirm-steam-prompts.sh" >/tmp/msfs-auto-confirm.log 2>&1 &
+        echo "Started auto-confirm helper for launch prompts (${AUTO_CONFIRM_SECONDS}s)."
+    fi
 fi
 
 echo ""

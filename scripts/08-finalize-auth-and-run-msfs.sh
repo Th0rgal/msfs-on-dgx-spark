@@ -13,7 +13,17 @@ POLL_SECONDS="${POLL_SECONDS:-20}"
 LAUNCH_VERIFY_WAIT_SECONDS="${LAUNCH_VERIFY_WAIT_SECONDS:-120}"
 LAUNCH_MIN_STABLE_SECONDS="${LAUNCH_MIN_STABLE_SECONDS:-30}"
 ALLOW_OFFLINE_LAUNCH_IF_INSTALLED="${ALLOW_OFFLINE_LAUNCH_IF_INSTALLED:-1}"
+AUTO_CONFIRM_PROMPTS="${AUTO_CONFIRM_PROMPTS:-1}"
+AUTO_CONFIRM_SECONDS="${AUTO_CONFIRM_SECONDS:-120}"
 GUARD_CODE="${1:-${STEAM_GUARD_CODE:-}}"
+AUTO_CONFIRM_PID=""
+
+cleanup() {
+  if [ -n "${AUTO_CONFIRM_PID:-}" ] && kill -0 "$AUTO_CONFIRM_PID" >/dev/null 2>&1; then
+    kill "$AUTO_CONFIRM_PID" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT
 
 manifest_progress() {
   local manifest="$1"
@@ -145,6 +155,12 @@ if [ "$INSTALL_WAIT_SECONDS" -gt 0 ]; then
 fi
 
 echo "[7/8] Launching MSFS via ~/launch-msfs.sh ..."
+if [ "$AUTO_CONFIRM_PROMPTS" = "1" ] && [ -x "$SCRIPT_DIR/60-auto-confirm-steam-prompts.sh" ]; then
+  DISPLAY_NUM="$DISPLAY_NUM" AUTO_CONFIRM_SECONDS="$AUTO_CONFIRM_SECONDS" \
+    "$SCRIPT_DIR/60-auto-confirm-steam-prompts.sh" >/tmp/msfs-auto-confirm.log 2>&1 &
+  AUTO_CONFIRM_PID="$!"
+  echo "Started auto-confirm helper for Steam prompts (pid=${AUTO_CONFIRM_PID}, ${AUTO_CONFIRM_SECONDS}s)."
+fi
 if [ -x "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" ]; then
   WAIT_SECONDS=20 "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" >/tmp/msfs-launch.log 2>&1 || true
 elif [ -x "$HOME/launch-msfs.sh" ]; then

@@ -1,5 +1,26 @@
 # Progress Log
 
+## 2026-03-01 (unattended Steam prompt auto-confirm during launch)
+
+Validation from this checkout:
+
+- Added new helper script `scripts/60-auto-confirm-steam-prompts.sh`:
+  - best-effort Steam prompt automation via `xdotool` over a bounded timeout window,
+  - validates numeric env knobs (`AUTO_CONFIRM_SECONDS`, `AUTO_CONFIRM_INTERVAL`, `AUTO_CONFIRM_MAX_WINDOWS`),
+  - exits cleanly as a no-op when required UI tool dependencies are unavailable.
+- Updated launch orchestrators to start the helper automatically by default:
+  - `scripts/05-resume-headless-msfs.sh` (`AUTO_CONFIRM_ON_LAUNCH=1`, `AUTO_CONFIRM_SECONDS`),
+  - `scripts/08-finalize-auth-and-run-msfs.sh` (`AUTO_CONFIRM_PROMPTS=1`, `AUTO_CONFIRM_SECONDS`) with exit-trap cleanup for background helper lifecycle.
+- Updated docs:
+  - `README.md`
+- Local verification:
+  - `bash -n scripts/05-resume-headless-msfs.sh scripts/08-finalize-auth-and-run-msfs.sh scripts/60-auto-confirm-steam-prompts.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This reduces manual VNC intervention for first-run Steam confirmation dialogs and improves unattended MSFS launch reliability in headless DGX sessions.
+
 ## 2026-03-01 (CI merge-conflict marker guardrails)
 
 Validation from this checkout:
