@@ -1,5 +1,24 @@
 # Progress Log
 
+## 2026-03-01 (lock diagnostics + stale-lock reclaim hardening)
+
+Validation from this checkout:
+
+- Improved shared lock behavior in `scripts/lib-lock.sh`:
+  - lock-busy diagnostics now include holder PID context when available,
+  - mkdir-fallback lock mode now auto-reclaims stale lock directories by default when recorded holder PID is no longer running.
+- Added `MSFS_LOCK_RECLAIM_STALE` (default `1`) to control stale-lock reclamation in fallback mode.
+- Updated docs:
+  - `README.md`
+  - `docs/troubleshooting.md`
+- Local verification:
+  - `bash -n scripts/lib-lock.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This reduces operational friction and false blocking in long-running headless orchestration by improving lock-owner observability and automatic cleanup of stale fallback locks.
+
 ## 2026-03-01 (ShellCheck error-level CI guardrails)
 
 Validation from this checkout:

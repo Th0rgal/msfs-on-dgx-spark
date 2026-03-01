@@ -132,6 +132,7 @@ If unauthenticated failures occur with no active `steamwebhelper`, keep `AUTH_BO
 - `scripts/90-remote-dgx-stable-check.sh`
 
 **Cause**: another launch/retry/remote-check orchestration is already running; lock guardrails prevent overlapping runs from racing on Steam/MSFS state.
+Recent lock errors include holder PID context when discoverable (for example `holder pid: 12345`), which helps identify the active owner process.
 
 **Fix**:
 ```bash
@@ -142,6 +143,9 @@ MSFS_REMOTE_CHECK_LOCK_WAIT_SECONDS=600 ./scripts/90-remote-dgx-stable-check.sh
 
 # Last resort (not recommended): disable lock guardrails
 ENABLE_SCRIPT_LOCKS=0 ./scripts/90-remote-dgx-stable-check.sh
+
+# Optional: disable stale lockdir reclamation in mkdir-fallback mode
+MSFS_LOCK_RECLAIM_STALE=0 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
 ### Dispatch not accepted (`exit 4`) after auth succeeds
