@@ -156,22 +156,13 @@ for file_path in "${text_guardrail_files[@]}"; do
   fi
 done
 
-echo "==> Strict-mode guardrails (critical orchestrators)"
-critical_strict_scripts=(
-  "scripts/53-preflight-runtime-repair.sh"
-  "scripts/54-launch-and-capture-evidence.sh"
-  "scripts/55-run-until-stable-runtime.sh"
-  "scripts/56-run-staged-stability-check.sh"
-  "scripts/57-recover-steam-runtime.sh"
-  "scripts/58-ensure-steam-auth.sh"
-  "scripts/90-remote-dgx-stable-check.sh"
-)
-for script_path in "${critical_strict_scripts[@]}"; do
+echo "==> Strict-mode guardrails (numbered scripts)"
+while IFS= read -r script_path; do
   if ! grep -qx 'set -euo pipefail' "${script_path}"; then
     echo "ERROR: missing strict mode header in ${script_path}" >&2
     exit 1
   fi
-done
+done < <(find scripts -maxdepth 1 -type f -name '[0-9][0-9]-*.sh' | sort)
 
 echo "==> Hardcoded sudo password guardrails"
 hardcoded_sudo_pattern="echo[[:space:]]+[\"'][^\"']+[\"'][[:space:]]*\\|[[:space:]]*sudo[[:space:]]+-S"

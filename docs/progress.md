@@ -1,5 +1,19 @@
 # Progress Log
 
+## 2026-03-01 (strict-mode guardrails for all numbered scripts)
+
+Validation from this checkout:
+
+- Expanded `scripts/99-ci-validate.sh` strict-mode guardrails to cover all numbered scripts (`scripts/[0-9][0-9]-*.sh`) instead of only a hand-picked critical subset.
+- Updated `README.md` contributor guidance to reflect full numbered-script strict-mode coverage.
+- Local verification:
+  - `bash -n scripts/99-ci-validate.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a CI regression gap where strict-mode drift in non-critical numbered scripts could previously merge unnoticed.
+
 ## 2026-03-01 (strict lock-toggle input validation)
 
 Validation from this checkout:
