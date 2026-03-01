@@ -1,5 +1,27 @@
 # Progress Log
 
+## 2026-03-01 (lock acquire failure-state cleanup hardening)
+
+Validation from this checkout:
+
+- Hardened `scripts/lib-lock.sh` lock acquisition behavior:
+  - acquisition now keeps backend state local until success,
+  - failed flock acquisition paths now close the opened fd and clear lock globals,
+  - failed mkdir-fallback acquisition paths now clear lock globals before returning.
+- Expanded lock regression coverage in `scripts/98-test-lock-lib.sh`:
+  - verifies failed flock contention leaves no stale `MSFS_LOCK_FILE`/`MSFS_LOCK_FD`/`MSFS_LOCK_DIR` state,
+  - verifies failed mkdir contention leaves no stale lock globals.
+- Updated docs:
+  - `README.md`
+- Local verification:
+  - `bash -n scripts/lib-lock.sh scripts/98-test-lock-lib.sh` (pass)
+  - `./scripts/98-test-lock-lib.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a reliability gap where failed lock attempts in long-lived shells could leave partial lock state (including an open flock fd), creating hidden retry coupling and potential fd pressure.
+
 ## 2026-03-01 (strict-mode guardrails for all numbered scripts)
 
 Validation from this checkout:
