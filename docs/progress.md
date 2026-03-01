@@ -1,5 +1,20 @@
 # Progress Log
 
+## 2026-03-01 (CI shebang guardrails for Bash scripts)
+
+Validation from this checkout:
+
+- Added shebang validation to `scripts/99-ci-validate.sh` for all `scripts/*.sh` files.
+- CI now fails if any script does not start with `#!/usr/bin/env bash`.
+- Updated `README.md` contributor guidance to include shebang guardrails.
+- Local verification:
+  - `bash -n scripts/99-ci-validate.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a shell-execution reliability gap where accidental shebang drift could force `/bin/sh` behavior and break Bash-specific orchestration paths.
+
 ## 2026-03-01 (tracked-markdown docs integrity guardrails)
 
 Validation from this checkout:

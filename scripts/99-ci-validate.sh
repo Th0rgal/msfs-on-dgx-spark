@@ -15,6 +15,15 @@ while IFS= read -r script_path; do
   bash -n "${script_path}"
 done < <(find scripts -maxdepth 1 -type f -name '*.sh' | sort)
 
+echo "==> Shebang guardrails"
+while IFS= read -r script_path; do
+  shebang_line="$(head -n 1 "${script_path}")"
+  if [[ "${shebang_line}" != "#!/usr/bin/env bash" ]]; then
+    echo "ERROR: expected '#!/usr/bin/env bash' in ${script_path}" >&2
+    exit 1
+  fi
+done < <(find scripts -maxdepth 1 -type f -name '*.sh' | sort)
+
 echo "==> Executable bit checks"
 while IFS= read -r script_path; do
   if [[ ! -x "${script_path}" ]]; then
