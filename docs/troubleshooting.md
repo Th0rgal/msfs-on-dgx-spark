@@ -146,6 +146,9 @@ ENABLE_SCRIPT_LOCKS=0 ./scripts/90-remote-dgx-stable-check.sh
 
 # Optional: disable stale lockdir reclamation in mkdir-fallback mode
 MSFS_LOCK_RECLAIM_STALE=0 ./scripts/90-remote-dgx-stable-check.sh
+
+# Optional: force mkdir-fallback lock backend for deterministic debugging
+MSFS_FORCE_MKDIR_LOCK=1 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
 ### Dispatch not accepted (`exit 4`) after auth succeeds

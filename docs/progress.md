@@ -1,5 +1,28 @@
 # Progress Log
 
+## 2026-03-01 (mkdir-fallback lock-path regression coverage)
+
+Validation from this checkout:
+
+- Added deterministic fallback-backend control in `scripts/lib-lock.sh`:
+  - new env toggle `MSFS_FORCE_MKDIR_LOCK=1` bypasses `flock` and forces mkdir lock mode,
+  - invalid toggle values now fail fast with a clear validation error.
+- Expanded lock behavioral regression tests in `scripts/98-test-lock-lib.sh`:
+  - verifies contention diagnostics in forced mkdir-fallback mode,
+  - verifies stale lockdir auto-reclaim during lock acquisition in fallback mode,
+  - verifies `MSFS_LOCK_RECLAIM_STALE=0` blocks acquisition on stale fallback lockdirs.
+- Updated docs:
+  - `README.md`
+  - `docs/troubleshooting.md`
+- Local verification:
+  - `bash -n scripts/lib-lock.sh scripts/98-test-lock-lib.sh` (pass)
+  - `./scripts/98-test-lock-lib.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a meaningful regression blind spot by validating both lock backends in CI/self-tests instead of only the default `flock` path.
+
 ## 2026-03-01 (CI local markdown-link integrity checks)
 
 Validation from this checkout:
