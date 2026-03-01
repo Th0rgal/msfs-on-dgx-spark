@@ -24,17 +24,21 @@ while IFS= read -r script_path; do
 done < <(find scripts -maxdepth 1 -type f -name '[0-9][0-9]-*.sh' | sort)
 
 echo "==> Docs script-reference checks"
+mapfile -t markdown_files < <(git ls-files '*.md')
+if [[ "${#markdown_files[@]}" -eq 0 ]]; then
+  echo "WARN: no tracked markdown files found; skipping docs script-reference checks."
+fi
+
 list_doc_script_refs() {
+  if [[ "${#markdown_files[@]}" -eq 0 ]]; then
+    return 0
+  fi
   if [[ "${have_rg}" -eq 1 ]]; then
     rg --no-filename -o 'scripts/[0-9][0-9]-[A-Za-z0-9_.-]+\.sh' \
-      README.md \
-      docs/setup-guide.md \
-      docs/troubleshooting.md || true
+      "${markdown_files[@]}" || true
   else
     grep -Eho 'scripts/[0-9][0-9]-[A-Za-z0-9_.-]+\.sh' \
-      README.md \
-      docs/setup-guide.md \
-      docs/troubleshooting.md || true
+      "${markdown_files[@]}" || true
   fi
 }
 
