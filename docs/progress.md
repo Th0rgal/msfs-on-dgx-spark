@@ -1,5 +1,24 @@
 # Progress Log
 
+## 2026-03-01 (ShellCheck error-level CI guardrails)
+
+Validation from this checkout:
+
+- Expanded `scripts/99-ci-validate.sh` with ShellCheck enforcement:
+  - requires `shellcheck` in `PATH`,
+  - runs `shellcheck -S error scripts/*.sh`,
+  - fails fast with actionable install guidance when missing.
+- Updated GitHub Actions workflow `.github/workflows/ci.yml`:
+  - installs `shellcheck` before running repository validation.
+- Updated `README.md` contributing guidance to include the new ShellCheck guardrail.
+- Local verification:
+  - `bash -n scripts/99-ci-validate.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a key shell-quality gap by adding static error-level defect detection before merge, which is high leverage for a shell-orchestrated repository.
+
 ## 2026-03-01 (userspace tailscaled cleanup on remote-check exit)
 
 Validation from this checkout:

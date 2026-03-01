@@ -69,4 +69,12 @@ if grep -RInE "${hardcoded_sudo_pattern}" scripts/*.sh >/dev/null; then
   exit 1
 fi
 
+echo "==> ShellCheck error-level guardrails"
+if ! command -v shellcheck >/dev/null 2>&1; then
+  echo "ERROR: shellcheck is required but was not found in PATH." >&2
+  echo "Install shellcheck locally or run in CI where it is provisioned." >&2
+  exit 1
+fi
+shellcheck -S error scripts/*.sh
+
 echo "CI validation passed."
