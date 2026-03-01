@@ -91,7 +91,7 @@ while [ "$a" -le "$MAX_ATTEMPTS" ]; do
       AUTH_SUBMIT_LOGIN="$AUTH_SUBMIT_LOGIN" \
       AUTH_USE_STEAM_LOGIN_CLI="$AUTH_USE_STEAM_LOGIN_CLI" \
       ALLOW_UI_AUTH_FALLBACK="$ALLOW_UI_AUTH_FALLBACK" \
-      "$SCRIPT_DIR/58-ensure-steam-auth.sh" 2>&1 | tee "$reauth_log"
+      bash "$SCRIPT_DIR/58-ensure-steam-auth.sh" 2>&1 | tee "$reauth_log"
       reauth_rc=${PIPESTATUS[0]}
       set -e
       echo "  re-auth exit code: $reauth_rc"

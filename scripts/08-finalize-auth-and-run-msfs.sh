@@ -13,6 +13,7 @@ POLL_SECONDS="${POLL_SECONDS:-20}"
 LAUNCH_VERIFY_WAIT_SECONDS="${LAUNCH_VERIFY_WAIT_SECONDS:-120}"
 LAUNCH_MIN_STABLE_SECONDS="${LAUNCH_MIN_STABLE_SECONDS:-30}"
 ALLOW_OFFLINE_LAUNCH_IF_INSTALLED="${ALLOW_OFFLINE_LAUNCH_IF_INSTALLED:-1}"
+ALLOW_UI_AUTH_FALLBACK="${ALLOW_UI_AUTH_FALLBACK:-1}"
 AUTO_CONFIRM_PROMPTS="${AUTO_CONFIRM_PROMPTS:-1}"
 AUTO_CONFIRM_SECONDS="${AUTO_CONFIRM_SECONDS:-120}"
 CAPTURE_STEAM_SCREENSHOT="${CAPTURE_STEAM_SCREENSHOT:-1}"
@@ -98,9 +99,9 @@ echo "[3/8] Waiting for authenticated Steam session..."
 start_ts="$(date +%s)"
 allow_offline=0
 while true; do
-  if steam_session_authenticated "$DISPLAY_NUM" "$STEAM_DIR"; then
+  if ALLOW_UI_AUTH_FALLBACK="$ALLOW_UI_AUTH_FALLBACK" steam_session_authenticated "$DISPLAY_NUM" "$STEAM_DIR"; then
     sid="$(steamid_from_processes || true)"
-    [ -z "$sid" ] && sid="$(steamid_from_connection_log "$STEAM_DIR" || true)"
+    [ -z "$sid" ] && sid="$(ALLOW_UI_AUTH_FALLBACK="$ALLOW_UI_AUTH_FALLBACK" steamid_from_connection_log "$STEAM_DIR" || true)"
     [ -z "$sid" ] && sid="ui-detected"
     echo "Authenticated Steam session detected: steamid=$sid"
     break
@@ -175,10 +176,10 @@ if [ "$INSTALL_WAIT_SECONDS" -gt 0 ]; then
 fi
 
 echo "[7/8] Launching MSFS via ~/launch-msfs.sh ..."
-if [ "$ENSURE_LAUNCHABLE_STATE" = "1" ] && [ -x "$SCRIPT_DIR/62-ensure-msfs-launchable-state.sh" ]; then
+if [ "$ENSURE_LAUNCHABLE_STATE" = "1" ] && [ -f "$SCRIPT_DIR/62-ensure-msfs-launchable-state.sh" ]; then
   set +e
   MSFS_APPID="$MSFS_APPID" WAIT_FOR_EXISTING_SECONDS="$LAUNCHABLE_WAIT_SECONDS" OUT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)/output" \
-    "$SCRIPT_DIR/62-ensure-msfs-launchable-state.sh" >/tmp/msfs-launchable-state.log 2>&1
+    bash "$SCRIPT_DIR/62-ensure-msfs-launchable-state.sh" >/tmp/msfs-launchable-state.log 2>&1
   ensure_rc=$?
   set -e
   if [ "$ensure_rc" -eq 10 ]; then
@@ -187,9 +188,9 @@ if [ "$ENSURE_LAUNCHABLE_STATE" = "1" ] && [ -x "$SCRIPT_DIR/62-ensure-msfs-laun
     echo "WARN: launchability guard reported non-zero exit ($ensure_rc); proceeding with dispatch."
   fi
 fi
-if [ "$AUTO_CONFIRM_PROMPTS" = "1" ] && [ -x "$SCRIPT_DIR/60-auto-confirm-steam-prompts.sh" ]; then
+if [ "$AUTO_CONFIRM_PROMPTS" = "1" ] && [ -f "$SCRIPT_DIR/60-auto-confirm-steam-prompts.sh" ]; then
   DISPLAY_NUM="$DISPLAY_NUM" AUTO_CONFIRM_SECONDS="$AUTO_CONFIRM_SECONDS" \
-    "$SCRIPT_DIR/60-auto-confirm-steam-prompts.sh" >/tmp/msfs-auto-confirm.log 2>&1 &
+    bash "$SCRIPT_DIR/60-auto-confirm-steam-prompts.sh" >/tmp/msfs-auto-confirm.log 2>&1 &
   AUTO_CONFIRM_PID="$!"
   echo "Started auto-confirm helper for Steam prompts (pid=${AUTO_CONFIRM_PID}, ${AUTO_CONFIRM_SECONDS}s)."
 fi
@@ -247,12 +248,12 @@ else
   fi
 fi
 
-if [ "$verify_rc" -eq 0 ] && [ "$CAPTURE_STEAM_SCREENSHOT" = "1" ] && [ -x "$SCRIPT_DIR/61-capture-steam-f12-screenshot.sh" ]; then
+if [ "$verify_rc" -eq 0 ] && [ "$CAPTURE_STEAM_SCREENSHOT" = "1" ] && [ -f "$SCRIPT_DIR/61-capture-steam-f12-screenshot.sh" ]; then
   echo "Capturing a Steam in-game screenshot via F12..."
   set +e
   DISPLAY_NUM="$DISPLAY_NUM" MSFS_APPID="$MSFS_APPID" WAIT_SECONDS="$SCREENSHOT_WAIT_SECONDS" \
     OUT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)/output" \
-    "$SCRIPT_DIR/61-capture-steam-f12-screenshot.sh"
+    bash "$SCRIPT_DIR/61-capture-steam-f12-screenshot.sh"
   shot_rc=$?
   set -e
   if [ "$shot_rc" -ne 0 ]; then

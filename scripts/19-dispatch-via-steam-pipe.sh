@@ -14,6 +14,7 @@ PIPE_WRITE_RETRY_DELAY_SECONDS="${PIPE_WRITE_RETRY_DELAY_SECONDS:-5}"
 PIPE_WRITE_RECOVER_ON_TIMEOUT="${PIPE_WRITE_RECOVER_ON_TIMEOUT:-1}"
 URI_FALLBACK_ON_PIPE_FAILURE="${URI_FALLBACK_ON_PIPE_FAILURE:-1}"
 URI_FALLBACK_TIMEOUT_SECONDS="${URI_FALLBACK_TIMEOUT_SECONDS:-15}"
+DISPATCH_REQUIRE_ACCEPT="${DISPATCH_REQUIRE_ACCEPT:-0}"
 RECOVER_SCRIPT="${RECOVER_SCRIPT:-$SCRIPT_DIR/57-recover-steam-runtime.sh}"
 RECOVER_OUT_DIR="${RECOVER_OUT_DIR:-$REPO_ROOT/output}"
 DISPLAY_NUM="${DISPLAY_NUM:-$(resolve_display_num "$SCRIPT_DIR")}"
@@ -75,6 +76,7 @@ echo "  Pipe write timeout: ${PIPE_WRITE_TIMEOUT_SECONDS}s"
 echo "  Pipe write retries: ${PIPE_WRITE_RETRIES}"
 echo "  Pipe timeout recovery: ${PIPE_WRITE_RECOVER_ON_TIMEOUT}"
 echo "  URI fallback on pipe failure: ${URI_FALLBACK_ON_PIPE_FAILURE}"
+echo "  Require accept evidence: ${DISPATCH_REQUIRE_ACCEPT}"
 echo "  DISPLAY: $DISPLAY_NUM"
 echo "  GameAction before: $before_ga"
 echo "  StartSession before: $before_start"
@@ -85,6 +87,7 @@ if ! [[ "$PIPE_WRITE_RETRIES" =~ ^[0-9]+$ ]] || [ "$PIPE_WRITE_RETRIES" -lt 1 ];
 fi
 
 pipe_write_ok=0
+fallback_dispatched=0
 attempt=1
 while [ "$attempt" -le "$PIPE_WRITE_RETRIES" ]; do
   if timeout "${PIPE_WRITE_TIMEOUT_SECONDS}s" sh -c 'printf "%s\n" "$1" > "$2"' sh "$LAUNCH_URI" "$STEAM_PIPE"; then
@@ -95,9 +98,9 @@ while [ "$attempt" -le "$PIPE_WRITE_RETRIES" ]; do
 
   echo "  Pipe write: timeout on attempt ${attempt}/${PIPE_WRITE_RETRIES}"
   if [ "$attempt" -lt "$PIPE_WRITE_RETRIES" ]; then
-    if [ "$PIPE_WRITE_RECOVER_ON_TIMEOUT" = "1" ] && [ -x "$RECOVER_SCRIPT" ]; then
+    if [ "$PIPE_WRITE_RECOVER_ON_TIMEOUT" = "1" ] && [ -f "$RECOVER_SCRIPT" ]; then
       echo "  Running runtime recovery before retry..."
-      OUT_DIR="$RECOVER_OUT_DIR" "$RECOVER_SCRIPT" >/dev/null 2>&1 || true
+      OUT_DIR="$RECOVER_OUT_DIR" bash "$RECOVER_SCRIPT" >/dev/null 2>&1 || true
     fi
     sleep "$PIPE_WRITE_RETRY_DELAY_SECONDS"
   fi
@@ -108,6 +111,7 @@ if [ "$pipe_write_ok" -ne 1 ]; then
   if [ "$URI_FALLBACK_ON_PIPE_FAILURE" = "1" ]; then
     echo "  Pipe write exhausted; falling back to Steam URI dispatch on DISPLAY=$DISPLAY_NUM"
     timeout "${URI_FALLBACK_TIMEOUT_SECONDS}s" env DISPLAY="$DISPLAY_NUM" steam "$LAUNCH_URI" >/dev/null 2>&1 || true
+    fallback_dispatched=1
   else
     echo "RESULT: failed to write launch URI to steam pipe within timeout."
     echo "Hint: this usually means Steam has no active pipe consumer in the current session."
@@ -134,6 +138,11 @@ if [ "$after_ga" -gt "$before_ga" ] || [ "$after_start" -gt "$before_start" ]; t
   fi
   tail -n 120 "$CONTENT_LOG" | grep -nE "${MSFS_APPID}|App Running|state changed" | tail -n 40 || true
   tail -n 120 "$COMPAT_LOG" | grep -nE "StartSession: appID ${MSFS_APPID}|Command prefix|Proton - Experimental|GE-Proton" | tail -n 40 || true
+  exit 0
+fi
+
+if [ "$DISPATCH_REQUIRE_ACCEPT" != "1" ] && { [ "$pipe_write_ok" -eq 1 ] || [ "$fallback_dispatched" -eq 1 ]; }; then
+  echo "RESULT: dispatch sent (no immediate accept evidence; proceeding in soft-success mode)."
   exit 0
 fi
 

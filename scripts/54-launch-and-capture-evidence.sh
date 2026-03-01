@@ -12,9 +12,12 @@ WAIT_SECONDS="${WAIT_SECONDS:-240}"
 MIN_STABLE_SECONDS="${MIN_STABLE_SECONDS:-45}"
 REQUIRE_NVIDIA_DISPLAY="${REQUIRE_NVIDIA_DISPLAY:-1}"
 AUTH_DEBUG_ON_FAILURE="${AUTH_DEBUG_ON_FAILURE:-1}"
+ALLOW_UI_AUTH_FALLBACK="${ALLOW_UI_AUTH_FALLBACK:-1}"
 AUTH_BOOTSTRAP_STEAM_STACK="${AUTH_BOOTSTRAP_STEAM_STACK:-1}"
 AUTH_BOOTSTRAP_WAIT_SECONDS="${AUTH_BOOTSTRAP_WAIT_SECONDS:-8}"
 AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER="${AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER:-1}"
+AUTH_ENSURE_LOGIN_BEFORE_DISPATCH="${AUTH_ENSURE_LOGIN_BEFORE_DISPATCH:-1}"
+AUTH_ENSURE_LOGIN_WAIT_SECONDS="${AUTH_ENSURE_LOGIN_WAIT_SECONDS:-90}"
 DISPATCH_MAX_ATTEMPTS="${DISPATCH_MAX_ATTEMPTS:-2}"
 DISPATCH_RETRY_DELAY_SECONDS="${DISPATCH_RETRY_DELAY_SECONDS:-8}"
 DISPATCH_RECOVER_ON_NO_ACCEPT="${DISPATCH_RECOVER_ON_NO_ACCEPT:-1}"
@@ -86,8 +89,26 @@ if [ "$AUTH_BOOTSTRAP_STEAM_STACK" = "1" ]; then
   fi
 fi
 
+if [ "$AUTH_ENSURE_LOGIN_BEFORE_DISPATCH" = "1" ] && [ -f "$SCRIPT_DIR/58-ensure-steam-auth.sh" ]; then
+  auth_ensure_log="$OUT_DIR/auth-ensure-${MSFS_APPID}-${STAMP}.log"
+  set +e
+  DISPLAY_NUM="$DISPLAY_NUM" \
+  LOGIN_WAIT_SECONDS="$AUTH_ENSURE_LOGIN_WAIT_SECONDS" \
+  ALLOW_UI_AUTH_FALLBACK="$ALLOW_UI_AUTH_FALLBACK" \
+  AUTH_AUTO_FILL="${AUTH_AUTO_FILL:-1}" \
+  AUTH_SUBMIT_LOGIN="${AUTH_SUBMIT_LOGIN:-1}" \
+  AUTH_USE_STEAM_LOGIN_CLI="${AUTH_USE_STEAM_LOGIN_CLI:-1}" \
+  AUTH_RESTORE_WINDOWS="${AUTH_RESTORE_WINDOWS:-1}" \
+  bash "$SCRIPT_DIR/58-ensure-steam-auth.sh" >"$auth_ensure_log" 2>&1
+  auth_ensure_rc=$?
+  set -e
+  if [ "$auth_ensure_rc" -ne 0 ]; then
+    echo "WARN: auth ensure step returned rc=$auth_ensure_rc: $auth_ensure_log"
+  fi
+fi
+
 auth_log="$OUT_DIR/auth-state-${MSFS_APPID}-${STAMP}.log"
-if ! steam_session_authenticated "$DISPLAY_NUM" "$STEAM_DIR"; then
+if ! ALLOW_UI_AUTH_FALLBACK="$ALLOW_UI_AUTH_FALLBACK" steam_session_authenticated "$DISPLAY_NUM" "$STEAM_DIR"; then
   debug_note=""
   if [ "$AUTH_DEBUG_ON_FAILURE" = "1" ] && [ -x "$SCRIPT_DIR/11-debug-steam-window-state.sh" ]; then
     set +e
@@ -105,7 +126,7 @@ if ! steam_session_authenticated "$DISPLAY_NUM" "$STEAM_DIR"; then
     echo "RESULT: Steam session unauthenticated; launch skipped."
     echo "  DISPLAY: $DISPLAY_NUM"
     echo "  Steam dir: $STEAM_DIR"
-    echo "  Auth status: $(steam_auth_status "$DISPLAY_NUM" "$STEAM_DIR" || true)"
+    echo "  Auth status: $(ALLOW_UI_AUTH_FALLBACK="$ALLOW_UI_AUTH_FALLBACK" steam_auth_status "$DISPLAY_NUM" "$STEAM_DIR" || true)"
     [ -n "$debug_note" ] && echo "$debug_note"
     echo "Hint: complete Steam login/Steam Guard in the active UI session, then retry."
   } | tee "$auth_log"
@@ -113,7 +134,7 @@ if ! steam_session_authenticated "$DISPLAY_NUM" "$STEAM_DIR"; then
 fi
 {
   echo "RESULT: Steam session authenticated."
-  echo "  Auth status: $(steam_auth_status "$DISPLAY_NUM" "$STEAM_DIR" || true)"
+  echo "  Auth status: $(ALLOW_UI_AUTH_FALLBACK="$ALLOW_UI_AUTH_FALLBACK" steam_auth_status "$DISPLAY_NUM" "$STEAM_DIR" || true)"
 } >"$auth_log"
 
 echo "[1/5] Preflight runtime repair"
@@ -122,10 +143,10 @@ MSFS_APPID="$MSFS_APPID" "$SCRIPT_DIR/53-preflight-runtime-repair.sh" \
 
 echo "[2/5] Launch dispatch via Steam pipe"
 ensure_rc=0
-if [ "$ENSURE_LAUNCHABLE_STATE" = "1" ] && [ -x "$SCRIPT_DIR/62-ensure-msfs-launchable-state.sh" ]; then
+if [ "$ENSURE_LAUNCHABLE_STATE" = "1" ] && [ -f "$SCRIPT_DIR/62-ensure-msfs-launchable-state.sh" ]; then
   set +e
   MSFS_APPID="$MSFS_APPID" WAIT_FOR_EXISTING_SECONDS="$LAUNCHABLE_WAIT_SECONDS" OUT_DIR="$OUT_DIR" \
-    "$SCRIPT_DIR/62-ensure-msfs-launchable-state.sh" \
+    bash "$SCRIPT_DIR/62-ensure-msfs-launchable-state.sh" \
     >"$OUT_DIR/launchable-state-${MSFS_APPID}-${STAMP}.log" 2>&1
   ensure_rc=$?
   set -e
