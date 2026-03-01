@@ -1,5 +1,29 @@
 # Progress Log
 
+## 2026-03-01 (userspace tailscaled cleanup on remote-check exit)
+
+Validation from this checkout:
+
+- Updated `scripts/90-remote-dgx-stable-check.sh` to track userspace `tailscaled` instances started by the script itself and tear them down during exit cleanup by default.
+- Added `LOCAL_TAILSCALE_CLEANUP_ON_EXIT` (default `1`):
+  - `1` = stop script-started userspace `tailscaled` on exit (default).
+  - `0` = preserve script-started userspace daemon for manual debugging.
+- Cleanup is scoped safely:
+  - only applies when `BOOTSTRAP_LOCAL_TAILSCALE=1`,
+  - only affects daemons started by the current script run,
+  - does not terminate pre-existing/system `tailscaled`.
+- Updated docs:
+  - `README.md`
+  - `docs/setup-guide.md`
+  - `docs/troubleshooting.md`
+- Local verification:
+  - `bash -n scripts/90-remote-dgx-stable-check.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This removes a high-noise reliability risk in headless/CI runners where repeated remote checks could leave lingering userspace tailscale daemons and stale sockets.
+
 ## 2026-03-01 (concurrency guardrails for critical orchestrators)
 
 Validation from this checkout:
