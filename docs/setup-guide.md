@@ -460,4 +460,10 @@ VKD3D_DEBUG=warn VKD3D_CONFIG=dxr %command% -FastLaunch
 
 # Disable DXVK HUD after initial testing
 # Just remove DXVK_HUD from launch options
+
+# Serialize launch/retry/remote orchestrators (enabled by default)
+ENABLE_SCRIPT_LOCKS=1
+MSFS_LAUNCH_LOCK_WAIT_SECONDS=0
+MSFS_STABLE_RUN_LOCK_WAIT_SECONDS=0
+MSFS_REMOTE_CHECK_LOCK_WAIT_SECONDS=0
 ```

@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MSFS_APPID="${MSFS_APPID:-2537590}"
 source "$SCRIPT_DIR/lib-display.sh"
+source "$SCRIPT_DIR/lib-lock.sh"
 source "$SCRIPT_DIR/lib-steam-auth.sh"
 DISPLAY_NUM="$(resolve_display_num "$SCRIPT_DIR")"
 WAIT_SECONDS="${WAIT_SECONDS:-240}"
@@ -32,9 +33,16 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 OUT_DIR="${OUT_DIR:-$REPO_ROOT/output}"
 STEAM_DIR="${STEAM_DIR:-$HOME/snap/steam/common/.local/share/Steam}"
 PFX="$STEAM_DIR/steamapps/compatdata/${MSFS_APPID}/pfx"
+ENABLE_SCRIPT_LOCKS="${ENABLE_SCRIPT_LOCKS:-1}"
+MSFS_LAUNCH_LOCK_WAIT_SECONDS="${MSFS_LAUNCH_LOCK_WAIT_SECONDS:-0}"
 
 mkdir -p "$OUT_DIR"
 RUN_START_EPOCH="$(date +%s)"
+
+if [ "$ENABLE_SCRIPT_LOCKS" = "1" ]; then
+  acquire_script_lock "launch-cycle-${MSFS_APPID}" "$MSFS_LAUNCH_LOCK_WAIT_SECONDS"
+  trap 'release_script_lock' EXIT
+fi
 
 if [ "$AUTH_BOOTSTRAP_STEAM_STACK" = "1" ]; then
   bootstrap_log="$OUT_DIR/auth-bootstrap-${MSFS_APPID}-${STAMP}.log"

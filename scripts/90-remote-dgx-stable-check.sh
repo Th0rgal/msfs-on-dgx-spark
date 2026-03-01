@@ -4,6 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPT_DIR/lib-lock.sh"
 
 # Accept optional KEY=VALUE overrides as positional args for convenience.
 # This allows invocations like:
@@ -105,9 +106,19 @@ LOCAL_AUTH_ENV_FILE="${LOCAL_AUTH_ENV_FILE:-$HOME/.config/msfs-on-dgx-spark/stea
 REQUIRE_LOCAL_AUTH_ENV_PERMS="${REQUIRE_LOCAL_AUTH_ENV_PERMS:-1}"
 FETCH_EVIDENCE="${FETCH_EVIDENCE:-1}"
 LOCAL_EVIDENCE_DIR="${LOCAL_EVIDENCE_DIR:-$REPO_ROOT/output/remote-runs}"
+ENABLE_SCRIPT_LOCKS="${ENABLE_SCRIPT_LOCKS:-1}"
+MSFS_REMOTE_CHECK_LOCK_WAIT_SECONDS="${MSFS_REMOTE_CHECK_LOCK_WAIT_SECONDS:-0}"
 
 TMP_TAR="/tmp/msfs-on-dgx-spark-sync-$$.tgz"
-trap 'rm -f "$TMP_TAR"' EXIT
+cleanup_remote_check() {
+  rm -f "$TMP_TAR"
+  release_script_lock
+}
+trap 'cleanup_remote_check' EXIT
+
+if [ "$ENABLE_SCRIPT_LOCKS" = "1" ]; then
+  acquire_script_lock "remote-check-${MSFS_APPID}" "$MSFS_REMOTE_CHECK_LOCK_WAIT_SECONDS"
+fi
 
 if ! command -v ssh >/dev/null 2>&1; then
   echo "ERROR: ssh is required."

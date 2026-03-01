@@ -123,6 +123,26 @@ If retries stop on exit code `7` after an earlier authenticated attempt, enable 
 `90-remote-dgx-stable-check.sh` now supports remote credential sourcing via `REMOTE_AUTH_ENV_FILE` (default `$HOME/.config/msfs-on-dgx-spark/steam-auth.env`) with permission check (`REQUIRE_REMOTE_AUTH_ENV_PERMS=1` expects mode `600`).
 If unauthenticated failures occur with no active `steamwebhelper`, keep `AUTH_BOOTSTRAP_STEAM_STACK=1` and `AUTH_RECOVER_RUNTIME_ON_MISSING_WEBHELPER=1` (defaults) so verification first restarts the Steam/UI stack and repairs runtime roots before deciding auth is missing.
 
+### Concurrent runs fail with `ERROR: lock busy`
+
+**Symptom**: one of these scripts exits immediately with `ERROR: lock busy: ...`:
+- `scripts/54-launch-and-capture-evidence.sh`
+- `scripts/55-run-until-stable-runtime.sh`
+- `scripts/90-remote-dgx-stable-check.sh`
+
+**Cause**: another launch/retry/remote-check orchestration is already running; lock guardrails prevent overlapping runs from racing on Steam/MSFS state.
+
+**Fix**:
+```bash
+# Wait for lock ownership instead of failing immediately
+MSFS_LAUNCH_LOCK_WAIT_SECONDS=120 ./scripts/54-launch-and-capture-evidence.sh
+MSFS_STABLE_RUN_LOCK_WAIT_SECONDS=300 ./scripts/55-run-until-stable-runtime.sh
+MSFS_REMOTE_CHECK_LOCK_WAIT_SECONDS=600 ./scripts/90-remote-dgx-stable-check.sh
+
+# Last resort (not recommended): disable lock guardrails
+ENABLE_SCRIPT_LOCKS=0 ./scripts/90-remote-dgx-stable-check.sh
+```
+
 ### Dispatch not accepted (`exit 4`) after auth succeeds
 
 **Symptom**: dispatch logs report `RESULT: no launch session accepted via pipe in this attempt.`

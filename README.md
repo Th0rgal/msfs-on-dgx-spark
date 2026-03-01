@@ -193,6 +193,7 @@ When `AUTO_REAUTH_ON_AUTH_FAILURE=1` is enabled and auth recovery fails, `90-rem
 `54-launch-and-capture-evidence.sh` now retries dispatch inside a single attempt (`DISPATCH_MAX_ATTEMPTS`, default `2`) and can auto-run `57-recover-steam-runtime.sh` between redispatches (`DISPATCH_RECOVER_ON_NO_ACCEPT=1`) before launch verification begins; these dispatch knobs are forwarded by `90-remote-dgx-stable-check.sh`.
 Pipe-write tuning is now also forwarded end-to-end by `90-remote-dgx-stable-check.sh`: `PIPE_WRITE_TIMEOUT_SECONDS` (default `6`), `PIPE_WRITE_RETRIES` (default `3`), `PIPE_WRITE_RETRY_DELAY_SECONDS`, `PIPE_WRITE_RECOVER_ON_TIMEOUT`, and URI fallback controls (`URI_FALLBACK_ON_PIPE_FAILURE`, `URI_FALLBACK_TIMEOUT_SECONDS`).
 When dispatch still fails, fallback now runs as an ordered chain (`DISPATCH_FALLBACK_CHAIN`, default `applaunch,steam_uri,snap_uri`) and can auto-normalize Steam windows first (`DISPATCH_FORCE_UI_ON_FAILURE=1`) to recover from hidden/off-screen UI states before retrying launch methods.
+Critical orchestrators now fail-fast on concurrent runs by default (`ENABLE_SCRIPT_LOCKS=1`): `54-launch-and-capture-evidence.sh`, `55-run-until-stable-runtime.sh`, and `90-remote-dgx-stable-check.sh`. Use `MSFS_LAUNCH_LOCK_WAIT_SECONDS`, `MSFS_STABLE_RUN_LOCK_WAIT_SECONDS`, and `MSFS_REMOTE_CHECK_LOCK_WAIT_SECONDS` to wait for active runs instead of exiting immediately.
 
 See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [docs/progress.md](docs/progress.md) for live validation notes.
 
