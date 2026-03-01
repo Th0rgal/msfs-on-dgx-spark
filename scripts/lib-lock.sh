@@ -59,10 +59,16 @@ acquire_script_lock() {
   local lock_wait_seconds="${2:-0}"
   local locks_dir="${3:-${MSFS_LOCKS_DIR:-${XDG_RUNTIME_DIR:-/tmp}/msfs-on-dgx-spark-locks}}"
   local lock_reclaim_stale="${MSFS_LOCK_RECLAIM_STALE:-1}"
+  local force_mkdir_lock="${MSFS_FORCE_MKDIR_LOCK:-0}"
   local holder_note=""
   mkdir -p "$locks_dir"
 
-  if command -v flock >/dev/null 2>&1; then
+  if [[ "$force_mkdir_lock" != "0" && "$force_mkdir_lock" != "1" ]]; then
+    echo "ERROR: MSFS_FORCE_MKDIR_LOCK must be 0 or 1 (got: $force_mkdir_lock)"
+    return 1
+  fi
+
+  if [[ "$force_mkdir_lock" != "1" ]] && command -v flock >/dev/null 2>&1; then
     MSFS_LOCK_FILE="$locks_dir/${lock_name}.lock"
     exec {MSFS_LOCK_FD}> "$MSFS_LOCK_FILE"
     if ! [[ "$lock_wait_seconds" =~ ^[0-9]+$ ]]; then
