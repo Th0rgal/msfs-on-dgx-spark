@@ -77,4 +77,7 @@ if ! command -v shellcheck >/dev/null 2>&1; then
 fi
 shellcheck -S error scripts/*.sh
 
+echo "==> Lock helper behavioral self-test"
+./scripts/98-test-lock-lib.sh
+
 echo "CI validation passed."

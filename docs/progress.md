@@ -1,5 +1,24 @@
 # Progress Log
 
+## 2026-03-01 (lock behavior regression tests in CI)
+
+Validation from this checkout:
+
+- Added deterministic lock behavior self-tests in `scripts/98-test-lock-lib.sh`:
+  - verifies contention fails fast with `ERROR: lock busy` diagnostics and holder PID context,
+  - verifies stale fallback lockdirs are reclaimed when holder PID is not running,
+  - verifies active lockdirs are preserved when holder PID is running.
+- Updated `scripts/99-ci-validate.sh` to execute `./scripts/98-test-lock-lib.sh` as part of local/CI validation.
+- Updated contributor guidance in `README.md` to document the new lock behavior test coverage.
+- Local verification:
+  - `bash -n scripts/98-test-lock-lib.sh scripts/99-ci-validate.sh` (pass)
+  - `./scripts/98-test-lock-lib.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a meaningful reliability gap by adding behavioral regression detection for locking semantics, not just syntax/lint checks.
+
 ## 2026-03-01 (lock diagnostics + stale-lock reclaim hardening)
 
 Validation from this checkout:
