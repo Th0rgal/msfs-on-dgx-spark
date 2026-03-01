@@ -273,4 +273,21 @@ if ! grep -q "ERROR: MSFS_FORCE_MKDIR_LOCK must be 0 or 1" <<<"$invalid_force_mk
   exit 1
 fi
 
+echo "[lock-test] invalid lock names fail fast"
+set +e
+invalid_lock_name_output="$(
+  MSFS_LOCKS_DIR="$tmp_dir" bash -c "source \"$SCRIPT_DIR/lib-lock.sh\"; acquire_script_lock '../ci-invalid-lock-name' 0" 2>&1
+)"
+invalid_lock_name_rc=$?
+set -e
+if [ "$invalid_lock_name_rc" -eq 0 ]; then
+  echo "ERROR: expected invalid lock name to fail." >&2
+  exit 1
+fi
+if ! grep -Fq "ERROR: lock name must match ^[A-Za-z0-9_.-]+\$" <<<"$invalid_lock_name_output"; then
+  echo "ERROR: missing validation diagnostic for invalid lock name." >&2
+  echo "$invalid_lock_name_output" >&2
+  exit 1
+fi
+
 echo "Lock helper self-test passed."

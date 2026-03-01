@@ -78,6 +78,10 @@ acquire_script_lock() {
   local holder_note=""
   mkdir -p "$locks_dir"
 
+  if [[ ! "$lock_name" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+    echo "ERROR: lock name must match ^[A-Za-z0-9_.-]+\$ (got: $lock_name)"
+    return 1
+  fi
   if [[ "$force_mkdir_lock" != "0" && "$force_mkdir_lock" != "1" ]]; then
     echo "ERROR: MSFS_FORCE_MKDIR_LOCK must be 0 or 1 (got: $force_mkdir_lock)"
     return 1
