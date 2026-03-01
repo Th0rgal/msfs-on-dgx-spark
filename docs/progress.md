@@ -1,5 +1,27 @@
 # Progress Log
 
+## 2026-03-01 (strict lock-toggle input validation)
+
+Validation from this checkout:
+
+- Hardened `scripts/lib-lock.sh` input validation:
+  - `MSFS_LOCK_RECLAIM_STALE` now enforces strict `0|1` values and fails fast on invalid input.
+  - Existing strict validation for `MSFS_FORCE_MKDIR_LOCK` remains in place.
+- Expanded lock regression coverage in `scripts/98-test-lock-lib.sh`:
+  - verifies invalid `MSFS_LOCK_RECLAIM_STALE` fails with a clear diagnostic,
+  - verifies invalid `MSFS_FORCE_MKDIR_LOCK` fails with a clear diagnostic.
+- Updated docs:
+  - `README.md`
+  - `docs/troubleshooting.md`
+- Local verification:
+  - `bash -n scripts/lib-lock.sh scripts/98-test-lock-lib.sh` (pass)
+  - `./scripts/98-test-lock-lib.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a silent misconfiguration gap where typoed lock env values could previously alter fallback behavior without an explicit error signal.
+
 ## 2026-03-01 (CI CRLF/BOM drift guardrails)
 
 Validation from this checkout:

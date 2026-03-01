@@ -151,6 +151,8 @@ MSFS_LOCK_RECLAIM_STALE=0 ./scripts/90-remote-dgx-stable-check.sh
 MSFS_FORCE_MKDIR_LOCK=1 ./scripts/90-remote-dgx-stable-check.sh
 ```
 
+`MSFS_LOCK_RECLAIM_STALE` and `MSFS_FORCE_MKDIR_LOCK` only accept `0` or `1`; invalid values now fail fast with a descriptive error instead of silently changing lock behavior.
+
 ### Dispatch not accepted (`exit 4`) after auth succeeds
 
 **Symptom**: dispatch logs report `RESULT: no launch session accepted via pipe in this attempt.`
