@@ -139,6 +139,23 @@ if [[ "${#markdown_files[@]}" -gt 0 ]]; then
   done < <(printf '%s\n' "${markdown_files[@]}")
 fi
 
+echo "==> Text file encoding/line-ending guardrails"
+mapfile -t text_guardrail_files < <(
+  git ls-files 'scripts/*.sh' '*.md' '.github/workflows/*.yml'
+)
+for file_path in "${text_guardrail_files[@]}"; do
+  if LC_ALL=C grep -q $'\r' "${file_path}"; then
+    echo "ERROR: CRLF line endings detected in ${file_path}" >&2
+    exit 1
+  fi
+
+  bom_hex="$(head -c 3 "${file_path}" | od -An -t x1 | tr -d '[:space:]')"
+  if [[ "${bom_hex}" == "efbbbf" ]]; then
+    echo "ERROR: UTF-8 BOM detected in ${file_path}" >&2
+    exit 1
+  fi
+done
+
 echo "==> Strict-mode guardrails (critical orchestrators)"
 critical_strict_scripts=(
   "scripts/53-preflight-runtime-repair.sh"

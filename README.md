@@ -245,7 +245,7 @@ See [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, and [d
 
 This is uncharted territory. If you have a DGX Spark and want to help, open an issue or PR. Particularly useful:
 
-- Run `./scripts/99-ci-validate.sh` before opening a PR (same checks as GitHub Actions CI: syntax, shebang guardrails (`#!/usr/bin/env bash`), executable bits, unique two-digit numbered-script prefixes, docs script-reference integrity across tracked markdown files, local markdown-link integrity checks for tracked docs, strict-mode guardrails for critical launch/auth/recovery orchestrators (`53`, `54`, `55`, `56`, `57`, `58`, `90`), hardcoded sudo-password pattern blocking, `shellcheck -S error` across `scripts/*.sh`, and behavioral lock self-tests via `scripts/98-test-lock-lib.sh` including forced mkdir-fallback coverage).
+- Run `./scripts/99-ci-validate.sh` before opening a PR (same checks as GitHub Actions CI: syntax, shebang guardrails (`#!/usr/bin/env bash`), executable bits, unique two-digit numbered-script prefixes, docs script-reference integrity across tracked markdown files, local markdown-link integrity checks for tracked docs, text-file CRLF/BOM guardrails (`scripts/*.sh`, tracked markdown, and workflow YAML), strict-mode guardrails for critical launch/auth/recovery orchestrators (`53`, `54`, `55`, `56`, `57`, `58`, `90`), hardcoded sudo-password pattern blocking, `shellcheck -S error` across `scripts/*.sh`, and behavioral lock self-tests via `scripts/98-test-lock-lib.sh` including forced mkdir-fallback coverage).
 - Testing MSFS with different Proton versions
 - Profiling performance bottlenecks (CPU translation vs GPU vs memory bandwidth)
 - Arxan DRM compatibility findings

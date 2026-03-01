@@ -1,5 +1,25 @@
 # Progress Log
 
+## 2026-03-01 (CI CRLF/BOM drift guardrails)
+
+Validation from this checkout:
+
+- Expanded `scripts/99-ci-validate.sh` with text-file encoding/line-ending guardrails for tracked:
+  - `scripts/*.sh`
+  - `*.md`
+  - `.github/workflows/*.yml`
+- Validator now fails when any guarded file contains:
+  - CRLF line endings (`\\r\\n`)
+  - UTF-8 BOM prefix (`EF BB BF`)
+- Updated `README.md` contributor guidance to include the new CRLF/BOM guardrails.
+- Local verification:
+  - `bash -n scripts/99-ci-validate.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a cross-platform reliability gap where Windows-style line endings or BOM-prefixed files could introduce subtle shell parsing/shebang issues and noisy diffs.
+
 ## 2026-03-01 (mkdir-fallback lock-path regression coverage)
 
 Validation from this checkout:
