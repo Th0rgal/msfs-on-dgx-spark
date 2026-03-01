@@ -29,6 +29,8 @@ DISPATCH_FALLBACK_APP_LAUNCH="${DISPATCH_FALLBACK_APP_LAUNCH:-1}"
 DISPATCH_FALLBACK_WAIT_SECONDS="${DISPATCH_FALLBACK_WAIT_SECONDS:-20}"
 DISPATCH_FORCE_UI_ON_FAILURE="${DISPATCH_FORCE_UI_ON_FAILURE:-1}"
 DISPATCH_FALLBACK_CHAIN="${DISPATCH_FALLBACK_CHAIN:-applaunch,steam_uri,snap_uri}"
+ENSURE_LAUNCHABLE_STATE="${ENSURE_LAUNCHABLE_STATE:-1}"
+LAUNCHABLE_WAIT_SECONDS="${LAUNCHABLE_WAIT_SECONDS:-40}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 OUT_DIR="${OUT_DIR:-$REPO_ROOT/output}"
@@ -119,44 +121,63 @@ MSFS_APPID="$MSFS_APPID" "$SCRIPT_DIR/53-preflight-runtime-repair.sh" \
   >"$OUT_DIR/preflight-${MSFS_APPID}-${STAMP}.log" 2>&1 || true
 
 echo "[2/5] Launch dispatch via Steam pipe"
+ensure_rc=0
+if [ "$ENSURE_LAUNCHABLE_STATE" = "1" ] && [ -x "$SCRIPT_DIR/62-ensure-msfs-launchable-state.sh" ]; then
+  set +e
+  MSFS_APPID="$MSFS_APPID" WAIT_FOR_EXISTING_SECONDS="$LAUNCHABLE_WAIT_SECONDS" OUT_DIR="$OUT_DIR" \
+    "$SCRIPT_DIR/62-ensure-msfs-launchable-state.sh" \
+    >"$OUT_DIR/launchable-state-${MSFS_APPID}-${STAMP}.log" 2>&1
+  ensure_rc=$?
+  set -e
+  if [ "$ensure_rc" -eq 10 ]; then
+    echo "  runtime already active; skipping fresh dispatch and moving to stability verification"
+  elif [ "$ensure_rc" -ne 0 ]; then
+    echo "  WARN: launchability guard returned rc=$ensure_rc; proceeding with dispatch"
+  fi
+fi
+
 if ! [[ "$DISPATCH_MAX_ATTEMPTS" =~ ^[0-9]+$ ]] || [ "$DISPATCH_MAX_ATTEMPTS" -lt 1 ]; then
   echo "ERROR: DISPATCH_MAX_ATTEMPTS must be a positive integer (got: $DISPATCH_MAX_ATTEMPTS)"
   exit 1
 fi
 
 dispatch_rc=4
-d=1
-while [ "$d" -le "$DISPATCH_MAX_ATTEMPTS" ]; do
-  dispatch_log="$OUT_DIR/dispatch-${MSFS_APPID}-${STAMP}-d${d}.log"
-  set +e
-  MSFS_APPID="$MSFS_APPID" DISPLAY_NUM="$DISPLAY_NUM" WAIT_SECONDS="$DISPATCH_ACCEPT_WAIT_SECONDS" \
-    PIPE_WRITE_TIMEOUT_SECONDS="$PIPE_WRITE_TIMEOUT_SECONDS" \
-    PIPE_WRITE_RETRIES="$PIPE_WRITE_RETRIES" \
-    PIPE_WRITE_RETRY_DELAY_SECONDS="$PIPE_WRITE_RETRY_DELAY_SECONDS" \
-    PIPE_WRITE_RECOVER_ON_TIMEOUT="$PIPE_WRITE_RECOVER_ON_TIMEOUT" \
-    URI_FALLBACK_ON_PIPE_FAILURE="$URI_FALLBACK_ON_PIPE_FAILURE" \
-    URI_FALLBACK_TIMEOUT_SECONDS="$URI_FALLBACK_TIMEOUT_SECONDS" \
-    "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" \
-    >"$dispatch_log" 2>&1
-  dispatch_rc=$?
-  set -e
+if [ "$ensure_rc" -eq 10 ]; then
+  dispatch_rc=0
+else
+  d=1
+  while [ "$d" -le "$DISPATCH_MAX_ATTEMPTS" ]; do
+    dispatch_log="$OUT_DIR/dispatch-${MSFS_APPID}-${STAMP}-d${d}.log"
+    set +e
+    MSFS_APPID="$MSFS_APPID" DISPLAY_NUM="$DISPLAY_NUM" WAIT_SECONDS="$DISPATCH_ACCEPT_WAIT_SECONDS" \
+      PIPE_WRITE_TIMEOUT_SECONDS="$PIPE_WRITE_TIMEOUT_SECONDS" \
+      PIPE_WRITE_RETRIES="$PIPE_WRITE_RETRIES" \
+      PIPE_WRITE_RETRY_DELAY_SECONDS="$PIPE_WRITE_RETRY_DELAY_SECONDS" \
+      PIPE_WRITE_RECOVER_ON_TIMEOUT="$PIPE_WRITE_RECOVER_ON_TIMEOUT" \
+      URI_FALLBACK_ON_PIPE_FAILURE="$URI_FALLBACK_ON_PIPE_FAILURE" \
+      URI_FALLBACK_TIMEOUT_SECONDS="$URI_FALLBACK_TIMEOUT_SECONDS" \
+      "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" \
+      >"$dispatch_log" 2>&1
+    dispatch_rc=$?
+    set -e
 
-  if [ "$dispatch_rc" -eq 0 ]; then
-    break
-  fi
-
-  if [ "$d" -lt "$DISPATCH_MAX_ATTEMPTS" ]; then
-    echo "  dispatch attempt $d/$DISPATCH_MAX_ATTEMPTS failed (rc=$dispatch_rc): $dispatch_log"
-    if [ "$DISPATCH_RECOVER_ON_NO_ACCEPT" = "1" ] && [ "$dispatch_rc" -eq 4 ]; then
-      echo "  running Steam runtime recovery before redispatch"
-      OUT_DIR="$OUT_DIR" DISPLAY_NUM="$DISPLAY_NUM" "$SCRIPT_DIR/57-recover-steam-runtime.sh" \
-        >"$OUT_DIR/dispatch-recover-${MSFS_APPID}-${STAMP}-d${d}.log" 2>&1 || true
+    if [ "$dispatch_rc" -eq 0 ]; then
+      break
     fi
-    sleep "$DISPATCH_RETRY_DELAY_SECONDS"
-  fi
 
-  d=$((d + 1))
-done
+    if [ "$d" -lt "$DISPATCH_MAX_ATTEMPTS" ]; then
+      echo "  dispatch attempt $d/$DISPATCH_MAX_ATTEMPTS failed (rc=$dispatch_rc): $dispatch_log"
+      if [ "$DISPATCH_RECOVER_ON_NO_ACCEPT" = "1" ] && [ "$dispatch_rc" -eq 4 ]; then
+        echo "  running Steam runtime recovery before redispatch"
+        OUT_DIR="$OUT_DIR" DISPLAY_NUM="$DISPLAY_NUM" "$SCRIPT_DIR/57-recover-steam-runtime.sh" \
+          >"$OUT_DIR/dispatch-recover-${MSFS_APPID}-${STAMP}-d${d}.log" 2>&1 || true
+      fi
+      sleep "$DISPATCH_RETRY_DELAY_SECONDS"
+    fi
+
+    d=$((d + 1))
+  done
+fi
 
 if [ "$dispatch_rc" -ne 0 ]; then
   echo "  WARN: launch dispatch did not confirm acceptance after $DISPATCH_MAX_ATTEMPTS attempt(s) (last rc=$dispatch_rc)"

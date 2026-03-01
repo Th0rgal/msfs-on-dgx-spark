@@ -170,6 +170,33 @@ DISPATCH_FALLBACK_CHAIN='applaunch,steam_uri,snap_uri' \
 ./scripts/90-remote-dgx-stable-check.sh MIN_STABLE_SECONDS=30 MAX_ATTEMPTS=1
 ```
 
+### Steam says `An error occurred while launching this game: game already running`
+
+**Symptom**: launch from Steam/UI/script fails with an `already running` dialog even though no playable window is visible.
+
+**Cause**: stale AppID launcher wrappers are still present from a previous attempt, or MSFS is already active and being relaunched.
+
+**Fix**:
+```bash
+# 1) Normalize running state (waits, avoids duplicate relaunch, cleans stale wrappers if needed)
+./scripts/62-ensure-msfs-launchable-state.sh
+
+# 2) Relaunch using guarded orchestration (guard is enabled by default)
+./scripts/08-finalize-auth-and-run-msfs.sh
+
+# 3) Confirm stable runtime
+./scripts/09-verify-msfs-launch.sh
+```
+
+Useful knobs:
+```bash
+# Wait longer before deciding wrappers are stale
+LAUNCHABLE_WAIT_SECONDS=90 ./scripts/08-finalize-auth-and-run-msfs.sh
+
+# Disable auto-cleanup for diagnostics
+KILL_STALE_WRAPPERS=0 ./scripts/62-ensure-msfs-launchable-state.sh
+```
+
 ### Steam crashes on launch
 
 **Symptom**: Steam exits immediately or shows a blank window.

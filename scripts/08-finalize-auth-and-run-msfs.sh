@@ -18,6 +18,8 @@ AUTO_CONFIRM_SECONDS="${AUTO_CONFIRM_SECONDS:-120}"
 CAPTURE_STEAM_SCREENSHOT="${CAPTURE_STEAM_SCREENSHOT:-1}"
 SCREENSHOT_WAIT_SECONDS="${SCREENSHOT_WAIT_SECONDS:-25}"
 REQUIRE_NVIDIA_DISPLAY="${REQUIRE_NVIDIA_DISPLAY:-1}"
+ENSURE_LAUNCHABLE_STATE="${ENSURE_LAUNCHABLE_STATE:-1}"
+LAUNCHABLE_WAIT_SECONDS="${LAUNCHABLE_WAIT_SECONDS:-40}"
 GUARD_CODE="${1:-${STEAM_GUARD_CODE:-}}"
 AUTO_CONFIRM_PID=""
 
@@ -173,22 +175,38 @@ if [ "$INSTALL_WAIT_SECONDS" -gt 0 ]; then
 fi
 
 echo "[7/8] Launching MSFS via ~/launch-msfs.sh ..."
+if [ "$ENSURE_LAUNCHABLE_STATE" = "1" ] && [ -x "$SCRIPT_DIR/62-ensure-msfs-launchable-state.sh" ]; then
+  set +e
+  MSFS_APPID="$MSFS_APPID" WAIT_FOR_EXISTING_SECONDS="$LAUNCHABLE_WAIT_SECONDS" OUT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)/output" \
+    "$SCRIPT_DIR/62-ensure-msfs-launchable-state.sh" >/tmp/msfs-launchable-state.log 2>&1
+  ensure_rc=$?
+  set -e
+  if [ "$ensure_rc" -eq 10 ]; then
+    echo "MSFS appears already running; skipping relaunch dispatch."
+  elif [ "$ensure_rc" -ne 0 ]; then
+    echo "WARN: launchability guard reported non-zero exit ($ensure_rc); proceeding with dispatch."
+  fi
+fi
 if [ "$AUTO_CONFIRM_PROMPTS" = "1" ] && [ -x "$SCRIPT_DIR/60-auto-confirm-steam-prompts.sh" ]; then
   DISPLAY_NUM="$DISPLAY_NUM" AUTO_CONFIRM_SECONDS="$AUTO_CONFIRM_SECONDS" \
     "$SCRIPT_DIR/60-auto-confirm-steam-prompts.sh" >/tmp/msfs-auto-confirm.log 2>&1 &
   AUTO_CONFIRM_PID="$!"
   echo "Started auto-confirm helper for Steam prompts (pid=${AUTO_CONFIRM_PID}, ${AUTO_CONFIRM_SECONDS}s)."
 fi
-if [ -x "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" ]; then
-  WAIT_SECONDS=20 "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" >/tmp/msfs-launch.log 2>&1 || true
-elif [ -x "$HOME/launch-msfs.sh" ]; then
-  GAME_ARG="2020"
-  if [ "$MSFS_APPID" = "2537590" ]; then
-    GAME_ARG="2024"
-  fi
-  DISPLAY="$DISPLAY_NUM" "$HOME/launch-msfs.sh" "$GAME_ARG" >/tmp/msfs-launch.log 2>&1 || true
+if [ "${ensure_rc:-0}" -eq 10 ]; then
+  printf '%s\n' "Skipped launch dispatch because runtime is already active." >/tmp/msfs-launch.log
 else
-  DISPLAY="$DISPLAY_NUM" steam "steam://run/${MSFS_APPID}" >/tmp/msfs-launch.log 2>&1 || true
+  if [ -x "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" ]; then
+    WAIT_SECONDS=20 "$SCRIPT_DIR/19-dispatch-via-steam-pipe.sh" >/tmp/msfs-launch.log 2>&1 || true
+  elif [ -x "$HOME/launch-msfs.sh" ]; then
+    GAME_ARG="2020"
+    if [ "$MSFS_APPID" = "2537590" ]; then
+      GAME_ARG="2024"
+    fi
+    DISPLAY="$DISPLAY_NUM" "$HOME/launch-msfs.sh" "$GAME_ARG" >/tmp/msfs-launch.log 2>&1 || true
+  else
+    DISPLAY="$DISPLAY_NUM" steam "steam://run/${MSFS_APPID}" >/tmp/msfs-launch.log 2>&1 || true
+  fi
 fi
 
 sleep 8
