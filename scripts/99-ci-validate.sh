@@ -49,8 +49,12 @@ done < <(
 
 echo "==> Strict-mode guardrails (critical orchestrators)"
 critical_strict_scripts=(
+  "scripts/53-preflight-runtime-repair.sh"
   "scripts/54-launch-and-capture-evidence.sh"
   "scripts/55-run-until-stable-runtime.sh"
+  "scripts/56-run-staged-stability-check.sh"
+  "scripts/57-recover-steam-runtime.sh"
+  "scripts/58-ensure-steam-auth.sh"
   "scripts/90-remote-dgx-stable-check.sh"
 )
 for script_path in "${critical_strict_scripts[@]}"; do

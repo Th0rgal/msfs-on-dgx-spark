@@ -1,5 +1,26 @@
 # Progress Log
 
+## 2026-03-01 (expanded strict-mode CI guardrails across critical orchestration chain)
+
+Validation from this checkout:
+
+- Expanded strict-mode guardrails in `scripts/99-ci-validate.sh` to require `set -euo pipefail` in:
+  - `scripts/53-preflight-runtime-repair.sh`
+  - `scripts/54-launch-and-capture-evidence.sh`
+  - `scripts/55-run-until-stable-runtime.sh`
+  - `scripts/56-run-staged-stability-check.sh`
+  - `scripts/57-recover-steam-runtime.sh`
+  - `scripts/58-ensure-steam-auth.sh`
+  - `scripts/90-remote-dgx-stable-check.sh`
+- Updated `README.md` contributor guidance to reflect the expanded strict-mode coverage list.
+- Local verification:
+  - `bash -n scripts/99-ci-validate.sh` (pass)
+  - `./scripts/99-ci-validate.sh` (pass)
+
+Assessment update:
+
+- This closes a CI regression gap where strict-mode loss in preflight/staged/auth/recovery scripts could previously slip through despite those scripts being in the critical DGX launch reliability path.
+
 ## 2026-03-01 (lock behavior regression tests in CI)
 
 Validation from this checkout:
